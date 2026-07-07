@@ -1,0 +1,144 @@
+.cs-shell {
+    max-width: 760px;
+    margin: 0 auto;
+    line-height: 1.5;
+}
+
+.cs-task {
+    width: min(1120px, 100%);
+    margin: 0 auto;
+}
+
+.cs-status {
+    display: flex;
+    justify-content: flex-end;
+    gap: 16px;
+    margin-bottom: 18px;
+    color: #334155;
+    font-weight: 600;
+}
+
+.cs-card-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 14px;
+    align-items: stretch;
+}
+
+.cs-card {
+    min-height: 210px;
+    border: 3px solid var(--card-color);
+    border-radius: 8px;
+    background: #ffffff;
+    color: #0f172a;
+    cursor: pointer;
+    padding: 16px 12px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.18);
+}
+
+.cs-card:hover,
+.cs-card:focus {
+    outline: 3px solid color-mix(in srgb, var(--card-color) 45%, white);
+    outline-offset: 2px;
+}
+
+.cs-card-label {
+    color: var(--card-color);
+    font-weight: 700;
+}
+
+.cs-points {
+    font-size: 24px;
+    font-weight: 800;
+}
+
+.cs-multiplier,
+.cs-main-mark {
+    font-size: 14px;
+    font-weight: 650;
+    white-space: nowrap;
+}
+
+.cs-setup,
+.cs-debug {
+    max-width: 980px;
+    margin: 0 auto;
+}
+
+.cs-debug-notice {
+    border: 2px solid #b91c1c;
+    background: #fef2f2;
+    color: #7f1d1d;
+    font-weight: 700;
+    padding: 12px 14px;
+    margin-bottom: 16px;
+}
+
+.cs-debug-panel {
+    border: 1px solid #cbd5e1;
+    background: #f8fafc;
+    padding: 14px;
+    margin-bottom: 18px;
+}
+
+.cs-debug-panel h4 {
+    margin: 0 0 10px;
+}
+
+.cs-debug-panel dl {
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    gap: 6px 12px;
+    margin: 0;
+}
+
+.cs-debug-panel dt {
+    font-weight: 700;
+}
+
+.cs-debug-panel dd {
+    margin: 0;
+}
+
+.cs-debug-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+    margin-bottom: 18px;
+}
+
+.cs-debug-table th,
+.cs-debug-table td {
+    border: 1px solid #cbd5e1;
+    padding: 6px 8px;
+    text-align: left;
+}
+
+.cs-debug-table th {
+    background: #f1f5f9;
+}
+
+.cs-debug-end {
+    color: #334155;
+    font-weight: 650;
+}
+
+@media (min-width: 920px) {
+    .cs-card-row {
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 680px) {
+    .cs-status {
+        flex-direction: column;
+    }
+
+    .cs-card {
+        min-height: 160px;
+    }
+}

@@ -1,0 +1,66 @@
+{{ block title }}
+Development debug summary
+{{ endblock }}
+
+{{ block content }}
+<link rel="stylesheet" href="{{ static 'global/card_stacking.css' }}">
+
+<div class="cs-debug">
+    <div class="cs-debug-notice">
+        This page is only for debugging during development. Do not show this
+        page in the production experiment.
+    </div>
+
+    <div class="cs-debug-panel">
+        <h4>Development-only configuration</h4>
+        <dl>
+            <dt>Number of screens</dt>
+            <dd>{{ active_num_screens }}</dd>
+            <dt>Session color order</dt>
+            <dd>{{ color_order_labels }}</dd>
+            <dt>Main-card color</dt>
+            <dd>{{ main_card_color_label }}</dd>
+            <dt>Inactivity cutoff</dt>
+            <dd>{{ inactivity_seconds }} seconds</dd>
+            <dt>Total task elapsed time</dt>
+            <dd>{{ total_task_elapsed_seconds }} seconds</dd>
+        </dl>
+    </div>
+
+    <table class="cs-debug-table">
+        <thead>
+            <tr>
+                <th>Screen</th>
+                <th>Chosen card id</th>
+                <th>Chosen card</th>
+                <th>Position</th>
+                <th>Main card?</th>
+                <th>X</th>
+                <th>Y</th>
+                <th>Z</th>
+                <th>Time to answer</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{ for decision in decisions }}
+            <tr>
+                <td>{{ decision.round_number }}</td>
+                <td>{{ decision.chosen_card_id }}</td>
+                <td>{{ decision.chosen_card_label }}</td>
+                <td>{{ decision.chosen_card_position }}</td>
+                <td>{{ decision.chosen_is_main }}</td>
+                <td>{{ decision.chosen_x }}</td>
+                <td>{{ decision.chosen_y }}</td>
+                <td>{{ decision.chosen_z }}</td>
+                <td>{{ decision.response_time_seconds }}s</td>
+            </tr>
+            {{ endfor }}
+        </tbody>
+    </table>
+
+    <p class="cs-debug-end">
+        End of development run. This terminal debug page will be removed or
+        replaced before the production experiment.
+    </p>
+</div>
+{{ endblock }}

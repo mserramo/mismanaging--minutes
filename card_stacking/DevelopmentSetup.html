@@ -1,0 +1,21 @@
+{{ block title }}
+Development setup
+{{ endblock }}
+
+{{ block content }}
+<link rel="stylesheet" href="{{ static 'global/card_stacking.css' }}">
+
+<div class="cs-setup">
+    <div class="cs-debug-notice">
+        Development-only experimenter setup. Do not show this page in the
+        production experiment or to participants.
+    </div>
+
+    <div class="cs-debug-panel">
+        <h4>Task parameters</h4>
+        {{ formfields }}
+    </div>
+
+    {{ next_button }}
+</div>
+{{ endblock }}

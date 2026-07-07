@@ -1,0 +1,16 @@
+{{ block title }}
+Task ended
+{{ endblock }}
+
+{{ block content }}
+<div class="cs-shell">
+    <p>
+        The task ended because there were {{ inactivity_seconds }} consecutive
+        seconds of inactivity.
+    </p>
+    <p>
+        You have lost the opportunity to earn a bonus from this task.
+    </p>
+    {{ next_button }}
+</div>
+{{ endblock }}

@@ -1,0 +1,53 @@
+{{ block title }}
+{{ progress_text }}
+{{ endblock }}
+
+{{ block content }}
+<link rel="stylesheet" href="{{ static 'global/card_stacking.css' }}">
+
+<div
+    class="cs-task"
+    data-inactivity-seconds="{{ inactivity_seconds }}"
+    data-round-number="{{ round_number }}"
+    data-task-timer-key="{{ task_timer_key }}"
+>
+    <input type="hidden" name="chosen_card_id" id="chosen_card_id">
+    <input type="hidden" name="chosen_card_position" id="chosen_card_position">
+    <input type="hidden" name="chosen_is_main" id="chosen_is_main">
+    <input type="hidden" name="chosen_x" id="chosen_x">
+    <input type="hidden" name="chosen_y" id="chosen_y">
+    <input type="hidden" name="chosen_z" id="chosen_z">
+    <input type="hidden" name="response_time_ms" id="response_time_ms">
+    <input type="hidden" name="task_elapsed_ms" id="task_elapsed_ms">
+    <input type="hidden" name="timed_out_inactive" id="timed_out_inactive" value="False">
+
+    <div class="cs-status">
+        <span id="cs-inactivity-display"></span>
+    </div>
+
+    <div class="cs-card-row" aria-label="Card choices">
+        {{ for card in cards }}
+        <button
+            class="cs-card"
+            type="button"
+            style="--card-color: {{ card.color }};"
+            data-card-id="{{ card.id }}"
+            data-position="{{ card.position }}"
+            data-is-main="{{ card.is_main }}"
+            data-x="{{ card.x }}"
+            data-y="{{ card.y }}"
+            data-z="{{ card.z }}"
+        >
+            <span class="cs-card-label">{{ card.label }}</span>
+            {{ if card.is_main }}
+            {{ else }}
+                <span class="cs-points">Points: {{ card.display_x }}</span>
+                <span class="cs-multiplier">{{ card.display_y }}%, {{ card.display_z }} multiplier</span>
+            {{ endif }}
+        </button>
+        {{ endfor }}
+    </div>
+</div>
+
+<script src="{{ static 'global/card_stacking.js' }}"></script>
+{{ endblock }}
