@@ -22,13 +22,12 @@ SESSION_CONFIG_DEFAULTS = dict(
 
 PARTICIPANT_FIELDS = [
     'card_stacking_num_screens',
+    'card_stacking_color_order_json',
+    'card_stacking_main_color_index',
     'card_stacking_inactive',
     'card_stacking_inactive_round',
 ]
-SESSION_FIELDS = [
-    'card_stacking_color_order_json',
-    'card_stacking_main_color_index',
-]
+SESSION_FIELDS = []
 
 LANGUAGE_CODE = 'en'
 REAL_WORLD_CURRENCY_CODE = 'USD'

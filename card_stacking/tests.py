@@ -54,6 +54,22 @@ class PlayerBot(Bot):
         assert next(card['color_id'] for card in cards if card['is_main']) == next(
             card['color_id'] for card in first_round_cards if card['is_main']
         )
+        if self.round_number == 1:
+            other_players = [
+                player
+                for player in self.player.subsession.get_players()
+                if player.id_in_group != self.player.id_in_group
+            ]
+            if other_players:
+                my_assignment = (
+                    self.player.participant.card_stacking_color_order_json,
+                    self.player.participant.card_stacking_main_color_index,
+                )
+                other_assignment = (
+                    other_players[0].participant.card_stacking_color_order_json,
+                    other_players[0].participant.card_stacking_main_color_index,
+                )
+                assert my_assignment != other_assignment
         if self.case == 'main_complete':
             chosen_card = next(card for card in cards if card['is_main'])
         else:

@@ -106,38 +106,39 @@ def active_num_screens(player):
     return value
 
 
-def session_color_order(session):
-    color_order_json = _extra_field(session, 'card_stacking_color_order_json')
+def participant_color_order(participant):
+    color_order_json = _extra_field(participant, 'card_stacking_color_order_json')
     if color_order_json:
         return json.loads(color_order_json)
     return list(range(len(C.CARD_DECK)))
 
 
-def session_main_color_index(session):
-    value = _extra_field(session, 'card_stacking_main_color_index')
+def participant_main_color_index(participant):
+    value = _extra_field(participant, 'card_stacking_main_color_index')
     if value is None:
-        return session_color_order(session)[0]
+        return participant_color_order(participant)[0]
     return int(value)
 
 
-def initialize_session_card_randomization(session):
-    if _extra_field(session, 'card_stacking_color_order_json'):
+def initialize_participant_card_randomization(participant):
+    if _extra_field(participant, 'card_stacking_color_order_json'):
         return
-    rng = random.Random(f'card-stacking-session-{session.code}')
+    rng = random.Random(f'card-stacking-participant-{participant.code}')
     color_order = list(range(len(C.CARD_DECK)))
     rng.shuffle(color_order)
-    session.card_stacking_color_order_json = json.dumps(color_order)
-    session.card_stacking_main_color_index = rng.choice(color_order)
+    participant.card_stacking_color_order_json = json.dumps(color_order)
+    participant.card_stacking_main_color_index = rng.choice(color_order)
 
 
-def color_order_labels(session):
+def color_order_labels(participant):
     return [
-        C.CARD_DECK[color_index]['label'] for color_index in session_color_order(session)
+        C.CARD_DECK[color_index]['label']
+        for color_index in participant_color_order(participant)
     ]
 
 
-def main_card_color_label(session):
-    return C.CARD_DECK[session_main_color_index(session)]['label']
+def main_card_color_label(participant):
+    return C.CARD_DECK[participant_main_color_index(participant)]['label']
 
 
 def format_card_value(value):
@@ -164,10 +165,10 @@ def card_from_round(player, card_id):
 def build_cards_for_player(player):
     cards = []
     side_values = _side_values_for_round(player.round_number)
-    main_color_index = session_main_color_index(player.session)
+    main_color_index = participant_main_color_index(player.participant)
     side_index = 0
 
-    for color_index in session_color_order(player.session):
+    for color_index in participant_color_order(player.participant):
         color_card = C.CARD_DECK[color_index]
         card = dict(color_card)
         card.update(round_number=player.round_number)
@@ -208,10 +209,10 @@ def set_round_fields(player):
 
 
 def creating_session(subsession):
-    initialize_session_card_randomization(subsession.session)
     for player in subsession.get_players():
         if player.round_number == 1:
             player.participant.card_stacking_num_screens = C.DEFAULT_NUM_SCREENS
+            initialize_participant_card_randomization(player.participant)
             player.participant.card_stacking_inactive = False
             player.participant.card_stacking_inactive_round = None
         set_round_fields(player)
@@ -380,8 +381,8 @@ class Results(Page):
         return dict(
             decisions=decisions,
             active_num_screens=player.active_num_screens,
-            color_order_labels=', '.join(color_order_labels(player.session)),
-            main_card_color_label=main_card_color_label(player.session),
+            color_order_labels=', '.join(color_order_labels(player.participant)),
+            main_card_color_label=main_card_color_label(player.participant),
             inactivity_seconds=player.inactivity_seconds,
             total_task_elapsed_seconds=total_task_elapsed_seconds,
         )

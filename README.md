@@ -23,9 +23,10 @@ setup page. It lets the experimenter choose:
 
 - the number of decision screens.
 
-The left-to-right color order is randomized across oTree sessions and then fixed
-for every screen in that session. The main-card color is also randomized across
-sessions and fixed for every screen in that session.
+The left-to-right color order is randomized separately for each participant and
+then fixed for every screen that participant sees. The main-card color is also
+randomized separately for each participant and fixed for every screen that
+participant sees.
 
 This setup page is only for development. It should be removed or disabled before
 the production participant flow. During development only, the final debug page
