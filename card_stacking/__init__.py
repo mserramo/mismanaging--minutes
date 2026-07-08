@@ -140,6 +140,13 @@ def format_card_value(value):
     return f'{value:.1f}'
 
 
+def format_clock_seconds(total_seconds):
+    total_seconds = max(0, int(total_seconds))
+    minutes = total_seconds // 60
+    seconds = total_seconds % 60
+    return f'{minutes:02d}:{seconds:02d}'
+
+
 def add_display_values(card):
     for field_name in ['x', 'y', 'z']:
         card[f'display_{field_name}'] = format_card_value(card.get(field_name))
@@ -420,13 +427,15 @@ class Decision(Page):
     def vars_for_template(player):
         cards = json.loads(player.card_params_json)
         cards = [add_display_values(card) for card in cards]
+        task_duration_seconds = player.task_duration_minutes * 60
         return dict(
             cards=cards,
             inactivity_seconds=player.inactivity_seconds,
             progress_text=f'Screen {player.round_number}',
             round_number=player.round_number,
             task_timer_key=f'card_stacking_task_started_at_{player.participant.code}',
-            task_duration_seconds=player.task_duration_minutes * 60,
+            task_duration_seconds=task_duration_seconds,
+            initial_time_left_text=format_clock_seconds(task_duration_seconds),
             show_elapsed_minutes=player.show_elapsed_minutes,
             show_main_cards_collected=player.show_main_cards_collected,
             main_cards_collected_so_far=previous_main_cards_collected(player),
