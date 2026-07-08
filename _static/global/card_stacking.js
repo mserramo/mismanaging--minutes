@@ -32,6 +32,7 @@
     const bonusCueDurationMs = Number.isFinite(configuredBonusCueDurationMs)
         ? Math.max(0, configuredBonusCueDurationMs)
         : 100;
+    const cueSubmitBufferMs = 80;
     let lastActivityAt = Date.now();
     let submitted = false;
 
@@ -166,14 +167,17 @@
             button.disabled = true;
             button.classList.toggle('cs-card-selected', button === cardButton);
         });
+        let cueShown = false;
         if (multiplierApplied) {
             showCue(`${formatPoints(cardZ)}x multiplier applied`, 'cs-cue-multiplier');
+            cueShown = true;
         } else if (mainBonusTriggered) {
-            showCue(`Main-card bonus added: +${formatPoints(mainBonusPointsAdded)} points`, 'cs-cue-bonus');
+            showCue(`Main-card bonus added: +${formatPoints(mainBonusPointsAdded)} points`, 'cs-cue-main-bonus');
+            cueShown = true;
         }
         window.setTimeout(
             () => form.submit(),
-            Math.max(choiceSubmitDelayMs, multiplierApplied || mainBonusTriggered ? bonusCueDurationMs : 0)
+            Math.max(choiceSubmitDelayMs, cueShown ? bonusCueDurationMs + cueSubmitBufferMs : 0)
         );
     }
 

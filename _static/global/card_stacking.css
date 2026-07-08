@@ -11,17 +11,34 @@
 
 .cs-status {
     display: flex;
-    justify-content: flex-end;
-    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: flex-start;
     gap: 8px 16px;
     margin-bottom: 18px;
     color: #334155;
     font-weight: 600;
-    text-align: right;
 }
 
 .cs-status span {
     white-space: nowrap;
+}
+
+.cs-status-left,
+.cs-status-right {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.cs-status-left {
+    text-align: left;
+    align-items: flex-start;
+}
+
+.cs-status-right {
+    text-align: right;
+    align-items: flex-end;
+    margin-left: auto;
 }
 
 .cs-cue {
@@ -48,7 +65,16 @@
     text-shadow: 0 0 18px rgba(245, 158, 11, 0.38);
 }
 
-.cs-cue-bonus {
+.cs-cue-main-bonus {
+    display: block;
+    width: fit-content;
+    max-width: 100%;
+    margin-right: auto;
+    margin-left: auto;
+    padding: 2px 12px;
+    border: 2px solid #047857;
+    border-radius: 6px;
+    background: #ecfdf5;
     color: #047857;
     text-shadow: 0 0 18px rgba(16, 185, 129, 0.32);
 }
@@ -218,6 +244,12 @@
 @media (max-width: 680px) {
     .cs-status {
         flex-direction: column;
+    }
+
+    .cs-status-right {
+        align-items: flex-start;
+        margin-left: 0;
+        text-align: left;
     }
 
     .cs-card {

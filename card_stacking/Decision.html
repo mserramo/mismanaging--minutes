@@ -1,5 +1,5 @@
 {{ block content }}
-<link rel="stylesheet" href="{{ static 'global/card_stacking.css' }}?v=20260708-cue-defaults">
+<link rel="stylesheet" href="{{ static 'global/card_stacking.css' }}?v=20260708-status-layout">
 
 <div
     class="cs-task"
@@ -37,14 +37,18 @@
     <input type="hidden" name="timed_out_task_duration" id="timed_out_task_duration" value="False">
 
     <div class="cs-status">
-        <span id="cs-points-display">Points accumulated: {{ points_accumulated_display }}</span>
-        {{ if show_elapsed_minutes }}
-        <span id="cs-time-left-display">Time left: {{ initial_time_left_text }}</span>
-        {{ endif }}
+        <div class="cs-status-left">
+            {{ if show_elapsed_minutes }}
+            <span id="cs-time-left-display">Time left: {{ initial_time_left_text }}</span>
+            {{ endif }}
+            <span id="cs-inactivity-display"></span>
+        </div>
+        <div class="cs-status-right">
+            <span id="cs-points-display">Points accumulated: {{ points_accumulated_display }}</span>
         {{ if show_main_cards_collected }}
-        <span id="cs-main-card-display">Main cards collected: {{ main_cards_collected_so_far }}</span>
+            <span id="cs-main-card-display">Main cards collected: {{ main_cards_collected_so_far }}</span>
         {{ endif }}
-        <span id="cs-inactivity-display"></span>
+        </div>
     </div>
 
     <div class="cs-cue" id="cs-cue" aria-live="polite"></div>
@@ -73,5 +77,5 @@
     </div>
 </div>
 
-<script src="{{ static 'global/card_stacking.js' }}?v=20260708-cue-defaults"></script>
+<script src="{{ static 'global/card_stacking.js' }}?v=20260708-status-layout"></script>
 {{ endblock }}
