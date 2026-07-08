@@ -24,14 +24,14 @@
     const timeLeftDisplay = document.getElementById('cs-time-left-display');
     const pointsDisplay = document.getElementById('cs-points-display');
     const cueDisplay = document.getElementById('cs-cue');
-    const configuredChoiceSubmitDelayMs = Number(task.dataset.clickFeedbackMs || 50);
+    const configuredChoiceSubmitDelayMs = Number(task.dataset.clickFeedbackMs || 100);
     const choiceSubmitDelayMs = Number.isFinite(configuredChoiceSubmitDelayMs)
         ? Math.max(0, configuredChoiceSubmitDelayMs)
-        : 50;
-    const configuredBonusCueDurationMs = Number(task.dataset.bonusCueDurationMs || 50);
+        : 100;
+    const configuredBonusCueDurationMs = Number(task.dataset.bonusCueDurationMs || 100);
     const bonusCueDurationMs = Number.isFinite(configuredBonusCueDurationMs)
         ? Math.max(0, configuredBonusCueDurationMs)
-        : 50;
+        : 100;
     let lastActivityAt = Date.now();
     let submitted = false;
 
