@@ -14,8 +14,18 @@ Development debug summary
     <div class="cs-debug-panel">
         <h4>Development-only configuration</h4>
         <dl>
-            <dt>Number of screens</dt>
-            <dd>{{ active_num_screens }}</dd>
+            <dt>Task duration</dt>
+            <dd>{{ task_duration_minutes }} minutes</dd>
+            <dt>Possible screen types</dt>
+            <dd>{{ num_screen_types }}</dd>
+            <dt>Elapsed-time counter shown</dt>
+            <dd>{{ show_elapsed_minutes }}</dd>
+            <dt>Main-card counter shown</dt>
+            <dd>{{ show_main_cards_collected }}</dd>
+            <dt>Answered decision screens</dt>
+            <dd>{{ answered_rounds }}</dd>
+            <dt>Main cards collected</dt>
+            <dd>{{ main_cards_collected }}</dd>
             <dt>Participant color order</dt>
             <dd>{{ color_order_labels }}</dd>
             <dt>Main-card color</dt>
@@ -31,6 +41,7 @@ Development debug summary
         <thead>
             <tr>
                 <th>Screen</th>
+                <th>Screen type</th>
                 <th>Chosen card id</th>
                 <th>Chosen card</th>
                 <th>Position</th>
@@ -45,6 +56,7 @@ Development debug summary
             {{ for decision in decisions }}
             <tr>
                 <td>{{ decision.round_number }}</td>
+                <td>{{ decision.screen_type_index }}</td>
                 <td>{{ decision.chosen_card_id }}</td>
                 <td>{{ decision.chosen_card_label }}</td>
                 <td>{{ decision.chosen_card_position }}</td>
@@ -57,6 +69,16 @@ Development debug summary
             {{ endfor }}
         </tbody>
     </table>
+
+    <details class="cs-debug-details">
+        <summary>Generated possible screen types</summary>
+        <pre>{{ screen_types_json }}</pre>
+    </details>
+
+    <details class="cs-debug-details">
+        <summary>Sampled screen sequence</summary>
+        <pre>{{ screen_sequence_json }}</pre>
+    </details>
 
     <p class="cs-debug-end">
         End of development run. This terminal debug page will be removed or

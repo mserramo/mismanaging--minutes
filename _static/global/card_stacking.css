@@ -122,6 +122,23 @@
     background: #f1f5f9;
 }
 
+.cs-debug-details {
+    border: 1px solid #cbd5e1;
+    margin-bottom: 12px;
+    padding: 10px 12px;
+}
+
+.cs-debug-details summary {
+    cursor: pointer;
+    font-weight: 700;
+}
+
+.cs-debug-details pre {
+    max-height: 260px;
+    overflow: auto;
+    white-space: pre-wrap;
+}
+
 .cs-debug-end {
     color: #334155;
     font-weight: 650;

@@ -10,6 +10,9 @@
     data-inactivity-seconds="{{ inactivity_seconds }}"
     data-round-number="{{ round_number }}"
     data-task-timer-key="{{ task_timer_key }}"
+    data-task-duration-seconds="{{ task_duration_seconds }}"
+    data-show-elapsed-minutes="{{ show_elapsed_minutes }}"
+    data-show-main-cards-collected="{{ show_main_cards_collected }}"
 >
     <input type="hidden" name="chosen_card_id" id="chosen_card_id">
     <input type="hidden" name="chosen_card_position" id="chosen_card_position">
@@ -20,8 +23,15 @@
     <input type="hidden" name="response_time_ms" id="response_time_ms">
     <input type="hidden" name="task_elapsed_ms" id="task_elapsed_ms">
     <input type="hidden" name="timed_out_inactive" id="timed_out_inactive" value="False">
+    <input type="hidden" name="timed_out_task_duration" id="timed_out_task_duration" value="False">
 
     <div class="cs-status">
+        {{ if show_elapsed_minutes }}
+        <span id="cs-elapsed-display">Elapsed: 00:00</span>
+        {{ endif }}
+        {{ if show_main_cards_collected }}
+        <span id="cs-main-card-display">Main cards: {{ main_cards_collected_so_far }}</span>
+        {{ endif }}
         <span id="cs-inactivity-display"></span>
     </div>
 

@@ -9,7 +9,10 @@
     const roundNumber = Number(task.dataset.roundNumber || 1);
     const taskTimerKey = task.dataset.taskTimerKey || 'card_stacking_task_started_at';
     const inactivitySeconds = Number(task.dataset.inactivitySeconds || 30);
+    const taskDurationSeconds = Number(task.dataset.taskDurationSeconds || 0);
+    const showElapsedMinutes = task.dataset.showElapsedMinutes === 'True';
     const inactivityDisplay = document.getElementById('cs-inactivity-display');
+    const elapsedDisplay = document.getElementById('cs-elapsed-display');
     let lastActivityAt = Date.now();
     let submitted = false;
 
@@ -33,8 +36,28 @@
         return Math.max(0, Math.round(Date.now() - taskStartedAt));
     }
 
+    function formatElapsed(ms) {
+        const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+        const minutes = Math.floor(totalSeconds / 60);
+        const seconds = totalSeconds % 60;
+        return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+    }
+
+    function taskDurationMs() {
+        return Math.max(0, Math.round(taskDurationSeconds * 1000));
+    }
+
+    function durationExpired() {
+        const durationMs = taskDurationMs();
+        return durationMs > 0 && taskElapsedMs() >= durationMs;
+    }
+
     function submitChoice(cardButton) {
         if (submitted) {
+            return;
+        }
+        if (durationExpired()) {
+            submitTaskDurationTimeout();
             return;
         }
         submitted = true;
@@ -48,6 +71,7 @@
         setValue('response_time_ms', responseTimeMs());
         setValue('task_elapsed_ms', taskElapsedMs());
         setValue('timed_out_inactive', 'False');
+        setValue('timed_out_task_duration', 'False');
         form.submit();
     }
 
@@ -66,6 +90,26 @@
         setValue('response_time_ms', responseTimeMs());
         setValue('task_elapsed_ms', taskElapsedMs());
         setValue('timed_out_inactive', 'True');
+        setValue('timed_out_task_duration', 'False');
+        form.submit();
+    }
+
+    function submitTaskDurationTimeout() {
+        if (submitted) {
+            return;
+        }
+        submitted = true;
+
+        setValue('chosen_card_id', '');
+        setValue('chosen_card_position', '');
+        setValue('chosen_is_main', '');
+        setValue('chosen_x', '');
+        setValue('chosen_y', '');
+        setValue('chosen_z', '');
+        setValue('response_time_ms', responseTimeMs());
+        setValue('task_elapsed_ms', taskElapsedMs());
+        setValue('timed_out_inactive', 'False');
+        setValue('timed_out_task_duration', 'True');
         form.submit();
     }
 
@@ -74,6 +118,13 @@
     }
 
     function updateInactivityClock() {
+        if (showElapsedMinutes && elapsedDisplay) {
+            elapsedDisplay.textContent = `Elapsed: ${formatElapsed(taskElapsedMs())}`;
+        }
+        if (durationExpired()) {
+            submitTaskDurationTimeout();
+            return;
+        }
         const elapsedSeconds = Math.floor((Date.now() - lastActivityAt) / 1000);
         const remaining = Math.max(0, inactivitySeconds - elapsedSeconds);
         if (inactivityDisplay) {

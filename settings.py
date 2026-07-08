@@ -7,7 +7,6 @@ SESSION_CONFIGS = [
         display_name='Card Stacking Game',
         app_sequence=['card_stacking'],
         num_demo_participants=1,
-        card_num_screens=50,
         inactivity_seconds=30,
     ),
 ]
@@ -16,16 +15,22 @@ SESSION_CONFIG_DEFAULTS = dict(
     real_world_currency_per_point=1.00,
     participation_fee=0.00,
     doc='',
-    card_num_screens=50,
     inactivity_seconds=30,
 )
 
 PARTICIPANT_FIELDS = [
-    'card_stacking_num_screens',
     'card_stacking_color_order_json',
     'card_stacking_main_color_index',
+    'card_stacking_task_duration_minutes',
+    'card_stacking_num_screen_types',
+    'card_stacking_screen_types_json',
+    'card_stacking_screen_sequence_json',
+    'card_stacking_show_elapsed_minutes',
+    'card_stacking_show_main_cards_collected',
     'card_stacking_inactive',
     'card_stacking_inactive_round',
+    'card_stacking_time_finished',
+    'card_stacking_time_finished_round',
 ]
 SESSION_FIELDS = []
 
