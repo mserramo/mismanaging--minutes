@@ -42,7 +42,7 @@
             {{ if card.is_main }}
             {{ else }}
                 <span class="cs-points">Points: {{ card.display_x }}</span>
-                <span class="cs-multiplier">{{ card.display_y }}%, {{ card.display_z }} multiplier</span>
+                <span class="cs-multiplier">{{ card.display_y }}% of {{ card.display_z }}x multiplier</span>
             {{ endif }}
         </button>
         {{ endfor }}
