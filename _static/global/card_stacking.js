@@ -24,15 +24,10 @@
     const timeLeftDisplay = document.getElementById('cs-time-left-display');
     const pointsDisplay = document.getElementById('cs-points-display');
     const cueDisplay = document.getElementById('cs-cue');
-    const configuredChoiceSubmitDelayMs = Number(task.dataset.clickFeedbackMs || 100);
-    const choiceSubmitDelayMs = Number.isFinite(configuredChoiceSubmitDelayMs)
-        ? Math.max(0, configuredChoiceSubmitDelayMs)
-        : 100;
-    const configuredBonusCueDurationMs = Number(task.dataset.bonusCueDurationMs || 100);
-    const bonusCueDurationMs = Number.isFinite(configuredBonusCueDurationMs)
-        ? Math.max(0, configuredBonusCueDurationMs)
-        : 100;
-    const cueSubmitBufferMs = 80;
+    const configuredFeedbackDelayMs = Number(task.dataset.clickFeedbackMs || 1100);
+    const feedbackDelayMs = Number.isFinite(configuredFeedbackDelayMs)
+        ? Math.max(0, configuredFeedbackDelayMs)
+        : 1100;
     let lastActivityAt = Date.now();
     let submitted = false;
 
@@ -75,16 +70,30 @@
         return Number.isFinite(parsed) ? parsed : 0;
     }
 
+    function ordinal(value) {
+        const number = Math.max(0, Math.floor(Number(value) || 0));
+        const mod100 = number % 100;
+        if (mod100 >= 11 && mod100 <= 13) {
+            return `${number}th`;
+        }
+        switch (number % 10) {
+            case 1:
+                return `${number}st`;
+            case 2:
+                return `${number}nd`;
+            case 3:
+                return `${number}rd`;
+            default:
+                return `${number}th`;
+        }
+    }
+
     function showCue(message, className) {
-        if (!cueDisplay || !message || bonusCueDurationMs <= 0) {
+        if (!cueDisplay || !message) {
             return;
         }
         cueDisplay.textContent = message;
         cueDisplay.className = `cs-cue cs-cue-visible ${className || ''}`.trim();
-        window.setTimeout(() => {
-            cueDisplay.className = 'cs-cue';
-            cueDisplay.textContent = '';
-        }, bonusCueDurationMs);
     }
 
     function taskDurationMs() {
@@ -167,18 +176,20 @@
             button.disabled = true;
             button.classList.toggle('cs-card-selected', button === cardButton);
         });
-        let cueShown = false;
         if (multiplierApplied) {
-            showCue(`${formatPoints(cardZ)}x multiplier applied`, 'cs-cue-multiplier');
-            cueShown = true;
+            showCue(
+                `+${formatPoints(cardPointsAdded)} points -- ${formatPoints(cardZ)}x multiplier applied`,
+                'cs-cue-multiplier'
+            );
         } else if (mainBonusTriggered) {
-            showCue(`Main-card bonus added: +${formatPoints(mainBonusPointsAdded)} points`, 'cs-cue-main-bonus');
-            cueShown = true;
+            showCue(
+                `+${formatPoints(mainBonusPointsAdded)} points -- collected ${ordinal(bonusThresholdMainCards)} main cards`,
+                'cs-cue-main-bonus'
+            );
+        } else if (!isMain) {
+            showCue(`+${formatPoints(cardPointsAdded)} points`, 'cs-cue-points');
         }
-        window.setTimeout(
-            () => form.submit(),
-            Math.max(choiceSubmitDelayMs, cueShown ? bonusCueDurationMs + cueSubmitBufferMs : 0)
-        );
+        window.setTimeout(() => form.submit(), feedbackDelayMs);
     }
 
     function submitInactiveTimeout() {

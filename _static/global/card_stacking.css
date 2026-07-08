@@ -65,6 +65,11 @@
     text-shadow: 0 0 18px rgba(245, 158, 11, 0.38);
 }
 
+.cs-cue-points {
+    color: #1d4ed8;
+    text-shadow: 0 0 14px rgba(59, 130, 246, 0.28);
+}
+
 .cs-cue-main-bonus {
     display: block;
     width: fit-content;

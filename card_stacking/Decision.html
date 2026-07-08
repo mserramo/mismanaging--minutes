@@ -1,5 +1,5 @@
 {{ block content }}
-<link rel="stylesheet" href="{{ static 'global/card_stacking.css' }}?v=20260708-status-layout">
+<link rel="stylesheet" href="{{ static 'global/card_stacking.css' }}?v=20260708-common-feedback-v2">
 
 <div
     class="cs-task"
@@ -10,7 +10,6 @@
     data-click-feedback-ms="{{ click_feedback_ms }}"
     data-bonus-threshold-main-cards="{{ bonus_threshold_main_cards }}"
     data-main-bonus-points="{{ main_bonus_points }}"
-    data-bonus-cue-duration-ms="{{ bonus_cue_duration_ms }}"
     data-points-accumulated="{{ points_accumulated }}"
     data-main-cards-collected="{{ main_cards_collected_so_far }}"
     data-main-bonus-triggered="{{ main_bonus_already_triggered }}"
@@ -77,5 +76,5 @@
     </div>
 </div>
 
-<script src="{{ static 'global/card_stacking.js' }}?v=20260708-status-layout"></script>
+<script src="{{ static 'global/card_stacking.js' }}?v=20260708-common-feedback-v2"></script>
 {{ endblock }}

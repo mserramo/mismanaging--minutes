@@ -34,7 +34,6 @@ PARTICIPANT_FIELDS = [
     'card_stacking_click_feedback_ms',
     'card_stacking_bonus_threshold_main_cards',
     'card_stacking_main_bonus_points',
-    'card_stacking_bonus_cue_duration_ms',
     'card_stacking_points_accumulated',
     'card_stacking_main_bonus_triggered',
     'card_stacking_main_bonus_trigger_round',

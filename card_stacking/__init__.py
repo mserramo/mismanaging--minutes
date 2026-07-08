@@ -21,13 +21,11 @@ class C(BaseConstants):
     FASTEST_DECISION_SECONDS = 0.5
     NUM_ROUNDS = int(MAX_DURATION_MINUTES * 60 / FASTEST_DECISION_SECONDS)
 
-    DEFAULT_DURATION_MINUTES = 5
+    DEFAULT_DURATION_MINUTES = 1
     DEFAULT_NUM_SCREEN_TYPES = 50
     DEFAULT_SCREEN_TYPES_FILE = 'screen_types.txt'
-    DEFAULT_CLICK_FEEDBACK_MS = 100
-    MAX_CLICK_FEEDBACK_MS = 2000
-    DEFAULT_BONUS_CUE_DURATION_MS = 100
-    MAX_BONUS_CUE_DURATION_MS = 2000
+    DEFAULT_CLICK_FEEDBACK_MS = 1100
+    MAX_CLICK_FEEDBACK_MS = 5000
     MAIN_BONUS_THRESHOLD_PER_MINUTE = 50
     MAIN_BONUS_POINTS_PER_MAIN_CARD = 15
 
@@ -57,14 +55,14 @@ class Player(BasePlayer):
     )
     setup_show_elapsed_minutes = models.BooleanField(
         label='Show time-left counter to participant?',
-        initial=False,
+        initial=True,
     )
     setup_show_main_cards_collected = models.BooleanField(
         label='Show main-card counter to participant?',
-        initial=False,
+        initial=True,
     )
     setup_click_feedback_ms = models.IntegerField(
-        label='Click feedback duration in milliseconds',
+        label='Common post-click feedback delay in milliseconds',
         initial=C.DEFAULT_CLICK_FEEDBACK_MS,
     )
     setup_bonus_threshold_main_cards = models.IntegerField(
@@ -79,11 +77,6 @@ class Player(BasePlayer):
             * C.MAIN_BONUS_POINTS_PER_MAIN_CARD
         ),
     )
-    setup_bonus_cue_duration_ms = models.IntegerField(
-        label='Bonus/multiplier cue duration in milliseconds',
-        initial=C.DEFAULT_BONUS_CUE_DURATION_MS,
-    )
-
     task_duration_minutes = models.FloatField()
     num_screen_types = models.IntegerField()
     show_elapsed_minutes = models.BooleanField()
@@ -91,7 +84,6 @@ class Player(BasePlayer):
     click_feedback_ms = models.IntegerField()
     bonus_threshold_main_cards = models.IntegerField()
     main_bonus_points = models.FloatField()
-    bonus_cue_duration_ms = models.IntegerField()
     inactivity_seconds = models.IntegerField()
     screen_type_index = models.IntegerField(blank=True)
 
@@ -328,12 +320,12 @@ def participant_num_screen_types(participant):
 
 
 def participant_show_elapsed_minutes(participant):
-    return bool(_extra_field(participant, 'card_stacking_show_elapsed_minutes', False))
+    return bool(_extra_field(participant, 'card_stacking_show_elapsed_minutes', True))
 
 
 def participant_show_main_cards_collected(participant):
     return bool(
-        _extra_field(participant, 'card_stacking_show_main_cards_collected', False)
+        _extra_field(participant, 'card_stacking_show_main_cards_collected', True)
     )
 
 
@@ -363,16 +355,6 @@ def participant_main_bonus_points(participant):
             participant,
             'card_stacking_main_bonus_points',
             default_main_bonus_points(participant_bonus_threshold_main_cards(participant)),
-        )
-    )
-
-
-def participant_bonus_cue_duration_ms(participant):
-    return int(
-        _extra_field(
-            participant,
-            'card_stacking_bonus_cue_duration_ms',
-            C.DEFAULT_BONUS_CUE_DURATION_MS,
         )
     )
 
@@ -466,7 +448,6 @@ def set_round_fields(player):
         player.participant
     )
     player.main_bonus_points = participant_main_bonus_points(player.participant)
-    player.bonus_cue_duration_ms = participant_bonus_cue_duration_ms(player.participant)
     player.inactivity_seconds = int(_session_config(player, 'inactivity_seconds', 30))
     player.screen_type_index = screen_type['type_index']
 
@@ -490,8 +471,8 @@ def creating_session(subsession):
                 C.DEFAULT_DURATION_MINUTES
             )
             player.participant.card_stacking_num_screen_types = num_screen_types
-            player.participant.card_stacking_show_elapsed_minutes = False
-            player.participant.card_stacking_show_main_cards_collected = False
+            player.participant.card_stacking_show_elapsed_minutes = True
+            player.participant.card_stacking_show_main_cards_collected = True
             player.participant.card_stacking_click_feedback_ms = (
                 C.DEFAULT_CLICK_FEEDBACK_MS
             )
@@ -502,9 +483,6 @@ def creating_session(subsession):
                 default_main_bonus_points(
                     player.participant.card_stacking_bonus_threshold_main_cards
                 )
-            )
-            player.participant.card_stacking_bonus_cue_duration_ms = (
-                C.DEFAULT_BONUS_CUE_DURATION_MS
             )
             player.participant.card_stacking_points_accumulated = 0
             player.participant.card_stacking_main_bonus_triggered = False
@@ -528,7 +506,6 @@ class DevelopmentSetup(Page):
         'setup_click_feedback_ms',
         'setup_bonus_threshold_main_cards',
         'setup_main_bonus_points',
-        'setup_bonus_cue_duration_ms',
     ]
 
     @staticmethod
@@ -541,7 +518,6 @@ class DevelopmentSetup(Page):
         click_feedback_ms = values.get('setup_click_feedback_ms')
         bonus_threshold_main_cards = values.get('setup_bonus_threshold_main_cards')
         main_bonus_points = values.get('setup_main_bonus_points')
-        bonus_cue_duration_ms = values.get('setup_bonus_cue_duration_ms')
         if duration_minutes is None:
             return 'Enter the task duration in minutes.'
         if duration_minutes <= 0:
@@ -549,12 +525,12 @@ class DevelopmentSetup(Page):
         if duration_minutes > C.MAX_DURATION_MINUTES:
             return f'Task duration cannot exceed {C.MAX_DURATION_MINUTES} minutes.'
         if click_feedback_ms is None:
-            return 'Enter the click feedback duration in milliseconds.'
+            return 'Enter the common post-click feedback delay in milliseconds.'
         if click_feedback_ms < 0:
-            return 'Click feedback duration cannot be negative.'
+            return 'Common post-click feedback delay cannot be negative.'
         if click_feedback_ms > C.MAX_CLICK_FEEDBACK_MS:
             return (
-                f'Click feedback duration cannot exceed '
+                f'Common post-click feedback delay cannot exceed '
                 f'{C.MAX_CLICK_FEEDBACK_MS} milliseconds.'
             )
         if bonus_threshold_main_cards is None:
@@ -565,15 +541,6 @@ class DevelopmentSetup(Page):
             return 'Enter the main-card bonus points.'
         if main_bonus_points < 0:
             return 'Main-card bonus points cannot be negative.'
-        if bonus_cue_duration_ms is None:
-            return 'Enter the bonus/multiplier cue duration in milliseconds.'
-        if bonus_cue_duration_ms < 0:
-            return 'Bonus/multiplier cue duration cannot be negative.'
-        if bonus_cue_duration_ms > C.MAX_BONUS_CUE_DURATION_MS:
-            return (
-                f'Bonus/multiplier cue duration cannot exceed '
-                f'{C.MAX_BONUS_CUE_DURATION_MS} milliseconds.'
-            )
 
     @staticmethod
     def before_next_page(player, timeout_happened):
@@ -594,9 +561,6 @@ class DevelopmentSetup(Page):
         )
         player.participant.card_stacking_main_bonus_points = (
             player.setup_main_bonus_points
-        )
-        player.participant.card_stacking_bonus_cue_duration_ms = (
-            player.setup_bonus_cue_duration_ms
         )
         player.participant.card_stacking_points_accumulated = 0
         player.participant.card_stacking_main_bonus_triggered = False
@@ -658,7 +622,6 @@ class Decision(Page):
             click_feedback_ms=player.click_feedback_ms,
             bonus_threshold_main_cards=player.bonus_threshold_main_cards,
             main_bonus_points=player.main_bonus_points,
-            bonus_cue_duration_ms=player.bonus_cue_duration_ms,
             initial_time_left_text=format_clock_seconds(task_duration_seconds),
             show_elapsed_minutes=player.show_elapsed_minutes,
             show_main_cards_collected=player.show_main_cards_collected,
@@ -883,7 +846,6 @@ class Results(Page):
             click_feedback_ms=player.click_feedback_ms,
             bonus_threshold_main_cards=player.bonus_threshold_main_cards,
             main_bonus_points=format_card_value(player.main_bonus_points),
-            bonus_cue_duration_ms=player.bonus_cue_duration_ms,
             answered_rounds=answered_rounds,
             main_cards_collected=main_cards_collected,
             points_accumulated=format_card_value(

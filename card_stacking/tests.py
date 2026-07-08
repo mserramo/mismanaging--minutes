@@ -48,7 +48,6 @@ class PlayerBot(Bot):
                     setup_click_feedback_ms=C.DEFAULT_CLICK_FEEDBACK_MS,
                     setup_bonus_threshold_main_cards=self.test_bonus_threshold,
                     setup_main_bonus_points=self.test_main_bonus_points,
-                    setup_bonus_cue_duration_ms=C.DEFAULT_BONUS_CUE_DURATION_MS,
                 ),
                 check_html=False,
             )
