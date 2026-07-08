@@ -24,6 +24,7 @@ class PlayerBot(Bot):
                     setup_duration_minutes=0.05,
                     setup_show_elapsed_minutes=self.case == 'counters',
                     setup_show_main_cards_collected=self.case == 'counters',
+                    setup_click_feedback_ms=C.DEFAULT_CLICK_FEEDBACK_MS,
                 ),
                 check_html=False,
             )

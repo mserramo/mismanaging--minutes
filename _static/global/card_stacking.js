@@ -15,7 +15,10 @@
     );
     const inactivityDisplay = document.getElementById('cs-inactivity-display');
     const timeLeftDisplay = document.getElementById('cs-time-left-display');
-    const choiceSubmitDelayMs = 220;
+    const configuredChoiceSubmitDelayMs = Number(task.dataset.clickFeedbackMs || 160);
+    const choiceSubmitDelayMs = Number.isFinite(configuredChoiceSubmitDelayMs)
+        ? Math.max(0, configuredChoiceSubmitDelayMs)
+        : 160;
     let lastActivityAt = Date.now();
     let submitted = false;
 

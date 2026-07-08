@@ -24,6 +24,8 @@ class C(BaseConstants):
     DEFAULT_DURATION_MINUTES = 5
     DEFAULT_NUM_SCREEN_TYPES = 50
     DEFAULT_SCREEN_TYPES_FILE = 'screen_types.txt'
+    DEFAULT_CLICK_FEEDBACK_MS = 160
+    MAX_CLICK_FEEDBACK_MS = 2000
 
     MAIN_CARD_ID = 'main'
 
@@ -57,11 +59,16 @@ class Player(BasePlayer):
         label='Show main-card counter to participant?',
         initial=False,
     )
+    setup_click_feedback_ms = models.IntegerField(
+        label='Click feedback duration in milliseconds',
+        initial=C.DEFAULT_CLICK_FEEDBACK_MS,
+    )
 
     task_duration_minutes = models.FloatField()
     num_screen_types = models.IntegerField()
     show_elapsed_minutes = models.BooleanField()
     show_main_cards_collected = models.BooleanField()
+    click_feedback_ms = models.IntegerField()
     inactivity_seconds = models.IntegerField()
     screen_type_index = models.IntegerField(blank=True)
 
@@ -291,6 +298,16 @@ def participant_show_main_cards_collected(participant):
     )
 
 
+def participant_click_feedback_ms(participant):
+    return int(
+        _extra_field(
+            participant,
+            'card_stacking_click_feedback_ms',
+            C.DEFAULT_CLICK_FEEDBACK_MS,
+        )
+    )
+
+
 def is_inactive(player):
     return bool(_extra_field(player.participant, 'card_stacking_inactive', False))
 
@@ -367,6 +384,7 @@ def set_round_fields(player):
     player.show_main_cards_collected = participant_show_main_cards_collected(
         player.participant
     )
+    player.click_feedback_ms = participant_click_feedback_ms(player.participant)
     player.inactivity_seconds = int(_session_config(player, 'inactivity_seconds', 30))
     player.screen_type_index = screen_type['type_index']
 
@@ -392,6 +410,9 @@ def creating_session(subsession):
             player.participant.card_stacking_num_screen_types = num_screen_types
             player.participant.card_stacking_show_elapsed_minutes = False
             player.participant.card_stacking_show_main_cards_collected = False
+            player.participant.card_stacking_click_feedback_ms = (
+                C.DEFAULT_CLICK_FEEDBACK_MS
+            )
             player.participant.card_stacking_inactive = False
             player.participant.card_stacking_inactive_round = None
             player.participant.card_stacking_time_finished = False
@@ -408,6 +429,7 @@ class DevelopmentSetup(Page):
         'setup_duration_minutes',
         'setup_show_elapsed_minutes',
         'setup_show_main_cards_collected',
+        'setup_click_feedback_ms',
     ]
 
     @staticmethod
@@ -417,12 +439,22 @@ class DevelopmentSetup(Page):
     @staticmethod
     def error_message(player, values):
         duration_minutes = values.get('setup_duration_minutes')
+        click_feedback_ms = values.get('setup_click_feedback_ms')
         if duration_minutes is None:
             return 'Enter the task duration in minutes.'
         if duration_minutes <= 0:
             return 'Task duration must be greater than 0 minutes.'
         if duration_minutes > C.MAX_DURATION_MINUTES:
             return f'Task duration cannot exceed {C.MAX_DURATION_MINUTES} minutes.'
+        if click_feedback_ms is None:
+            return 'Enter the click feedback duration in milliseconds.'
+        if click_feedback_ms < 0:
+            return 'Click feedback duration cannot be negative.'
+        if click_feedback_ms > C.MAX_CLICK_FEEDBACK_MS:
+            return (
+                f'Click feedback duration cannot exceed '
+                f'{C.MAX_CLICK_FEEDBACK_MS} milliseconds.'
+            )
 
     @staticmethod
     def before_next_page(player, timeout_happened):
@@ -434,6 +466,9 @@ class DevelopmentSetup(Page):
         )
         player.participant.card_stacking_show_main_cards_collected = (
             player.setup_show_main_cards_collected
+        )
+        player.participant.card_stacking_click_feedback_ms = (
+            player.setup_click_feedback_ms
         )
         player.participant.card_stacking_time_finished = False
         player.participant.card_stacking_time_finished_round = None
@@ -481,6 +516,7 @@ class Decision(Page):
             round_number=player.round_number,
             task_timer_key=f'card_stacking_task_started_at_{player.participant.code}',
             task_duration_seconds=task_duration_seconds,
+            click_feedback_ms=player.click_feedback_ms,
             initial_time_left_text=format_clock_seconds(task_duration_seconds),
             show_elapsed_minutes=player.show_elapsed_minutes,
             show_main_cards_collected=player.show_main_cards_collected,
@@ -624,6 +660,7 @@ class Results(Page):
             num_screen_types=player.num_screen_types,
             show_elapsed_minutes=player.show_elapsed_minutes,
             show_main_cards_collected=player.show_main_cards_collected,
+            click_feedback_ms=player.click_feedback_ms,
             answered_rounds=answered_rounds,
             main_cards_collected=main_cards_collected,
             color_order_labels=', '.join(color_order_labels(player.participant)),

@@ -31,6 +31,7 @@ PARTICIPANT_FIELDS = [
     'card_stacking_screen_sequence_json',
     'card_stacking_show_elapsed_minutes',
     'card_stacking_show_main_cards_collected',
+    'card_stacking_click_feedback_ms',
     'card_stacking_inactive',
     'card_stacking_inactive_round',
     'card_stacking_time_finished',
