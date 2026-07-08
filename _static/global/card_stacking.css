@@ -12,10 +12,16 @@
 .cs-status {
     display: flex;
     justify-content: flex-end;
-    gap: 16px;
+    flex-wrap: wrap;
+    gap: 8px 16px;
     margin-bottom: 18px;
     color: #334155;
     font-weight: 600;
+    text-align: right;
+}
+
+.cs-status span {
+    white-space: nowrap;
 }
 
 .cs-card-row {

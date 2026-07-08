@@ -27,10 +27,10 @@
 
     <div class="cs-status">
         {{ if show_elapsed_minutes }}
-        <span id="cs-elapsed-display">Elapsed: 00:00</span>
+        <span id="cs-time-left-display">Time left: 00:00</span>
         {{ endif }}
         {{ if show_main_cards_collected }}
-        <span id="cs-main-card-display">Main cards: {{ main_cards_collected_so_far }}</span>
+        <span id="cs-main-card-display">Main cards collected: {{ main_cards_collected_so_far }}</span>
         {{ endif }}
         <span id="cs-inactivity-display"></span>
     </div>

@@ -52,7 +52,7 @@ class Player(BasePlayer):
         initial=C.DEFAULT_NUM_SCREEN_TYPES,
     )
     setup_show_elapsed_minutes = models.BooleanField(
-        label='Show elapsed-time counter to participant?',
+        label='Show time-left counter to participant?',
         initial=False,
     )
     setup_show_main_cards_collected = models.BooleanField(

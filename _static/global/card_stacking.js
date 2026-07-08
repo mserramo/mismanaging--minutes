@@ -10,9 +10,11 @@
     const taskTimerKey = task.dataset.taskTimerKey || 'card_stacking_task_started_at';
     const inactivitySeconds = Number(task.dataset.inactivitySeconds || 30);
     const taskDurationSeconds = Number(task.dataset.taskDurationSeconds || 0);
-    const showElapsedMinutes = task.dataset.showElapsedMinutes === 'True';
+    const showTimeLeft = ['1', 'true', 'yes'].includes(
+        String(task.dataset.showElapsedMinutes || '').toLowerCase()
+    );
     const inactivityDisplay = document.getElementById('cs-inactivity-display');
-    const elapsedDisplay = document.getElementById('cs-elapsed-display');
+    const timeLeftDisplay = document.getElementById('cs-time-left-display');
     let lastActivityAt = Date.now();
     let submitted = false;
 
@@ -45,6 +47,14 @@
 
     function taskDurationMs() {
         return Math.max(0, Math.round(taskDurationSeconds * 1000));
+    }
+
+    function taskTimeLeftMs() {
+        const durationMs = taskDurationMs();
+        if (durationMs <= 0) {
+            return 0;
+        }
+        return Math.max(0, durationMs - taskElapsedMs());
     }
 
     function durationExpired() {
@@ -118,8 +128,8 @@
     }
 
     function updateInactivityClock() {
-        if (showElapsedMinutes && elapsedDisplay) {
-            elapsedDisplay.textContent = `Elapsed: ${formatElapsed(taskElapsedMs())}`;
+        if (showTimeLeft && timeLeftDisplay) {
+            timeLeftDisplay.textContent = `Time left: ${formatElapsed(taskTimeLeftMs())}`;
         }
         if (durationExpired()) {
             submitTaskDurationTimeout();
