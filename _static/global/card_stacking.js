@@ -15,6 +15,7 @@
     );
     const inactivityDisplay = document.getElementById('cs-inactivity-display');
     const timeLeftDisplay = document.getElementById('cs-time-left-display');
+    const choiceSubmitDelayMs = 220;
     let lastActivityAt = Date.now();
     let submitted = false;
 
@@ -71,6 +72,8 @@
             return;
         }
         submitted = true;
+        const clickedResponseTimeMs = responseTimeMs();
+        const clickedTaskElapsedMs = taskElapsedMs();
 
         setValue('chosen_card_id', cardButton.dataset.cardId);
         setValue('chosen_card_position', cardButton.dataset.position);
@@ -78,11 +81,16 @@
         setValue('chosen_x', cardButton.dataset.x);
         setValue('chosen_y', cardButton.dataset.y);
         setValue('chosen_z', cardButton.dataset.z);
-        setValue('response_time_ms', responseTimeMs());
-        setValue('task_elapsed_ms', taskElapsedMs());
+        setValue('response_time_ms', clickedResponseTimeMs);
+        setValue('task_elapsed_ms', clickedTaskElapsedMs);
         setValue('timed_out_inactive', 'False');
         setValue('timed_out_task_duration', 'False');
-        form.submit();
+
+        document.querySelectorAll('.cs-card').forEach((button) => {
+            button.disabled = true;
+            button.classList.toggle('cs-card-selected', button === cardButton);
+        });
+        window.setTimeout(() => form.submit(), choiceSubmitDelayMs);
     }
 
     function submitInactiveTimeout() {

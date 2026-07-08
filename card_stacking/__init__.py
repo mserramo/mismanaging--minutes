@@ -478,7 +478,6 @@ class Decision(Page):
         return dict(
             cards=cards,
             inactivity_seconds=player.inactivity_seconds,
-            progress_text=f'Screen {player.round_number}',
             round_number=player.round_number,
             task_timer_key=f'card_stacking_task_started_at_{player.participant.code}',
             task_duration_seconds=task_duration_seconds,

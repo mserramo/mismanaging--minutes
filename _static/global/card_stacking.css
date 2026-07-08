@@ -31,6 +31,10 @@
     align-items: stretch;
 }
 
+.cs-card-row-new {
+    animation: cs-new-screen 260ms ease-out;
+}
+
 .cs-card {
     min-height: 210px;
     border: 3px solid var(--card-color);
@@ -44,12 +48,26 @@
     flex-direction: column;
     justify-content: space-between;
     box-shadow: 0 1px 3px rgba(15, 23, 42, 0.18);
+    transition:
+        box-shadow 120ms ease,
+        transform 120ms ease;
 }
 
 .cs-card:hover,
 .cs-card:focus {
     outline: 3px solid color-mix(in srgb, var(--card-color) 45%, white);
     outline-offset: 2px;
+}
+
+.cs-card-selected {
+    box-shadow:
+        0 0 0 5px color-mix(in srgb, var(--card-color) 26%, white),
+        0 14px 24px rgba(15, 23, 42, 0.22);
+    transform: translateY(-3px) scale(1.015);
+}
+
+.cs-card:disabled {
+    cursor: default;
 }
 
 .cs-card-label {
@@ -148,6 +166,18 @@
 .cs-debug-end {
     color: #334155;
     font-weight: 650;
+}
+
+@keyframes cs-new-screen {
+    0% {
+        opacity: 0.68;
+        transform: translateY(8px);
+    }
+
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 @media (min-width: 920px) {
