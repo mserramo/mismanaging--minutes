@@ -10,15 +10,28 @@
     const taskTimerKey = task.dataset.taskTimerKey || 'card_stacking_task_started_at';
     const inactivitySeconds = Number(task.dataset.inactivitySeconds || 30);
     const taskDurationSeconds = Number(task.dataset.taskDurationSeconds || 0);
+    const bonusThresholdMainCards = Number(task.dataset.bonusThresholdMainCards || 0);
+    const mainBonusPoints = Number(task.dataset.mainBonusPoints || 0);
+    const pointsAccumulated = Number(task.dataset.pointsAccumulated || 0);
+    const mainCardsCollected = Number(task.dataset.mainCardsCollected || 0);
+    const mainBonusAlreadyTriggered = ['1', 'true', 'yes'].includes(
+        String(task.dataset.mainBonusTriggered || '').toLowerCase()
+    );
     const showTimeLeft = ['1', 'true', 'yes'].includes(
         String(task.dataset.showElapsedMinutes || '').toLowerCase()
     );
     const inactivityDisplay = document.getElementById('cs-inactivity-display');
     const timeLeftDisplay = document.getElementById('cs-time-left-display');
-    const configuredChoiceSubmitDelayMs = Number(task.dataset.clickFeedbackMs || 100);
+    const pointsDisplay = document.getElementById('cs-points-display');
+    const cueDisplay = document.getElementById('cs-cue');
+    const configuredChoiceSubmitDelayMs = Number(task.dataset.clickFeedbackMs || 50);
     const choiceSubmitDelayMs = Number.isFinite(configuredChoiceSubmitDelayMs)
         ? Math.max(0, configuredChoiceSubmitDelayMs)
-        : 100;
+        : 50;
+    const configuredBonusCueDurationMs = Number(task.dataset.bonusCueDurationMs || 50);
+    const bonusCueDurationMs = Number.isFinite(configuredBonusCueDurationMs)
+        ? Math.max(0, configuredBonusCueDurationMs)
+        : 50;
     let lastActivityAt = Date.now();
     let submitted = false;
 
@@ -49,6 +62,30 @@
         return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
     }
 
+    function formatPoints(value) {
+        if (!Number.isFinite(value)) {
+            return '0';
+        }
+        return Number.isInteger(value) ? String(value) : value.toFixed(1);
+    }
+
+    function parseCardNumber(value) {
+        const parsed = Number(value);
+        return Number.isFinite(parsed) ? parsed : 0;
+    }
+
+    function showCue(message, className) {
+        if (!cueDisplay || !message || bonusCueDurationMs <= 0) {
+            return;
+        }
+        cueDisplay.textContent = message;
+        cueDisplay.className = `cs-cue cs-cue-visible ${className || ''}`.trim();
+        window.setTimeout(() => {
+            cueDisplay.className = 'cs-cue';
+            cueDisplay.textContent = '';
+        }, bonusCueDurationMs);
+    }
+
     function taskDurationMs() {
         return Math.max(0, Math.round(taskDurationSeconds * 1000));
     }
@@ -77,23 +114,67 @@
         submitted = true;
         const clickedResponseTimeMs = responseTimeMs();
         const clickedTaskElapsedMs = taskElapsedMs();
+        const isMain = cardButton.dataset.isMain === 'True';
+        const cardX = parseCardNumber(cardButton.dataset.x);
+        const cardY = parseCardNumber(cardButton.dataset.y);
+        const cardZ = parseCardNumber(cardButton.dataset.z);
+        let cardPointsAdded = 0;
+        let multiplierApplied = false;
+        let mainBonusTriggered = false;
+        let mainBonusPointsAdded = 0;
+
+        if (isMain) {
+            const nextMainCardsCollected = mainCardsCollected + 1;
+            mainBonusTriggered = (
+                !mainBonusAlreadyTriggered
+                && bonusThresholdMainCards > 0
+                && nextMainCardsCollected >= bonusThresholdMainCards
+            );
+            if (mainBonusTriggered) {
+                mainBonusPointsAdded = mainBonusPoints;
+            }
+        } else {
+            multiplierApplied = Math.random() < cardY / 100;
+            cardPointsAdded = multiplierApplied ? cardX * cardZ : cardX;
+        }
+
+        const pointsAfter = pointsAccumulated + cardPointsAdded + mainBonusPointsAdded;
 
         setValue('chosen_card_id', cardButton.dataset.cardId);
         setValue('chosen_card_position', cardButton.dataset.position);
-        setValue('chosen_is_main', cardButton.dataset.isMain === 'True' ? 'True' : 'False');
+        setValue('chosen_is_main', isMain ? 'True' : 'False');
         setValue('chosen_x', cardButton.dataset.x);
         setValue('chosen_y', cardButton.dataset.y);
         setValue('chosen_z', cardButton.dataset.z);
         setValue('response_time_ms', clickedResponseTimeMs);
         setValue('task_elapsed_ms', clickedTaskElapsedMs);
+        setValue('points_before', pointsAccumulated);
+        setValue('card_points_added', cardPointsAdded);
+        setValue('multiplier_applied', multiplierApplied ? 'True' : 'False');
+        setValue('multiplier_y', isMain ? '' : cardY);
+        setValue('multiplier_z', isMain ? '' : cardZ);
+        setValue('main_bonus_triggered_this_round', mainBonusTriggered ? 'True' : 'False');
+        setValue('main_bonus_points_added', mainBonusPointsAdded);
+        setValue('points_after', pointsAfter);
         setValue('timed_out_inactive', 'False');
         setValue('timed_out_task_duration', 'False');
+        if (pointsDisplay) {
+            pointsDisplay.textContent = `Points accumulated: ${formatPoints(pointsAfter)}`;
+        }
 
         document.querySelectorAll('.cs-card').forEach((button) => {
             button.disabled = true;
             button.classList.toggle('cs-card-selected', button === cardButton);
         });
-        window.setTimeout(() => form.submit(), choiceSubmitDelayMs);
+        if (multiplierApplied) {
+            showCue(`${formatPoints(cardZ)}x multiplier applied`, 'cs-cue-multiplier');
+        } else if (mainBonusTriggered) {
+            showCue(`Main-card bonus added: +${formatPoints(mainBonusPointsAdded)} points`, 'cs-cue-bonus');
+        }
+        window.setTimeout(
+            () => form.submit(),
+            Math.max(choiceSubmitDelayMs, multiplierApplied || mainBonusTriggered ? bonusCueDurationMs : 0)
+        );
     }
 
     function submitInactiveTimeout() {
@@ -110,6 +191,14 @@
         setValue('chosen_z', '');
         setValue('response_time_ms', responseTimeMs());
         setValue('task_elapsed_ms', taskElapsedMs());
+        setValue('points_before', pointsAccumulated);
+        setValue('card_points_added', '');
+        setValue('multiplier_applied', '');
+        setValue('multiplier_y', '');
+        setValue('multiplier_z', '');
+        setValue('main_bonus_triggered_this_round', 'False');
+        setValue('main_bonus_points_added', '');
+        setValue('points_after', pointsAccumulated);
         setValue('timed_out_inactive', 'True');
         setValue('timed_out_task_duration', 'False');
         form.submit();
@@ -129,6 +218,14 @@
         setValue('chosen_z', '');
         setValue('response_time_ms', responseTimeMs());
         setValue('task_elapsed_ms', taskElapsedMs());
+        setValue('points_before', pointsAccumulated);
+        setValue('card_points_added', '');
+        setValue('multiplier_applied', '');
+        setValue('multiplier_y', '');
+        setValue('multiplier_z', '');
+        setValue('main_bonus_triggered_this_round', 'False');
+        setValue('main_bonus_points_added', '');
+        setValue('points_after', pointsAccumulated);
         setValue('timed_out_inactive', 'False');
         setValue('timed_out_task_duration', 'True');
         form.submit();

@@ -18,4 +18,41 @@ Development setup
 
     {{ next_button }}
 </div>
+
+<script>
+    (function () {
+        const durationInput = document.getElementById('id_setup_duration_minutes');
+        const thresholdInput = document.getElementById('id_setup_bonus_threshold_main_cards');
+        const pointsInput = document.getElementById('id_setup_main_bonus_points');
+        if (!durationInput || !thresholdInput || !pointsInput) {
+            return;
+        }
+
+        const thresholdPerMinute = 50;
+        const pointsPerMainCard = 15;
+
+        function formatNumber(value) {
+            return Number.isInteger(value) ? String(value) : value.toFixed(1);
+        }
+
+        function defaultThreshold() {
+            const duration = Number(durationInput.value || 0);
+            return Math.max(1, Math.round(duration * thresholdPerMinute));
+        }
+
+        function defaultPoints() {
+            const threshold = Number(thresholdInput.value || 0);
+            return Math.max(0, threshold * pointsPerMainCard);
+        }
+
+        durationInput.addEventListener('input', () => {
+            thresholdInput.value = defaultThreshold();
+            pointsInput.value = formatNumber(defaultPoints());
+        });
+
+        thresholdInput.addEventListener('input', () => {
+            pointsInput.value = formatNumber(defaultPoints());
+        });
+    })();
+</script>
 {{ endblock }}

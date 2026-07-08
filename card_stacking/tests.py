@@ -6,12 +6,33 @@ from . import C, Decision, DevelopmentSetup, InactivityLoss, Intro
 
 class PlayerBot(Bot):
     cases = ['complete', 'counters', 'main_complete', 'inactive']
+    test_bonus_threshold = 2
+    test_main_bonus_points = 30
 
     def _participant_time_finished(self):
         try:
             return self.player.participant.card_stacking_time_finished
         except KeyError:
             return False
+
+    def _participant_points(self):
+        try:
+            return self.player.participant.card_stacking_points_accumulated
+        except KeyError:
+            return 0
+
+    def _participant_bonus_triggered(self):
+        try:
+            return self.player.participant.card_stacking_main_bonus_triggered
+        except KeyError:
+            return False
+
+    def _previous_main_count(self):
+        return sum(
+            1
+            for previous_player in self.player.in_previous_rounds()
+            if previous_player.field_maybe_none('chosen_is_main')
+        )
 
     def play_round(self):
         if self._participant_time_finished():
@@ -25,6 +46,9 @@ class PlayerBot(Bot):
                     setup_show_elapsed_minutes=self.case == 'counters',
                     setup_show_main_cards_collected=self.case == 'counters',
                     setup_click_feedback_ms=C.DEFAULT_CLICK_FEEDBACK_MS,
+                    setup_bonus_threshold_main_cards=self.test_bonus_threshold,
+                    setup_main_bonus_points=self.test_main_bonus_points,
+                    setup_bonus_cue_duration_ms=C.DEFAULT_BONUS_CUE_DURATION_MS,
                 ),
                 check_html=False,
             )
@@ -51,6 +75,14 @@ class PlayerBot(Bot):
                         chosen_z='',
                         response_time_ms=30000,
                         task_elapsed_ms=30000,
+                        points_before=self._participant_points(),
+                        card_points_added='',
+                        multiplier_applied='',
+                        multiplier_y='',
+                        multiplier_z='',
+                        main_bonus_triggered_this_round=False,
+                        main_bonus_points_added='',
+                        points_after=self._participant_points(),
                         timed_out_inactive=True,
                         timed_out_task_duration=False,
                     ),
@@ -100,6 +132,14 @@ class PlayerBot(Bot):
                     chosen_z='',
                     response_time_ms=1000,
                     task_elapsed_ms=3100,
+                    points_before=self._participant_points(),
+                    card_points_added='',
+                    multiplier_applied='',
+                    multiplier_y='',
+                    multiplier_z='',
+                    main_bonus_triggered_this_round=False,
+                    main_bonus_points_added='',
+                    points_after=self._participant_points(),
                     timed_out_inactive=False,
                     timed_out_task_duration=True,
                 ),
@@ -111,6 +151,17 @@ class PlayerBot(Bot):
             chosen_card = next(card for card in cards if card['is_main'])
         else:
             chosen_card = next(card for card in cards if not card['is_main'])
+        points_before = self._participant_points()
+        card_points_added = 0 if chosen_card['is_main'] else chosen_card['x']
+        main_bonus_triggered = (
+            chosen_card['is_main']
+            and not self._participant_bonus_triggered()
+            and self._previous_main_count() + 1 >= self.test_bonus_threshold
+        )
+        main_bonus_points_added = (
+            self.test_main_bonus_points if main_bonus_triggered else 0
+        )
+        points_after = points_before + card_points_added + main_bonus_points_added
         yield Submission(
             Decision,
             dict(
@@ -122,6 +173,14 @@ class PlayerBot(Bot):
                 chosen_z=chosen_card['z'] or '',
                 response_time_ms=1000,
                 task_elapsed_ms=self.round_number * 1000,
+                points_before=points_before,
+                card_points_added=card_points_added,
+                multiplier_applied=False,
+                multiplier_y='' if chosen_card['is_main'] else chosen_card['y'],
+                multiplier_z='' if chosen_card['is_main'] else chosen_card['z'],
+                main_bonus_triggered_this_round=main_bonus_triggered,
+                main_bonus_points_added=main_bonus_points_added,
+                points_after=points_after,
                 timed_out_inactive=False,
                 timed_out_task_duration=False,
             ),

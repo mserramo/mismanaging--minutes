@@ -1,5 +1,5 @@
 {{ block content }}
-<link rel="stylesheet" href="{{ static 'global/card_stacking.css' }}?v=20260708-feedback-duration">
+<link rel="stylesheet" href="{{ static 'global/card_stacking.css' }}?v=20260708-points">
 
 <div
     class="cs-task"
@@ -8,6 +8,12 @@
     data-task-timer-key="{{ task_timer_key }}"
     data-task-duration-seconds="{{ task_duration_seconds }}"
     data-click-feedback-ms="{{ click_feedback_ms }}"
+    data-bonus-threshold-main-cards="{{ bonus_threshold_main_cards }}"
+    data-main-bonus-points="{{ main_bonus_points }}"
+    data-bonus-cue-duration-ms="{{ bonus_cue_duration_ms }}"
+    data-points-accumulated="{{ points_accumulated }}"
+    data-main-cards-collected="{{ main_cards_collected_so_far }}"
+    data-main-bonus-triggered="{{ main_bonus_already_triggered }}"
     data-show-elapsed-minutes="{{ show_elapsed_minutes }}"
     data-show-main-cards-collected="{{ show_main_cards_collected }}"
 >
@@ -19,10 +25,19 @@
     <input type="hidden" name="chosen_z" id="chosen_z">
     <input type="hidden" name="response_time_ms" id="response_time_ms">
     <input type="hidden" name="task_elapsed_ms" id="task_elapsed_ms">
+    <input type="hidden" name="points_before" id="points_before">
+    <input type="hidden" name="card_points_added" id="card_points_added">
+    <input type="hidden" name="multiplier_applied" id="multiplier_applied">
+    <input type="hidden" name="multiplier_y" id="multiplier_y">
+    <input type="hidden" name="multiplier_z" id="multiplier_z">
+    <input type="hidden" name="main_bonus_triggered_this_round" id="main_bonus_triggered_this_round">
+    <input type="hidden" name="main_bonus_points_added" id="main_bonus_points_added">
+    <input type="hidden" name="points_after" id="points_after">
     <input type="hidden" name="timed_out_inactive" id="timed_out_inactive" value="False">
     <input type="hidden" name="timed_out_task_duration" id="timed_out_task_duration" value="False">
 
     <div class="cs-status">
+        <span id="cs-points-display">Points accumulated: {{ points_accumulated_display }}</span>
         {{ if show_elapsed_minutes }}
         <span id="cs-time-left-display">Time left: {{ initial_time_left_text }}</span>
         {{ endif }}
@@ -31,6 +46,8 @@
         {{ endif }}
         <span id="cs-inactivity-display"></span>
     </div>
+
+    <div class="cs-cue" id="cs-cue" aria-live="polite"></div>
 
     <div class="cs-card-row cs-card-row-new" aria-label="Card choices">
         {{ for card in cards }}
@@ -56,5 +73,5 @@
     </div>
 </div>
 
-<script src="{{ static 'global/card_stacking.js' }}?v=20260708-feedback-duration"></script>
+<script src="{{ static 'global/card_stacking.js' }}?v=20260708-points"></script>
 {{ endblock }}

@@ -24,10 +24,22 @@ Development debug summary
             <dd>{{ show_main_cards_collected }}</dd>
             <dt>Click feedback duration</dt>
             <dd>{{ click_feedback_ms }} ms</dd>
+            <dt>Main-card bonus threshold (L)</dt>
+            <dd>{{ bonus_threshold_main_cards }}</dd>
+            <dt>Main-card bonus points (Q)</dt>
+            <dd>{{ main_bonus_points }}</dd>
+            <dt>Bonus/multiplier cue duration</dt>
+            <dd>{{ bonus_cue_duration_ms }} ms</dd>
             <dt>Answered decision screens</dt>
             <dd>{{ answered_rounds }}</dd>
             <dt>Main cards collected</dt>
             <dd>{{ main_cards_collected }}</dd>
+            <dt>Points accumulated</dt>
+            <dd>{{ points_accumulated }}</dd>
+            <dt>Main-card bonus triggered</dt>
+            <dd>{{ main_bonus_triggered }}</dd>
+            <dt>Main-card bonus trigger round</dt>
+            <dd>{{ main_bonus_trigger_round }}</dd>
             <dt>Participant color order</dt>
             <dd>{{ color_order_labels }}</dd>
             <dt>Main-card color</dt>
@@ -51,6 +63,12 @@ Development debug summary
                 <th>X</th>
                 <th>Y</th>
                 <th>Z</th>
+                <th>Points before</th>
+                <th>Card points added</th>
+                <th>Multiplier applied?</th>
+                <th>Main bonus triggered?</th>
+                <th>Main bonus points</th>
+                <th>Points after</th>
                 <th>Time to answer</th>
             </tr>
         </thead>
@@ -66,6 +84,12 @@ Development debug summary
                 <td>{{ decision.chosen_x }}</td>
                 <td>{{ decision.chosen_y }}</td>
                 <td>{{ decision.chosen_z }}</td>
+                <td>{{ decision.points_before }}</td>
+                <td>{{ decision.card_points_added }}</td>
+                <td>{{ decision.multiplier_applied }}</td>
+                <td>{{ decision.main_bonus_triggered }}</td>
+                <td>{{ decision.main_bonus_points_added }}</td>
+                <td>{{ decision.points_after }}</td>
                 <td>{{ decision.response_time_seconds }}s</td>
             </tr>
             {{ endfor }}

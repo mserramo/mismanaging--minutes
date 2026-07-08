@@ -24,6 +24,35 @@
     white-space: nowrap;
 }
 
+.cs-cue {
+    min-height: 32px;
+    margin-bottom: 10px;
+    text-align: center;
+    font-size: 20px;
+    font-weight: 800;
+    color: #0f172a;
+    opacity: 0;
+    transform: scale(0.96);
+    transition:
+        opacity 80ms ease,
+        transform 80ms ease;
+}
+
+.cs-cue-visible {
+    opacity: 1;
+    transform: scale(1);
+}
+
+.cs-cue-multiplier {
+    color: #b45309;
+    text-shadow: 0 0 18px rgba(245, 158, 11, 0.38);
+}
+
+.cs-cue-bonus {
+    color: #047857;
+    text-shadow: 0 0 18px rgba(16, 185, 129, 0.32);
+}
+
 .cs-card-row {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));

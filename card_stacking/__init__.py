@@ -24,8 +24,12 @@ class C(BaseConstants):
     DEFAULT_DURATION_MINUTES = 5
     DEFAULT_NUM_SCREEN_TYPES = 50
     DEFAULT_SCREEN_TYPES_FILE = 'screen_types.txt'
-    DEFAULT_CLICK_FEEDBACK_MS = 100
+    DEFAULT_CLICK_FEEDBACK_MS = 50
     MAX_CLICK_FEEDBACK_MS = 2000
+    DEFAULT_BONUS_CUE_DURATION_MS = 50
+    MAX_BONUS_CUE_DURATION_MS = 2000
+    MAIN_BONUS_THRESHOLD_PER_MINUTE = 50
+    MAIN_BONUS_POINTS_PER_MAIN_CARD = 15
 
     MAIN_CARD_ID = 'main'
 
@@ -63,12 +67,31 @@ class Player(BasePlayer):
         label='Click feedback duration in milliseconds',
         initial=C.DEFAULT_CLICK_FEEDBACK_MS,
     )
+    setup_bonus_threshold_main_cards = models.IntegerField(
+        label='Main-card bonus threshold (L)',
+        initial=int(C.DEFAULT_DURATION_MINUTES * C.MAIN_BONUS_THRESHOLD_PER_MINUTE),
+    )
+    setup_main_bonus_points = models.FloatField(
+        label='Main-card bonus points (Q)',
+        initial=(
+            C.DEFAULT_DURATION_MINUTES
+            * C.MAIN_BONUS_THRESHOLD_PER_MINUTE
+            * C.MAIN_BONUS_POINTS_PER_MAIN_CARD
+        ),
+    )
+    setup_bonus_cue_duration_ms = models.IntegerField(
+        label='Bonus/multiplier cue duration in milliseconds',
+        initial=C.DEFAULT_BONUS_CUE_DURATION_MS,
+    )
 
     task_duration_minutes = models.FloatField()
     num_screen_types = models.IntegerField()
     show_elapsed_minutes = models.BooleanField()
     show_main_cards_collected = models.BooleanField()
     click_feedback_ms = models.IntegerField()
+    bonus_threshold_main_cards = models.IntegerField()
+    main_bonus_points = models.FloatField()
+    bonus_cue_duration_ms = models.IntegerField()
     inactivity_seconds = models.IntegerField()
     screen_type_index = models.IntegerField(blank=True)
 
@@ -87,6 +110,14 @@ class Player(BasePlayer):
     response_time_ms = models.IntegerField(blank=True)
     task_elapsed_ms = models.IntegerField(blank=True)
     main_cards_collected = models.IntegerField(initial=0)
+    points_before = models.FloatField(blank=True)
+    card_points_added = models.FloatField(blank=True)
+    multiplier_applied = models.BooleanField(blank=True)
+    multiplier_y = models.FloatField(blank=True)
+    multiplier_z = models.FloatField(blank=True)
+    main_bonus_triggered_this_round = models.BooleanField(initial=False)
+    main_bonus_points_added = models.FloatField(blank=True)
+    points_after = models.FloatField(blank=True)
     timed_out_inactive = models.BooleanField(initial=False)
     timed_out_task_duration = models.BooleanField(initial=False)
 
@@ -158,6 +189,14 @@ def format_clock_seconds(total_seconds):
     minutes = total_seconds // 60
     seconds = total_seconds % 60
     return f'{minutes:02d}:{seconds:02d}'
+
+
+def default_bonus_threshold_main_cards(duration_minutes):
+    return max(1, int(round(duration_minutes * C.MAIN_BONUS_THRESHOLD_PER_MINUTE)))
+
+
+def default_main_bonus_points(bonus_threshold_main_cards):
+    return float(bonus_threshold_main_cards * C.MAIN_BONUS_POINTS_PER_MAIN_CARD)
 
 
 def add_display_values(card):
@@ -308,6 +347,44 @@ def participant_click_feedback_ms(participant):
     )
 
 
+def participant_bonus_threshold_main_cards(participant):
+    return int(
+        _extra_field(
+            participant,
+            'card_stacking_bonus_threshold_main_cards',
+            default_bonus_threshold_main_cards(C.DEFAULT_DURATION_MINUTES),
+        )
+    )
+
+
+def participant_main_bonus_points(participant):
+    return float(
+        _extra_field(
+            participant,
+            'card_stacking_main_bonus_points',
+            default_main_bonus_points(participant_bonus_threshold_main_cards(participant)),
+        )
+    )
+
+
+def participant_bonus_cue_duration_ms(participant):
+    return int(
+        _extra_field(
+            participant,
+            'card_stacking_bonus_cue_duration_ms',
+            C.DEFAULT_BONUS_CUE_DURATION_MS,
+        )
+    )
+
+
+def participant_points_accumulated(participant):
+    return float(_extra_field(participant, 'card_stacking_points_accumulated', 0))
+
+
+def participant_main_bonus_triggered(participant):
+    return bool(_extra_field(participant, 'card_stacking_main_bonus_triggered', False))
+
+
 def is_inactive(player):
     return bool(_extra_field(player.participant, 'card_stacking_inactive', False))
 
@@ -385,6 +462,11 @@ def set_round_fields(player):
         player.participant
     )
     player.click_feedback_ms = participant_click_feedback_ms(player.participant)
+    player.bonus_threshold_main_cards = participant_bonus_threshold_main_cards(
+        player.participant
+    )
+    player.main_bonus_points = participant_main_bonus_points(player.participant)
+    player.bonus_cue_duration_ms = participant_bonus_cue_duration_ms(player.participant)
     player.inactivity_seconds = int(_session_config(player, 'inactivity_seconds', 30))
     player.screen_type_index = screen_type['type_index']
 
@@ -413,6 +495,20 @@ def creating_session(subsession):
             player.participant.card_stacking_click_feedback_ms = (
                 C.DEFAULT_CLICK_FEEDBACK_MS
             )
+            player.participant.card_stacking_bonus_threshold_main_cards = (
+                default_bonus_threshold_main_cards(C.DEFAULT_DURATION_MINUTES)
+            )
+            player.participant.card_stacking_main_bonus_points = (
+                default_main_bonus_points(
+                    player.participant.card_stacking_bonus_threshold_main_cards
+                )
+            )
+            player.participant.card_stacking_bonus_cue_duration_ms = (
+                C.DEFAULT_BONUS_CUE_DURATION_MS
+            )
+            player.participant.card_stacking_points_accumulated = 0
+            player.participant.card_stacking_main_bonus_triggered = False
+            player.participant.card_stacking_main_bonus_trigger_round = None
             player.participant.card_stacking_inactive = False
             player.participant.card_stacking_inactive_round = None
             player.participant.card_stacking_time_finished = False
@@ -430,6 +526,9 @@ class DevelopmentSetup(Page):
         'setup_show_elapsed_minutes',
         'setup_show_main_cards_collected',
         'setup_click_feedback_ms',
+        'setup_bonus_threshold_main_cards',
+        'setup_main_bonus_points',
+        'setup_bonus_cue_duration_ms',
     ]
 
     @staticmethod
@@ -440,6 +539,9 @@ class DevelopmentSetup(Page):
     def error_message(player, values):
         duration_minutes = values.get('setup_duration_minutes')
         click_feedback_ms = values.get('setup_click_feedback_ms')
+        bonus_threshold_main_cards = values.get('setup_bonus_threshold_main_cards')
+        main_bonus_points = values.get('setup_main_bonus_points')
+        bonus_cue_duration_ms = values.get('setup_bonus_cue_duration_ms')
         if duration_minutes is None:
             return 'Enter the task duration in minutes.'
         if duration_minutes <= 0:
@@ -454,6 +556,23 @@ class DevelopmentSetup(Page):
             return (
                 f'Click feedback duration cannot exceed '
                 f'{C.MAX_CLICK_FEEDBACK_MS} milliseconds.'
+            )
+        if bonus_threshold_main_cards is None:
+            return 'Enter the main-card bonus threshold.'
+        if bonus_threshold_main_cards < 1:
+            return 'Main-card bonus threshold must be at least 1.'
+        if main_bonus_points is None:
+            return 'Enter the main-card bonus points.'
+        if main_bonus_points < 0:
+            return 'Main-card bonus points cannot be negative.'
+        if bonus_cue_duration_ms is None:
+            return 'Enter the bonus/multiplier cue duration in milliseconds.'
+        if bonus_cue_duration_ms < 0:
+            return 'Bonus/multiplier cue duration cannot be negative.'
+        if bonus_cue_duration_ms > C.MAX_BONUS_CUE_DURATION_MS:
+            return (
+                f'Bonus/multiplier cue duration cannot exceed '
+                f'{C.MAX_BONUS_CUE_DURATION_MS} milliseconds.'
             )
 
     @staticmethod
@@ -470,6 +589,18 @@ class DevelopmentSetup(Page):
         player.participant.card_stacking_click_feedback_ms = (
             player.setup_click_feedback_ms
         )
+        player.participant.card_stacking_bonus_threshold_main_cards = (
+            player.setup_bonus_threshold_main_cards
+        )
+        player.participant.card_stacking_main_bonus_points = (
+            player.setup_main_bonus_points
+        )
+        player.participant.card_stacking_bonus_cue_duration_ms = (
+            player.setup_bonus_cue_duration_ms
+        )
+        player.participant.card_stacking_points_accumulated = 0
+        player.participant.card_stacking_main_bonus_triggered = False
+        player.participant.card_stacking_main_bonus_trigger_round = None
         player.participant.card_stacking_time_finished = False
         player.participant.card_stacking_time_finished_round = None
         set_round_fields(player)
@@ -492,6 +623,14 @@ class Decision(Page):
         'chosen_z',
         'response_time_ms',
         'task_elapsed_ms',
+        'points_before',
+        'card_points_added',
+        'multiplier_applied',
+        'multiplier_y',
+        'multiplier_z',
+        'main_bonus_triggered_this_round',
+        'main_bonus_points_added',
+        'points_after',
         'timed_out_inactive',
         'timed_out_task_duration',
     ]
@@ -517,10 +656,20 @@ class Decision(Page):
             task_timer_key=f'card_stacking_task_started_at_{player.participant.code}',
             task_duration_seconds=task_duration_seconds,
             click_feedback_ms=player.click_feedback_ms,
+            bonus_threshold_main_cards=player.bonus_threshold_main_cards,
+            main_bonus_points=player.main_bonus_points,
+            bonus_cue_duration_ms=player.bonus_cue_duration_ms,
             initial_time_left_text=format_clock_seconds(task_duration_seconds),
             show_elapsed_minutes=player.show_elapsed_minutes,
             show_main_cards_collected=player.show_main_cards_collected,
             main_cards_collected_so_far=previous_main_cards_collected(player),
+            points_accumulated=participant_points_accumulated(player.participant),
+            points_accumulated_display=format_card_value(
+                participant_points_accumulated(player.participant)
+            ),
+            main_bonus_already_triggered=participant_main_bonus_triggered(
+                player.participant
+            ),
         )
 
     @staticmethod
@@ -538,17 +687,26 @@ class Decision(Page):
         player.main_cards_collected = previous_main_count
 
         if player.timed_out_inactive:
+            current_points = participant_points_accumulated(player.participant)
+            player.points_before = current_points
+            player.points_after = current_points
             player.participant.card_stacking_inactive = True
             player.participant.card_stacking_inactive_round = player.round_number
             return
 
         if player.timed_out_task_duration:
+            current_points = participant_points_accumulated(player.participant)
+            player.points_before = current_points
+            player.points_after = current_points
             player.participant.card_stacking_time_finished = True
             player.participant.card_stacking_time_finished_round = player.round_number
             return
 
         chosen_card = card_from_round(player, player.chosen_card_id)
         if chosen_card:
+            current_points = participant_points_accumulated(player.participant)
+            if player.field_maybe_none('points_before') is None:
+                player.points_before = current_points
             player.chosen_card_position = chosen_card['position']
             player.chosen_is_main = chosen_card['is_main']
             player.chosen_x = chosen_card.get('x')
@@ -557,6 +715,42 @@ class Decision(Page):
             player.main_cards_collected = previous_main_count + int(
                 bool(chosen_card['is_main'])
             )
+            if chosen_card['is_main']:
+                player.card_points_added = 0
+                player.multiplier_applied = False
+                player.multiplier_y = None
+                player.multiplier_z = None
+                if (
+                    not participant_main_bonus_triggered(player.participant)
+                    and player.main_cards_collected >= player.bonus_threshold_main_cards
+                ):
+                    player.main_bonus_triggered_this_round = True
+                    player.main_bonus_points_added = player.main_bonus_points
+                    player.participant.card_stacking_main_bonus_triggered = True
+                    player.participant.card_stacking_main_bonus_trigger_round = (
+                        player.round_number
+                    )
+                else:
+                    player.main_bonus_triggered_this_round = False
+                    player.main_bonus_points_added = 0
+            else:
+                if player.field_maybe_none('multiplier_applied') is None:
+                    player.multiplier_applied = False
+                player.card_points_added = (
+                    chosen_card['x'] * chosen_card['z']
+                    if player.multiplier_applied
+                    else chosen_card['x']
+                )
+                player.multiplier_y = chosen_card.get('y')
+                player.multiplier_z = chosen_card.get('z')
+                player.main_bonus_triggered_this_round = False
+                player.main_bonus_points_added = 0
+            player.points_after = (
+                player.points_before
+                + (player.field_maybe_none('card_points_added') or 0)
+                + (player.field_maybe_none('main_bonus_points_added') or 0)
+            )
+            player.participant.card_stacking_points_accumulated = player.points_after
 
         if player.round_number == C.NUM_ROUNDS:
             player.participant.card_stacking_time_finished = True
@@ -639,6 +833,32 @@ class Results(Page):
                         if chosen_card and chosen_card['is_main']
                         else format_card_value(round_player.field_maybe_none('chosen_z'))
                     ),
+                    points_before=format_card_value(
+                        round_player.field_maybe_none('points_before')
+                    ),
+                    card_points_added=format_card_value(
+                        round_player.field_maybe_none('card_points_added')
+                    ),
+                    multiplier_applied=(
+                        ''
+                        if chosen_card and chosen_card['is_main']
+                        else 'Yes'
+                        if round_player.field_maybe_none('multiplier_applied')
+                        else 'No'
+                    ),
+                    main_bonus_triggered=(
+                        'Yes'
+                        if round_player.field_maybe_none(
+                            'main_bonus_triggered_this_round'
+                        )
+                        else 'No'
+                    ),
+                    main_bonus_points_added=format_card_value(
+                        round_player.field_maybe_none('main_bonus_points_added')
+                    ),
+                    points_after=format_card_value(
+                        round_player.field_maybe_none('points_after')
+                    ),
                     response_time_seconds=(
                         ''
                         if response_time_ms is None
@@ -661,8 +881,18 @@ class Results(Page):
             show_elapsed_minutes=player.show_elapsed_minutes,
             show_main_cards_collected=player.show_main_cards_collected,
             click_feedback_ms=player.click_feedback_ms,
+            bonus_threshold_main_cards=player.bonus_threshold_main_cards,
+            main_bonus_points=format_card_value(player.main_bonus_points),
+            bonus_cue_duration_ms=player.bonus_cue_duration_ms,
             answered_rounds=answered_rounds,
             main_cards_collected=main_cards_collected,
+            points_accumulated=format_card_value(
+                participant_points_accumulated(player.participant)
+            ),
+            main_bonus_triggered=participant_main_bonus_triggered(player.participant),
+            main_bonus_trigger_round=_extra_field(
+                player.participant, 'card_stacking_main_bonus_trigger_round', ''
+            ),
             color_order_labels=', '.join(color_order_labels(player.participant)),
             main_card_color_label=main_card_color_label(player.participant),
             inactivity_seconds=player.inactivity_seconds,
