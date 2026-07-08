@@ -8,6 +8,8 @@ SESSION_CONFIGS = [
         app_sequence=['card_stacking'],
         num_demo_participants=1,
         inactivity_seconds=30,
+        num_screen_types=50,
+        screen_types_file='screen_types.txt',
     ),
 ]
 
@@ -16,6 +18,8 @@ SESSION_CONFIG_DEFAULTS = dict(
     participation_fee=0.00,
     doc='',
     inactivity_seconds=30,
+    num_screen_types=50,
+    screen_types_file='screen_types.txt',
 )
 
 PARTICIPANT_FIELDS = [

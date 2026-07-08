@@ -22,13 +22,15 @@ class PlayerBot(Bot):
                 DevelopmentSetup,
                 dict(
                     setup_duration_minutes=0.05,
-                    setup_num_screen_types=7,
                     setup_show_elapsed_minutes=self.case == 'counters',
                     setup_show_main_cards_collected=self.case == 'counters',
                 ),
                 check_html=False,
             )
-            assert len(json.loads(self.player.participant.card_stacking_screen_types_json)) == 7
+            assert (
+                len(json.loads(self.player.participant.card_stacking_screen_types_json))
+                == C.DEFAULT_NUM_SCREEN_TYPES
+            )
             assert (
                 len(json.loads(self.player.participant.card_stacking_screen_sequence_json))
                 == C.NUM_ROUNDS

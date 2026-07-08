@@ -1,6 +1,7 @@
 from otree.api import *
 
 import json
+from pathlib import Path
 import random
 
 
@@ -22,6 +23,7 @@ class C(BaseConstants):
 
     DEFAULT_DURATION_MINUTES = 5
     DEFAULT_NUM_SCREEN_TYPES = 50
+    DEFAULT_SCREEN_TYPES_FILE = 'screen_types.txt'
 
     MAIN_CARD_ID = 'main'
 
@@ -46,10 +48,6 @@ class Player(BasePlayer):
     setup_duration_minutes = models.FloatField(
         label='Task duration in minutes',
         initial=C.DEFAULT_DURATION_MINUTES,
-    )
-    setup_num_screen_types = models.IntegerField(
-        label='Number of possible decision-screen types',
-        initial=C.DEFAULT_NUM_SCREEN_TYPES,
     )
     setup_show_elapsed_minutes = models.BooleanField(
         label='Show time-left counter to participant?',
@@ -88,6 +86,14 @@ class Player(BasePlayer):
 
 def _session_config(player, key, default):
     return player.session.config.get(key, default)
+
+
+def configured_num_screen_types(session):
+    return int(session.config.get('num_screen_types', C.DEFAULT_NUM_SCREEN_TYPES))
+
+
+def configured_screen_types_file(session):
+    return session.config.get('screen_types_file', C.DEFAULT_SCREEN_TYPES_FILE)
 
 
 def _extra_field(obj, field_name, default=None):
@@ -153,22 +159,65 @@ def add_display_values(card):
     return card
 
 
-def generate_screen_types(participant, num_screen_types):
-    rng = random.Random(
-        f'card-stacking-screen-types-{participant.code}-{num_screen_types}'
-    )
-    screen_types = []
-    for type_index in range(1, num_screen_types + 1):
-        side_values = []
-        for _ in range(4):
-            side_values.append(
-                dict(
-                    x=rng.randint(4, 12),
-                    y=rng.randint(5, 30),
-                    z=rng.randint(1, 4),
-                )
+def parse_screen_type_line(line, line_number):
+    parts = [part.strip() for part in line.split('|')]
+    if len(parts) != 5:
+        raise ValueError(
+            f'Screen-types file line {line_number} must have one id and four cards.'
+        )
+    try:
+        type_index = int(parts[0])
+    except ValueError as exc:
+        raise ValueError(
+            f'Screen-types file line {line_number} has a non-integer type id.'
+        ) from exc
+
+    side_values = []
+    for card_position, card_part in enumerate(parts[1:], start=1):
+        values = [value.strip() for value in card_part.split(',')]
+        if len(values) != 3:
+            raise ValueError(
+                f'Screen-types file line {line_number}, card {card_position} '
+                'must have x,y,z.'
             )
-        screen_types.append(dict(type_index=type_index, side_values=side_values))
+        try:
+            x, y, z = [float(value) for value in values]
+        except ValueError as exc:
+            raise ValueError(
+                f'Screen-types file line {line_number}, card {card_position} '
+                'has a non-numeric x, y, or z.'
+            ) from exc
+        side_values.append(dict(x=x, y=y, z=z))
+
+    return dict(type_index=type_index, side_values=side_values)
+
+
+def load_screen_types_from_file(file_name, expected_num_screen_types):
+    file_path = Path(__file__).with_name(file_name)
+    if not file_path.exists():
+        raise FileNotFoundError(f'Screen-types file not found: {file_path}')
+
+    screen_types = []
+    for line_number, raw_line in enumerate(file_path.read_text().splitlines(), start=1):
+        line = raw_line.strip()
+        if not line or line.startswith('#'):
+            continue
+        screen_types.append(parse_screen_type_line(line, line_number))
+
+    if len(screen_types) != expected_num_screen_types:
+        raise ValueError(
+            f'Expected {expected_num_screen_types} screen types in {file_path}, '
+            f'found {len(screen_types)}.'
+        )
+
+    expected_ids = list(range(1, expected_num_screen_types + 1))
+    actual_ids = [screen_type['type_index'] for screen_type in screen_types]
+    if actual_ids != expected_ids:
+        raise ValueError(
+            f'Screen-types file ids must be consecutive from 1 to '
+            f'{expected_num_screen_types}. Found: {actual_ids}.'
+        )
+
     return screen_types
 
 
@@ -179,16 +228,20 @@ def generate_screen_sequence(participant, num_screen_types):
     return [rng.randint(1, num_screen_types) for _ in range(C.NUM_ROUNDS)]
 
 
-def initialize_participant_timed_task(participant, num_screen_types=None):
+def initialize_participant_timed_task(
+    participant, num_screen_types=None, screen_types=None
+):
     if num_screen_types is None:
         num_screen_types = _extra_field(
             participant, 'card_stacking_num_screen_types', C.DEFAULT_NUM_SCREEN_TYPES
         )
     num_screen_types = int(num_screen_types)
+    if screen_types is None:
+        screen_types = load_screen_types_from_file(
+            C.DEFAULT_SCREEN_TYPES_FILE, num_screen_types
+        )
     participant.card_stacking_num_screen_types = num_screen_types
-    participant.card_stacking_screen_types_json = json.dumps(
-        generate_screen_types(participant, num_screen_types)
-    )
+    participant.card_stacking_screen_types_json = json.dumps(screen_types)
     participant.card_stacking_screen_sequence_json = json.dumps(
         generate_screen_sequence(participant, num_screen_types)
     )
@@ -326,22 +379,26 @@ def set_round_fields(player):
 
 
 def creating_session(subsession):
+    num_screen_types = configured_num_screen_types(subsession.session)
+    screen_types = load_screen_types_from_file(
+        configured_screen_types_file(subsession.session), num_screen_types
+    )
     for player in subsession.get_players():
         if player.round_number == 1:
             initialize_participant_card_randomization(player.participant)
             player.participant.card_stacking_task_duration_minutes = (
                 C.DEFAULT_DURATION_MINUTES
             )
-            player.participant.card_stacking_num_screen_types = (
-                C.DEFAULT_NUM_SCREEN_TYPES
-            )
+            player.participant.card_stacking_num_screen_types = num_screen_types
             player.participant.card_stacking_show_elapsed_minutes = False
             player.participant.card_stacking_show_main_cards_collected = False
             player.participant.card_stacking_inactive = False
             player.participant.card_stacking_inactive_round = None
             player.participant.card_stacking_time_finished = False
             player.participant.card_stacking_time_finished_round = None
-            initialize_participant_timed_task(player.participant)
+            initialize_participant_timed_task(
+                player.participant, num_screen_types, screen_types
+            )
         set_round_fields(player)
 
 
@@ -349,7 +406,6 @@ class DevelopmentSetup(Page):
     form_model = 'player'
     form_fields = [
         'setup_duration_minutes',
-        'setup_num_screen_types',
         'setup_show_elapsed_minutes',
         'setup_show_main_cards_collected',
     ]
@@ -361,24 +417,18 @@ class DevelopmentSetup(Page):
     @staticmethod
     def error_message(player, values):
         duration_minutes = values.get('setup_duration_minutes')
-        num_screen_types = values.get('setup_num_screen_types')
         if duration_minutes is None:
             return 'Enter the task duration in minutes.'
         if duration_minutes <= 0:
             return 'Task duration must be greater than 0 minutes.'
         if duration_minutes > C.MAX_DURATION_MINUTES:
             return f'Task duration cannot exceed {C.MAX_DURATION_MINUTES} minutes.'
-        if num_screen_types is None:
-            return 'Enter the number of possible decision-screen types.'
-        if num_screen_types < 1:
-            return 'Number of possible decision-screen types must be at least 1.'
 
     @staticmethod
     def before_next_page(player, timeout_happened):
         player.participant.card_stacking_task_duration_minutes = (
             player.setup_duration_minutes
         )
-        player.participant.card_stacking_num_screen_types = player.setup_num_screen_types
         player.participant.card_stacking_show_elapsed_minutes = (
             player.setup_show_elapsed_minutes
         )
@@ -387,9 +437,6 @@ class DevelopmentSetup(Page):
         )
         player.participant.card_stacking_time_finished = False
         player.participant.card_stacking_time_finished_round = None
-        initialize_participant_timed_task(
-            player.participant, player.setup_num_screen_types
-        )
         set_round_fields(player)
 
 
