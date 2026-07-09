@@ -68,7 +68,7 @@ class Player(BasePlayer):
     )
     setup_use_post_click_delay = models.BooleanField(
         label='Use post-click feedback delay?',
-        initial=True,
+        initial=False,
     )
     setup_click_feedback_ms = models.IntegerField(
         label='Common post-click feedback delay in milliseconds',
@@ -350,7 +350,7 @@ def participant_show_click_feedback(participant):
 
 
 def participant_use_post_click_delay(participant):
-    return bool(_extra_field(participant, 'card_stacking_use_post_click_delay', True))
+    return bool(_extra_field(participant, 'card_stacking_use_post_click_delay', False))
 
 
 def participant_click_feedback_ms(participant):
@@ -566,7 +566,7 @@ def creating_session(subsession):
         player.participant.card_stacking_show_elapsed_minutes = True
         player.participant.card_stacking_show_main_cards_collected = True
         player.participant.card_stacking_show_click_feedback = True
-        player.participant.card_stacking_use_post_click_delay = True
+        player.participant.card_stacking_use_post_click_delay = False
         player.participant.card_stacking_click_feedback_ms = (
             C.DEFAULT_CLICK_FEEDBACK_MS
         )
@@ -617,7 +617,7 @@ class DevelopmentSetup(Page):
         if player.field_maybe_none('setup_show_click_feedback') is None:
             player.setup_show_click_feedback = True
         if player.field_maybe_none('setup_use_post_click_delay') is None:
-            player.setup_use_post_click_delay = True
+            player.setup_use_post_click_delay = False
         if player.field_maybe_none('setup_main_bonus_feedback_ms') is None:
             player.setup_main_bonus_feedback_ms = C.DEFAULT_MAIN_BONUS_FEEDBACK_MS
         return {}
