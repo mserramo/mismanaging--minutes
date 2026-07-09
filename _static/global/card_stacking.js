@@ -108,6 +108,16 @@
         cueDisplay.className = 'cs-cue cs-cue-visible';
     }
 
+    function hideCueAfter(delayMs) {
+        if (!cueDisplay || delayMs <= 0) {
+            return;
+        }
+        window.setTimeout(() => {
+            cueDisplay.classList.remove('cs-cue-visible');
+            window.setTimeout(() => cueDisplay.replaceChildren(), 90);
+        }, delayMs);
+    }
+
     function showInitialCue() {
         showCue(
             initialFeedbackMessage,
@@ -115,6 +125,12 @@
             initialFeedbackSideMessage,
             initialFeedbackSideClass
         );
+        if (initialFeedbackMessage) {
+            const initialFeedbackDelayMs = initialFeedbackClass === 'cs-cue-main-bonus'
+                ? mainBonusFeedbackDelayMs
+                : feedbackDelayMs;
+            hideCueAfter(initialFeedbackDelayMs);
+        }
     }
 
     function taskDurationMs() {
