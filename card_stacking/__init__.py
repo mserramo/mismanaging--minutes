@@ -460,6 +460,9 @@ def build_cards_for_player(player):
 
 
 def set_round_fields(player):
+    if player.field_maybe_none('card_params_json'):
+        return
+
     cards = build_cards_for_player(player)
     screen_type = screen_type_for_round(player)
     player.task_duration_minutes = participant_task_duration_minutes(player.participant)
@@ -489,45 +492,46 @@ def set_round_fields(player):
 
 
 def creating_session(subsession):
+    if subsession.round_number != 1:
+        return
+
     num_screen_types = configured_num_screen_types(subsession.session)
     screen_types = load_screen_types_from_file(
         configured_screen_types_file(subsession.session), num_screen_types
     )
     for player in subsession.get_players():
-        if player.round_number == 1:
-            initialize_participant_card_randomization(player.participant)
-            player.participant.card_stacking_task_duration_minutes = (
-                C.DEFAULT_DURATION_MINUTES
+        initialize_participant_card_randomization(player.participant)
+        player.participant.card_stacking_task_duration_minutes = (
+            C.DEFAULT_DURATION_MINUTES
+        )
+        player.participant.card_stacking_num_screen_types = num_screen_types
+        player.participant.card_stacking_show_elapsed_minutes = True
+        player.participant.card_stacking_show_main_cards_collected = True
+        player.participant.card_stacking_show_click_feedback = True
+        player.participant.card_stacking_click_feedback_ms = (
+            C.DEFAULT_CLICK_FEEDBACK_MS
+        )
+        player.participant.card_stacking_main_bonus_feedback_ms = (
+            C.DEFAULT_MAIN_BONUS_FEEDBACK_MS
+        )
+        player.participant.card_stacking_bonus_threshold_main_cards = (
+            default_bonus_threshold_main_cards(C.DEFAULT_DURATION_MINUTES)
+        )
+        player.participant.card_stacking_main_bonus_points = (
+            default_main_bonus_points(
+                player.participant.card_stacking_bonus_threshold_main_cards
             )
-            player.participant.card_stacking_num_screen_types = num_screen_types
-            player.participant.card_stacking_show_elapsed_minutes = True
-            player.participant.card_stacking_show_main_cards_collected = True
-            player.participant.card_stacking_show_click_feedback = True
-            player.participant.card_stacking_click_feedback_ms = (
-                C.DEFAULT_CLICK_FEEDBACK_MS
-            )
-            player.participant.card_stacking_main_bonus_feedback_ms = (
-                C.DEFAULT_MAIN_BONUS_FEEDBACK_MS
-            )
-            player.participant.card_stacking_bonus_threshold_main_cards = (
-                default_bonus_threshold_main_cards(C.DEFAULT_DURATION_MINUTES)
-            )
-            player.participant.card_stacking_main_bonus_points = (
-                default_main_bonus_points(
-                    player.participant.card_stacking_bonus_threshold_main_cards
-                )
-            )
-            player.participant.card_stacking_points_accumulated = 0
-            player.participant.card_stacking_main_bonus_triggered = False
-            player.participant.card_stacking_main_bonus_trigger_round = None
-            player.participant.card_stacking_inactive = False
-            player.participant.card_stacking_inactive_round = None
-            player.participant.card_stacking_time_finished = False
-            player.participant.card_stacking_time_finished_round = None
-            initialize_participant_timed_task(
-                player.participant, num_screen_types, screen_types
-            )
-        set_round_fields(player)
+        )
+        player.participant.card_stacking_points_accumulated = 0
+        player.participant.card_stacking_main_bonus_triggered = False
+        player.participant.card_stacking_main_bonus_trigger_round = None
+        player.participant.card_stacking_inactive = False
+        player.participant.card_stacking_inactive_round = None
+        player.participant.card_stacking_time_finished = False
+        player.participant.card_stacking_time_finished_round = None
+        initialize_participant_timed_task(
+            player.participant, num_screen_types, screen_types
+        )
 
 
 class DevelopmentSetup(Page):
@@ -660,12 +664,14 @@ class Decision(Page):
 
     @staticmethod
     def is_displayed(player):
+        if (
+            player.round_number > C.NUM_ROUNDS
+            or is_inactive(player)
+            or is_time_finished(player)
+        ):
+            return False
         set_round_fields(player)
-        return (
-            player.round_number <= C.NUM_ROUNDS
-            and not is_inactive(player)
-            and not is_time_finished(player)
-        )
+        return True
 
     @staticmethod
     def vars_for_template(player):
@@ -784,11 +790,13 @@ class Decision(Page):
 class InactivityLoss(Page):
     @staticmethod
     def is_displayed(player):
-        set_round_fields(player)
-        return (
+        if not (
             is_inactive(player)
             and player.participant.card_stacking_inactive_round == player.round_number
-        )
+        ):
+            return False
+        set_round_fields(player)
+        return True
 
     @staticmethod
     def vars_for_template(player):
@@ -798,13 +806,15 @@ class InactivityLoss(Page):
 class Results(Page):
     @staticmethod
     def is_displayed(player):
-        set_round_fields(player)
-        return (
+        if not (
             is_time_finished(player)
             and player.participant.card_stacking_time_finished_round
             == player.round_number
             and not is_inactive(player)
-        )
+        ):
+            return False
+        set_round_fields(player)
+        return True
 
     @staticmethod
     def vars_for_template(player):
