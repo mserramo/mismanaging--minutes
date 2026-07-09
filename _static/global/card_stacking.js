@@ -20,9 +20,16 @@
     const showClickFeedback = ['1', 'true', 'yes'].includes(
         String(task.dataset.showClickFeedback || 'true').toLowerCase()
     );
+    const usePostClickDelay = ['1', 'true', 'yes'].includes(
+        String(task.dataset.usePostClickDelay || 'true').toLowerCase()
+    );
     const showTimeLeft = ['1', 'true', 'yes'].includes(
         String(task.dataset.showElapsedMinutes || '').toLowerCase()
     );
+    const initialFeedbackMessage = task.dataset.initialFeedbackMessage || '';
+    const initialFeedbackClass = task.dataset.initialFeedbackClass || '';
+    const initialFeedbackSideMessage = task.dataset.initialFeedbackSideMessage || '';
+    const initialFeedbackSideClass = task.dataset.initialFeedbackSideClass || '';
     const inactivityDisplay = document.getElementById('cs-inactivity-display');
     const timeLeftDisplay = document.getElementById('cs-time-left-display');
     const pointsDisplay = document.getElementById('cs-points-display');
@@ -99,6 +106,15 @@
             cueDisplay.appendChild(cueBox(sideMessage, sideClassName));
         }
         cueDisplay.className = 'cs-cue cs-cue-visible';
+    }
+
+    function showInitialCue() {
+        showCue(
+            initialFeedbackMessage,
+            initialFeedbackClass,
+            initialFeedbackSideMessage,
+            initialFeedbackSideClass
+        );
     }
 
     function taskDurationMs() {
@@ -181,25 +197,29 @@
             button.disabled = true;
             button.classList.toggle('cs-card-selected', button === cardButton);
         });
-        if (mainBonusTriggered || mainBonusPointsAdded > 0) {
-            showCue(
-                `+${formatPoints(mainBonusPointsAdded)} points -- collected ${bonusThresholdMainCards} main cards`,
-                'cs-cue-main-bonus'
-            );
-        } else if (multiplierApplied) {
-            showCue(
-                `+${formatPoints(cardPointsAdded)} points`,
-                'cs-cue-points',
-                `${formatPoints(cardZ)}x`,
-                'cs-cue-multiplier-badge'
-            );
-        } else if (!isMain) {
-            showCue(`+${formatPoints(cardPointsAdded)} points`, 'cs-cue-points');
+        if (usePostClickDelay) {
+            if (mainBonusTriggered || mainBonusPointsAdded > 0) {
+                showCue(
+                    `+${formatPoints(mainBonusPointsAdded)} points -- collected ${bonusThresholdMainCards} main cards`,
+                    'cs-cue-main-bonus'
+                );
+            } else if (multiplierApplied) {
+                showCue(
+                    `+${formatPoints(cardPointsAdded)} points`,
+                    'cs-cue-points',
+                    `${formatPoints(cardZ)}x`,
+                    'cs-cue-multiplier-badge'
+                );
+            } else if (!isMain) {
+                showCue(`+${formatPoints(cardPointsAdded)} points`, 'cs-cue-points');
+            }
+            const submitDelayMs = mainBonusTriggered
+                ? mainBonusFeedbackDelayMs
+                : feedbackDelayMs;
+            window.setTimeout(() => form.submit(), submitDelayMs);
+        } else {
+            form.submit();
         }
-        const submitDelayMs = mainBonusTriggered
-            ? mainBonusFeedbackDelayMs
-            : feedbackDelayMs;
-        window.setTimeout(() => form.submit(), submitDelayMs);
     }
 
     function submitInactiveTimeout() {
@@ -286,6 +306,7 @@
         window.addEventListener(eventName, resetActivity, { passive: true });
     });
 
+    showInitialCue();
     updateInactivityClock();
     window.setInterval(updateInactivityClock, 250);
 })();

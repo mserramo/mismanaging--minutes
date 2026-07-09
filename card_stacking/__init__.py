@@ -66,6 +66,10 @@ class Player(BasePlayer):
         label='Show per-click point feedback?',
         initial=True,
     )
+    setup_use_post_click_delay = models.BooleanField(
+        label='Use post-click feedback delay?',
+        initial=True,
+    )
     setup_click_feedback_ms = models.IntegerField(
         label='Common post-click feedback delay in milliseconds',
         initial=C.DEFAULT_CLICK_FEEDBACK_MS,
@@ -91,6 +95,7 @@ class Player(BasePlayer):
     show_elapsed_minutes = models.BooleanField()
     show_main_cards_collected = models.BooleanField()
     show_click_feedback = models.BooleanField()
+    use_post_click_delay = models.BooleanField()
     click_feedback_ms = models.IntegerField()
     main_bonus_feedback_ms = models.IntegerField()
     bonus_threshold_main_cards = models.IntegerField()
@@ -344,6 +349,10 @@ def participant_show_click_feedback(participant):
     return bool(_extra_field(participant, 'card_stacking_show_click_feedback', True))
 
 
+def participant_use_post_click_delay(participant):
+    return bool(_extra_field(participant, 'card_stacking_use_post_click_delay', True))
+
+
 def participant_click_feedback_ms(participant):
     return int(
         _extra_field(
@@ -390,6 +399,54 @@ def participant_points_accumulated(participant):
 
 def participant_main_bonus_triggered(participant):
     return bool(_extra_field(participant, 'card_stacking_main_bonus_triggered', False))
+
+
+def pop_participant_pending_feedback(participant):
+    pending_feedback_json = _extra_field(
+        participant, 'card_stacking_pending_feedback_json'
+    )
+    participant.card_stacking_pending_feedback_json = ''
+    if not pending_feedback_json:
+        return {}
+    return json.loads(pending_feedback_json)
+
+
+def store_participant_pending_feedback(player):
+    if participant_use_post_click_delay(player.participant):
+        return
+    if not participant_show_click_feedback(player.participant):
+        return
+    if player.field_maybe_none('main_bonus_triggered_this_round'):
+        message = (
+            f'+{format_card_value(player.main_bonus_points_added)} points -- '
+            f'collected {player.bonus_threshold_main_cards} main cards'
+        )
+        pending_feedback = dict(
+            message=message,
+            class_name='cs-cue-main-bonus',
+            side_message='',
+            side_class_name='',
+        )
+    elif player.field_maybe_none('multiplier_applied'):
+        pending_feedback = dict(
+            message=f'+{format_card_value(player.card_points_added)} points',
+            class_name='cs-cue-points',
+            side_message=f'{format_card_value(player.multiplier_z)}x',
+            side_class_name='cs-cue-multiplier-badge',
+        )
+    elif not player.field_maybe_none('chosen_is_main'):
+        pending_feedback = dict(
+            message=f'+{format_card_value(player.card_points_added)} points',
+            class_name='cs-cue-points',
+            side_message='',
+            side_class_name='',
+        )
+    else:
+        player.participant.card_stacking_pending_feedback_json = ''
+        return
+    player.participant.card_stacking_pending_feedback_json = json.dumps(
+        pending_feedback
+    )
 
 
 def is_inactive(player):
@@ -472,6 +529,7 @@ def set_round_fields(player):
         player.participant
     )
     player.show_click_feedback = participant_show_click_feedback(player.participant)
+    player.use_post_click_delay = participant_use_post_click_delay(player.participant)
     player.click_feedback_ms = participant_click_feedback_ms(player.participant)
     player.main_bonus_feedback_ms = participant_main_bonus_feedback_ms(
         player.participant
@@ -508,6 +566,7 @@ def creating_session(subsession):
         player.participant.card_stacking_show_elapsed_minutes = True
         player.participant.card_stacking_show_main_cards_collected = True
         player.participant.card_stacking_show_click_feedback = True
+        player.participant.card_stacking_use_post_click_delay = True
         player.participant.card_stacking_click_feedback_ms = (
             C.DEFAULT_CLICK_FEEDBACK_MS
         )
@@ -529,6 +588,7 @@ def creating_session(subsession):
         player.participant.card_stacking_inactive_round = None
         player.participant.card_stacking_time_finished = False
         player.participant.card_stacking_time_finished_round = None
+        player.participant.card_stacking_pending_feedback_json = ''
         initialize_participant_timed_task(
             player.participant, num_screen_types, screen_types
         )
@@ -541,6 +601,7 @@ class DevelopmentSetup(Page):
         'setup_show_elapsed_minutes',
         'setup_show_main_cards_collected',
         'setup_show_click_feedback',
+        'setup_use_post_click_delay',
         'setup_click_feedback_ms',
         'setup_main_bonus_feedback_ms',
         'setup_bonus_threshold_main_cards',
@@ -555,6 +616,8 @@ class DevelopmentSetup(Page):
     def vars_for_template(player):
         if player.field_maybe_none('setup_show_click_feedback') is None:
             player.setup_show_click_feedback = True
+        if player.field_maybe_none('setup_use_post_click_delay') is None:
+            player.setup_use_post_click_delay = True
         if player.field_maybe_none('setup_main_bonus_feedback_ms') is None:
             player.setup_main_bonus_feedback_ms = C.DEFAULT_MAIN_BONUS_FEEDBACK_MS
         return {}
@@ -613,6 +676,9 @@ class DevelopmentSetup(Page):
         player.participant.card_stacking_show_click_feedback = (
             player.setup_show_click_feedback
         )
+        player.participant.card_stacking_use_post_click_delay = (
+            player.setup_use_post_click_delay
+        )
         player.participant.card_stacking_click_feedback_ms = (
             player.setup_click_feedback_ms
         )
@@ -630,6 +696,7 @@ class DevelopmentSetup(Page):
         player.participant.card_stacking_main_bonus_trigger_round = None
         player.participant.card_stacking_time_finished = False
         player.participant.card_stacking_time_finished_round = None
+        player.participant.card_stacking_pending_feedback_json = ''
         set_round_fields(player)
 
 
@@ -678,6 +745,13 @@ class Decision(Page):
         cards = json.loads(player.card_params_json)
         cards = [add_display_values(card) for card in cards]
         task_duration_seconds = player.task_duration_minutes * 60
+        pending_feedback = dict(
+            message='',
+            class_name='',
+            side_message='',
+            side_class_name='',
+        )
+        pending_feedback.update(pop_participant_pending_feedback(player.participant))
         return dict(
             cards=cards,
             inactivity_seconds=player.inactivity_seconds,
@@ -686,6 +760,7 @@ class Decision(Page):
             task_duration_seconds=task_duration_seconds,
             click_feedback_ms=player.click_feedback_ms,
             main_bonus_feedback_ms=player.main_bonus_feedback_ms,
+            use_post_click_delay=player.use_post_click_delay,
             bonus_threshold_main_cards=player.bonus_threshold_main_cards,
             main_bonus_points=player.main_bonus_points,
             initial_time_left_text=format_clock_seconds(task_duration_seconds),
@@ -700,6 +775,7 @@ class Decision(Page):
             main_bonus_already_triggered=participant_main_bonus_triggered(
                 player.participant
             ),
+            pending_feedback=pending_feedback,
         )
 
     @staticmethod
@@ -781,6 +857,7 @@ class Decision(Page):
                 + (player.field_maybe_none('main_bonus_points_added') or 0)
             )
             player.participant.card_stacking_points_accumulated = player.points_after
+            store_participant_pending_feedback(player)
 
         if player.round_number == C.NUM_ROUNDS:
             player.participant.card_stacking_time_finished = True
@@ -915,6 +992,7 @@ class Results(Page):
             show_elapsed_minutes=player.show_elapsed_minutes,
             show_main_cards_collected=player.show_main_cards_collected,
             show_click_feedback=player.show_click_feedback,
+            use_post_click_delay=player.use_post_click_delay,
             click_feedback_ms=player.click_feedback_ms,
             main_bonus_feedback_ms=player.main_bonus_feedback_ms,
             bonus_threshold_main_cards=player.bonus_threshold_main_cards,

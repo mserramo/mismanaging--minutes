@@ -32,6 +32,7 @@ PARTICIPANT_FIELDS = [
     'card_stacking_show_elapsed_minutes',
     'card_stacking_show_main_cards_collected',
     'card_stacking_show_click_feedback',
+    'card_stacking_use_post_click_delay',
     'card_stacking_click_feedback_ms',
     'card_stacking_main_bonus_feedback_ms',
     'card_stacking_bonus_threshold_main_cards',
@@ -43,6 +44,7 @@ PARTICIPANT_FIELDS = [
     'card_stacking_inactive_round',
     'card_stacking_time_finished',
     'card_stacking_time_finished_round',
+    'card_stacking_pending_feedback_json',
 ]
 SESSION_FIELDS = []
 
