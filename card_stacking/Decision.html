@@ -1,5 +1,5 @@
 {{ block content }}
-<link rel="stylesheet" href="{{ static 'global/card_stacking.css' }}?v=20260708-feedback-style-v1">
+<link rel="stylesheet" href="{{ static 'global/card_stacking.css' }}?v=20260709-click-feedback-toggle-v1">
 
 <div
     class="cs-task"
@@ -8,6 +8,8 @@
     data-task-timer-key="{{ task_timer_key }}"
     data-task-duration-seconds="{{ task_duration_seconds }}"
     data-click-feedback-ms="{{ click_feedback_ms }}"
+    data-main-bonus-feedback-ms="{{ main_bonus_feedback_ms }}"
+    data-show-click-feedback="{{ show_click_feedback }}"
     data-bonus-threshold-main-cards="{{ bonus_threshold_main_cards }}"
     data-main-bonus-points="{{ main_bonus_points }}"
     data-points-accumulated="{{ points_accumulated }}"
@@ -43,7 +45,7 @@
             <span id="cs-inactivity-display"></span>
         </div>
         <div class="cs-status-right">
-            <span id="cs-points-display">Points accumulated: {{ points_accumulated_display }}</span>
+            <span id="cs-points-display">Total Points: {{ points_accumulated_display }}</span>
         {{ if show_main_cards_collected }}
             <span id="cs-main-card-display">Main cards collected: {{ main_cards_collected_so_far }}</span>
         {{ endif }}
@@ -69,12 +71,12 @@
             {{ if card.is_main }}
             {{ else }}
                 <span class="cs-points">Points: {{ card.display_x }}</span>
-                <span class="cs-multiplier">{{ card.display_y }}% of {{ card.display_z }}x multiplier</span>
+                <span class="cs-multiplier">{{ card.display_y }}% of {{ card.display_z }}x</span>
             {{ endif }}
         </button>
         {{ endfor }}
     </div>
 </div>
 
-<script src="{{ static 'global/card_stacking.js' }}?v=20260708-feedback-style-v1"></script>
+<script src="{{ static 'global/card_stacking.js' }}?v=20260709-click-feedback-toggle-v1"></script>
 {{ endblock }}

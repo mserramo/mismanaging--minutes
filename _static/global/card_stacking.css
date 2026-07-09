@@ -48,6 +48,10 @@
     font-size: 20px;
     font-weight: 800;
     color: #0f172a;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
     opacity: 0;
     transform: scale(0.96);
     transition:
@@ -56,30 +60,31 @@
 }
 
 .cs-cue-visible {
-    display: block;
-    width: fit-content;
-    max-width: 100%;
-    margin-right: auto;
-    margin-left: auto;
-    padding: 2px 12px;
-    border: 2px solid currentColor;
-    border-radius: 6px;
     opacity: 1;
     transform: scale(1);
 }
 
+.cs-cue-box {
+    display: block;
+    width: fit-content;
+    max-width: 100%;
+    padding: 2px 12px;
+    border: 2px solid currentColor;
+    border-radius: 6px;
+}
+
 .cs-cue-multiplier {
-    border-color: #b45309;
-    background: #fffbeb;
-    color: #b45309;
-    text-shadow: 0 0 18px rgba(245, 158, 11, 0.38);
+    border-color: #0e7490;
+    background: #ecfeff;
+    color: #0e7490;
+    text-shadow: 0 0 18px rgba(6, 182, 212, 0.35);
 }
 
 .cs-cue-points {
-    border-color: #1d4ed8;
-    background: #eff6ff;
-    color: #1d4ed8;
-    text-shadow: 0 0 14px rgba(59, 130, 246, 0.28);
+    border-color: #334155;
+    background: #f8fafc;
+    color: #334155;
+    text-shadow: 0 0 14px rgba(100, 116, 139, 0.28);
 }
 
 .cs-cue-main-bonus {
@@ -87,6 +92,15 @@
     background: #ecfdf5;
     color: #047857;
     text-shadow: 0 0 18px rgba(16, 185, 129, 0.32);
+}
+
+.cs-cue-multiplier-badge {
+    min-width: 52px;
+    border-color: #0e7490;
+    background: #ecfeff;
+    color: #0e7490;
+    font-size: 24px;
+    text-shadow: 0 0 18px rgba(6, 182, 212, 0.42);
 }
 
 .cs-card-row {

@@ -2,6 +2,9 @@
 
 This repository contains the first oTree prototype of the Card Stacking Game.
 
+For coauthors who want to run the game locally without Codex, see
+[`docs/run_locally_for_coauthors.md`](docs/run_locally_for_coauthors.md).
+
 ## Local setup
 
 ```bash

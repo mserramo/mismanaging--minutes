@@ -22,14 +22,28 @@ Development setup
 <script>
     (function () {
         const durationInput = document.getElementById('id_setup_duration_minutes');
+        const showClickFeedbackInput = document.getElementById('id_setup_show_click_feedback');
+        const mainBonusDelayInput = document.getElementById('id_setup_main_bonus_feedback_ms');
         const thresholdInput = document.getElementById('id_setup_bonus_threshold_main_cards');
         const pointsInput = document.getElementById('id_setup_main_bonus_points');
         if (!durationInput || !thresholdInput || !pointsInput) {
             return;
         }
 
-        const thresholdPerMinute = 50;
-        const pointsPerMainCard = 15;
+        const thresholdPerMinute = 55;
+        const pointsPerMainCard = 30;
+        const defaultMainBonusDelay = 1000;
+        let thresholdOverridden = false;
+        let pointsOverridden = false;
+
+        if (showClickFeedbackInput && !showClickFeedbackInput.dataset.defaultApplied) {
+            showClickFeedbackInput.checked = true;
+            showClickFeedbackInput.dataset.defaultApplied = 'true';
+        }
+
+        if (mainBonusDelayInput && !mainBonusDelayInput.value) {
+            mainBonusDelayInput.value = defaultMainBonusDelay;
+        }
 
         function formatNumber(value) {
             return Number.isInteger(value) ? String(value) : value.toFixed(1);
@@ -45,13 +59,30 @@ Development setup
             return Math.max(0, threshold * pointsPerMainCard);
         }
 
+        function setDefaultThresholdAndPoints() {
+            if (!thresholdOverridden) {
+                thresholdInput.value = defaultThreshold();
+            }
+            if (!pointsOverridden) {
+                pointsInput.value = formatNumber(defaultPoints());
+            }
+        }
+
+        setDefaultThresholdAndPoints();
+
         durationInput.addEventListener('input', () => {
-            thresholdInput.value = defaultThreshold();
-            pointsInput.value = formatNumber(defaultPoints());
+            setDefaultThresholdAndPoints();
         });
 
         thresholdInput.addEventListener('input', () => {
-            pointsInput.value = formatNumber(defaultPoints());
+            thresholdOverridden = true;
+            if (!pointsOverridden) {
+                pointsInput.value = formatNumber(defaultPoints());
+            }
+        });
+
+        pointsInput.addEventListener('input', () => {
+            pointsOverridden = true;
         });
     })();
 </script>
