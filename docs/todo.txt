@@ -1,0 +1,38 @@
+Card Stacking Game To-Do List
+=============================
+
+1. Modify the code so the participant-level full generated screen sequence is
+   exported in the app data, not only stored internally on the participant.
+   This should make it possible to verify from the exported CSV which screen
+   type sequence was generated for each participant, including screens not
+   actually reached during play.
+
+2. Decide whether other participant-level randomization fields should also be
+   exported in app-level data, especially:
+   - participant color order
+   - participant main-card color
+   - full loaded screen-type list
+
+3. Replace placeholder screen types in `card_stacking/screen_types.txt` with
+   final experimental values.
+
+4. Decide whether the development setup page should be removed, hidden, or
+   replaced before production deployment.
+
+5. Decide whether the development debug summary page should be removed, hidden,
+   or replaced before production deployment.
+
+6. Review bonus/payment logic for production:
+   - conversion from points to money
+   - whether the main-card bonus contributes to real payment
+   - how multiplier gains contribute to real payment
+   - what exactly happens after inactivity loss
+
+7. Add production instructions text for participants.
+
+8. Confirm the intended inactivity limit and whether it should remain fixed in
+   session config or become configurable elsewhere.
+
+9. Add a final export/data dictionary documenting the most important saved
+   fields and how to analyze them.
+
