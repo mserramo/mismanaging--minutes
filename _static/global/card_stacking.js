@@ -24,10 +24,10 @@
     const timeLeftDisplay = document.getElementById('cs-time-left-display');
     const pointsDisplay = document.getElementById('cs-points-display');
     const cueDisplay = document.getElementById('cs-cue');
-    const configuredFeedbackDelayMs = Number(task.dataset.clickFeedbackMs || 1100);
+    const configuredFeedbackDelayMs = Number(task.dataset.clickFeedbackMs || 600);
     const feedbackDelayMs = Number.isFinite(configuredFeedbackDelayMs)
         ? Math.max(0, configuredFeedbackDelayMs)
-        : 1100;
+        : 600;
     let lastActivityAt = Date.now();
     let submitted = false;
 
@@ -70,22 +70,8 @@
         return Number.isFinite(parsed) ? parsed : 0;
     }
 
-    function ordinal(value) {
-        const number = Math.max(0, Math.floor(Number(value) || 0));
-        const mod100 = number % 100;
-        if (mod100 >= 11 && mod100 <= 13) {
-            return `${number}th`;
-        }
-        switch (number % 10) {
-            case 1:
-                return `${number}st`;
-            case 2:
-                return `${number}nd`;
-            case 3:
-                return `${number}rd`;
-            default:
-                return `${number}th`;
-        }
+    function parseBoolean(value) {
+        return ['1', 'true', 'yes'].includes(String(value || '').toLowerCase());
     }
 
     function showCue(message, className) {
@@ -124,7 +110,7 @@
         submitted = true;
         const clickedResponseTimeMs = responseTimeMs();
         const clickedTaskElapsedMs = taskElapsedMs();
-        const isMain = cardButton.dataset.isMain === 'True';
+        const isMain = parseBoolean(cardButton.dataset.isMain);
         const cardX = parseCardNumber(cardButton.dataset.x);
         const cardY = parseCardNumber(cardButton.dataset.y);
         const cardZ = parseCardNumber(cardButton.dataset.z);
@@ -176,15 +162,15 @@
             button.disabled = true;
             button.classList.toggle('cs-card-selected', button === cardButton);
         });
-        if (multiplierApplied) {
+        if (mainBonusTriggered || mainBonusPointsAdded > 0) {
+            showCue(
+                `+${formatPoints(mainBonusPointsAdded)} points -- collected ${bonusThresholdMainCards} main cards`,
+                'cs-cue-main-bonus'
+            );
+        } else if (multiplierApplied) {
             showCue(
                 `+${formatPoints(cardPointsAdded)} points -- ${formatPoints(cardZ)}x multiplier applied`,
                 'cs-cue-multiplier'
-            );
-        } else if (mainBonusTriggered) {
-            showCue(
-                `+${formatPoints(mainBonusPointsAdded)} points -- collected ${ordinal(bonusThresholdMainCards)} main cards`,
-                'cs-cue-main-bonus'
             );
         } else if (!isMain) {
             showCue(`+${formatPoints(cardPointsAdded)} points`, 'cs-cue-points');

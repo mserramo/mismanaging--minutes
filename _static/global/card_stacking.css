@@ -56,29 +56,34 @@
 }
 
 .cs-cue-visible {
-    opacity: 1;
-    transform: scale(1);
-}
-
-.cs-cue-multiplier {
-    color: #b45309;
-    text-shadow: 0 0 18px rgba(245, 158, 11, 0.38);
-}
-
-.cs-cue-points {
-    color: #1d4ed8;
-    text-shadow: 0 0 14px rgba(59, 130, 246, 0.28);
-}
-
-.cs-cue-main-bonus {
     display: block;
     width: fit-content;
     max-width: 100%;
     margin-right: auto;
     margin-left: auto;
     padding: 2px 12px;
-    border: 2px solid #047857;
+    border: 2px solid currentColor;
     border-radius: 6px;
+    opacity: 1;
+    transform: scale(1);
+}
+
+.cs-cue-multiplier {
+    border-color: #b45309;
+    background: #fffbeb;
+    color: #b45309;
+    text-shadow: 0 0 18px rgba(245, 158, 11, 0.38);
+}
+
+.cs-cue-points {
+    border-color: #1d4ed8;
+    background: #eff6ff;
+    color: #1d4ed8;
+    text-shadow: 0 0 14px rgba(59, 130, 246, 0.28);
+}
+
+.cs-cue-main-bonus {
+    border: 2px solid #047857;
     background: #ecfdf5;
     color: #047857;
     text-shadow: 0 0 18px rgba(16, 185, 129, 0.32);
