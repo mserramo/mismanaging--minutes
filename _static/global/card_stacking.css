@@ -204,6 +204,23 @@
     font-size: 14px;
 }
 
+.cs-setup-section {
+    border-top: 1px solid #cbd5e1;
+    padding-top: 14px;
+    margin-top: 14px;
+}
+
+.cs-setup-section:first-of-type {
+    margin-top: 0;
+}
+
+.cs-setup-section h5 {
+    margin: 0 0 12px;
+    color: #334155;
+    font-size: 16px;
+    font-weight: 700;
+}
+
 .cs-setup-readonly {
     background: #e2e8f0;
     color: #64748b;

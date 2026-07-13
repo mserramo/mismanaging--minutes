@@ -3,7 +3,7 @@ Development setup
 {{ endblock }}
 
 {{ block content }}
-<link rel="stylesheet" href="{{ static 'global/card_stacking.css' }}?v=20260713-snappy-controls-v1">
+<link rel="stylesheet" href="{{ static 'global/card_stacking.css' }}?v=20260713-grouped-setup-v1">
 
 <div class="cs-setup">
     <div class="cs-debug-notice">
@@ -13,13 +13,32 @@ Development setup
 
     <div class="cs-debug-panel">
         <h4>Task parameters</h4>
-        <p class="cs-setup-note">
-            Show per-click point feedback governs feedback message duration.
-            Wait before next screen governs the two wait-duration fields.
-            Screen motion duration is independent and controls the visual card
-            movement only.
-        </p>
-        {{ formfields }}
+        <div class="cs-setup-section">
+            <h5>Task and bonus</h5>
+            {{ formfield 'setup_duration_minutes' }}
+            {{ formfield 'setup_bonus_threshold_main_cards' }}
+            {{ formfield 'setup_main_bonus_points' }}
+        </div>
+
+        <div class="cs-setup-section">
+            <h5>Participant counters</h5>
+            {{ formfield 'setup_show_elapsed_minutes' }}
+            {{ formfield 'setup_show_main_cards_collected' }}
+        </div>
+
+        <div class="cs-setup-section">
+            <h5>Per-click feedback</h5>
+            {{ formfield 'setup_show_click_feedback' }}
+            {{ formfield 'setup_feedback_message_ms' }}
+        </div>
+
+        <div class="cs-setup-section">
+            <h5>Screen advance and motion</h5>
+            {{ formfield 'setup_use_post_click_delay' }}
+            {{ formfield 'setup_click_feedback_ms' }}
+            {{ formfield 'setup_main_bonus_feedback_ms' }}
+            {{ formfield 'setup_screen_motion_ms' }}
+        </div>
     </div>
 
     {{ next_button }}
