@@ -65,6 +65,10 @@ class Player(BasePlayer):
         label='Show main-card counter to participant?',
         initial=True,
     )
+    setup_show_total_points = models.BooleanField(
+        label='Show total-points counter to participant?',
+        initial=True,
+    )
     setup_show_click_feedback = models.BooleanField(
         label='Show per-click point feedback?',
         initial=True,
@@ -105,6 +109,7 @@ class Player(BasePlayer):
     num_screen_types = models.IntegerField()
     show_elapsed_minutes = models.BooleanField()
     show_main_cards_collected = models.BooleanField()
+    show_total_points = models.BooleanField()
     show_click_feedback = models.BooleanField()
     use_post_click_delay = models.BooleanField()
     feedback_message_ms = models.IntegerField()
@@ -364,6 +369,10 @@ def participant_show_main_cards_collected(participant):
     )
 
 
+def participant_show_total_points(participant):
+    return bool(_extra_field(participant, 'card_stacking_show_total_points', True))
+
+
 def participant_show_click_feedback(participant):
     return bool(_extra_field(participant, 'card_stacking_show_click_feedback', True))
 
@@ -570,6 +579,7 @@ def set_round_fields(player):
     player.show_main_cards_collected = participant_show_main_cards_collected(
         player.participant
     )
+    player.show_total_points = participant_show_total_points(player.participant)
     player.show_click_feedback = participant_show_click_feedback(player.participant)
     player.use_post_click_delay = participant_use_post_click_delay(player.participant)
     player.feedback_message_ms = participant_feedback_message_ms(player.participant)
@@ -609,6 +619,7 @@ def creating_session(subsession):
         player.participant.card_stacking_num_screen_types = num_screen_types
         player.participant.card_stacking_show_elapsed_minutes = True
         player.participant.card_stacking_show_main_cards_collected = True
+        player.participant.card_stacking_show_total_points = True
         player.participant.card_stacking_show_click_feedback = True
         player.participant.card_stacking_use_post_click_delay = False
         player.participant.card_stacking_feedback_message_ms = (
@@ -648,6 +659,7 @@ class DevelopmentSetup(Page):
         'setup_duration_minutes',
         'setup_show_elapsed_minutes',
         'setup_show_main_cards_collected',
+        'setup_show_total_points',
         'setup_show_click_feedback',
         'setup_feedback_message_ms',
         'setup_use_post_click_delay',
@@ -666,6 +678,8 @@ class DevelopmentSetup(Page):
     def vars_for_template(player):
         if player.field_maybe_none('setup_show_click_feedback') is None:
             player.setup_show_click_feedback = True
+        if player.field_maybe_none('setup_show_total_points') is None:
+            player.setup_show_total_points = True
         if player.field_maybe_none('setup_use_post_click_delay') is None:
             player.setup_use_post_click_delay = False
         if player.field_maybe_none('setup_feedback_message_ms') is None:
@@ -676,7 +690,10 @@ class DevelopmentSetup(Page):
             player.setup_main_bonus_feedback_ms = C.DEFAULT_MAIN_BONUS_FEEDBACK_MS
         if player.field_maybe_none('setup_screen_motion_ms') is None:
             player.setup_screen_motion_ms = C.DEFAULT_SCREEN_MOTION_MS
-        return {}
+        return dict(
+            setup_show_click_feedback=player.setup_show_click_feedback,
+            setup_use_post_click_delay=player.setup_use_post_click_delay,
+        )
 
     @staticmethod
     def error_message(player, values):
@@ -748,6 +765,9 @@ class DevelopmentSetup(Page):
         )
         player.participant.card_stacking_show_main_cards_collected = (
             player.setup_show_main_cards_collected
+        )
+        player.participant.card_stacking_show_total_points = (
+            player.setup_show_total_points
         )
         player.participant.card_stacking_show_click_feedback = (
             player.setup_show_click_feedback
@@ -885,6 +905,11 @@ class Decision(Page):
                 player,
                 'show_main_cards_collected',
                 participant_show_main_cards_collected(player.participant),
+            ),
+            show_total_points=_player_field(
+                player,
+                'show_total_points',
+                participant_show_total_points(player.participant),
             ),
             show_click_feedback=_player_field(
                 player,
@@ -1144,6 +1169,11 @@ class Results(Page):
                 player,
                 'show_main_cards_collected',
                 participant_show_main_cards_collected(player.participant),
+            ),
+            show_total_points=_player_field(
+                player,
+                'show_total_points',
+                participant_show_total_points(player.participant),
             ),
             show_click_feedback=_player_field(
                 player,

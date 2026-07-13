@@ -3,7 +3,7 @@ Development setup
 {{ endblock }}
 
 {{ block content }}
-<link rel="stylesheet" href="{{ static 'global/card_stacking.css' }}?v=20260713-600ms-defaults-v1">
+<link rel="stylesheet" href="{{ static 'global/card_stacking.css' }}?v=20260713-counter-toggle-v1">
 
 <div class="cs-setup">
     <div class="cs-debug-notice">
@@ -24,21 +24,90 @@ Development setup
             <h5>Participant counters</h5>
             {{ formfield 'setup_show_elapsed_minutes' }}
             {{ formfield 'setup_show_main_cards_collected' }}
+            {{ formfield 'setup_show_total_points' }}
         </div>
 
         <div class="cs-setup-section">
             <h5>Per-click feedback</h5>
-            {{ formfield 'setup_show_click_feedback' }}
-            <p class="cs-field-note">
-                Controls whether participants see point and multiplier feedback
-                after each card choice.
-            </p>
+            <div class="mb-3 _formfield">
+                <label class="col-form-label" for="id_setup_show_click_feedback">
+                    Show per-click point feedback?
+                </label>
+                <p class="cs-field-note">
+                    Controls whether participants see point and multiplier
+                    feedback after each card choice.
+                </p>
+                <div class="controls">
+                    <div id="id_setup_show_click_feedback" required>
+                        <div class="form-check">
+                            <input
+                                class="form-check-input"
+                                type="radio"
+                                {{ if setup_show_click_feedback }}checked{{ endif }}
+                                id="id_setup_show_click_feedback-0"
+                                name="setup_show_click_feedback"
+                                required
+                                value="True"
+                            >
+                            <label for="id_setup_show_click_feedback-0">Yes</label>
+                        </div>
+                        <div class="form-check">
+                            <input
+                                class="form-check-input"
+                                type="radio"
+                                {{ if not setup_show_click_feedback }}checked{{ endif }}
+                                id="id_setup_show_click_feedback-1"
+                                name="setup_show_click_feedback"
+                                required
+                                value="False"
+                            >
+                            <label for="id_setup_show_click_feedback-1">No</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
             {{ formfield 'setup_feedback_message_ms' }}
         </div>
 
         <div class="cs-setup-section">
             <h5>Screen advance and motion</h5>
-            {{ formfield 'setup_use_post_click_delay' }}
+            <div class="mb-3 _formfield">
+                <label class="col-form-label" for="id_setup_use_post_click_delay">
+                    Wait before next screen?
+                </label>
+                <p class="cs-field-note">
+                    Controls whether the current screen remains visible briefly
+                    after a card click before advancing.
+                </p>
+                <div class="controls">
+                    <div id="id_setup_use_post_click_delay" required>
+                        <div class="form-check">
+                            <input
+                                class="form-check-input"
+                                type="radio"
+                                {{ if setup_use_post_click_delay }}checked{{ endif }}
+                                id="id_setup_use_post_click_delay-0"
+                                name="setup_use_post_click_delay"
+                                required
+                                value="True"
+                            >
+                            <label for="id_setup_use_post_click_delay-0">Yes</label>
+                        </div>
+                        <div class="form-check">
+                            <input
+                                class="form-check-input"
+                                type="radio"
+                                {{ if not setup_use_post_click_delay }}checked{{ endif }}
+                                id="id_setup_use_post_click_delay-1"
+                                name="setup_use_post_click_delay"
+                                required
+                                value="False"
+                            >
+                            <label for="id_setup_use_post_click_delay-1">No</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
             {{ formfield 'setup_click_feedback_ms' }}
             {{ formfield 'setup_main_bonus_feedback_ms' }}
             {{ formfield 'setup_screen_motion_ms' }}
@@ -68,7 +137,7 @@ Development setup
 
         const thresholdPerMinute = 55;
         const pointsPerMainCard = 30;
-        const defaultFeedbackMessageMs = 300;
+        const defaultFeedbackMessageMs = 600;
         const defaultPostClickWaitMs = 0;
         const defaultMainBonusWaitMs = 0;
         let thresholdOverridden = false;

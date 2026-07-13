@@ -1,5 +1,5 @@
 {{ block content }}
-<link rel="stylesheet" href="{{ static 'global/card_stacking.css' }}?v=20260713-600ms-defaults-v1">
+<link rel="stylesheet" href="{{ static 'global/card_stacking.css' }}?v=20260713-counter-toggle-v1">
 
 <div
     class="cs-task"
@@ -22,6 +22,7 @@
     data-main-cards-collected="{{ main_cards_collected_so_far }}"
     data-main-bonus-triggered="{{ main_bonus_already_triggered }}"
     data-show-elapsed-minutes="{{ show_elapsed_minutes }}"
+    data-show-total-points="{{ show_total_points }}"
     data-show-main-cards-collected="{{ show_main_cards_collected }}"
     style="
         --cs-screen-motion-ms: {{ screen_motion_ms }}ms;
@@ -54,7 +55,9 @@
             <span id="cs-inactivity-display"></span>
         </div>
         <div class="cs-status-right">
+        {{ if show_total_points }}
             <span id="cs-points-display">Total Points: {{ points_accumulated_display }}</span>
+        {{ endif }}
         {{ if show_main_cards_collected }}
             <span id="cs-main-card-display">Main cards collected: {{ main_cards_collected_so_far }}</span>
         {{ endif }}
@@ -87,5 +90,5 @@
     </div>
 </div>
 
-<script src="{{ static 'global/card_stacking.js' }}?v=20260713-600ms-defaults-v1"></script>
+<script src="{{ static 'global/card_stacking.js' }}?v=20260713-counter-toggle-v1"></script>
 {{ endblock }}
