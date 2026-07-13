@@ -1,5 +1,5 @@
 {{ block content }}
-<link rel="stylesheet" href="{{ static 'global/card_stacking.css' }}?v=20260713-main-card-feedback-v1">
+<link rel="stylesheet" href="{{ static 'global/card_stacking.css' }}?v=20260713-single-round-v1">
 
 <div
     class="cs-task"
@@ -24,6 +24,7 @@
     data-show-elapsed-minutes="{{ show_elapsed_minutes }}"
     data-show-total-points="{{ show_total_points }}"
     data-show-main-cards-collected="{{ show_main_cards_collected }}"
+    data-main-color-index="{{ main_color_index }}"
     style="
         --cs-screen-motion-ms: {{ screen_motion_ms }}ms;
     "
@@ -46,6 +47,14 @@
     <input type="hidden" name="points_after" id="points_after">
     <input type="hidden" name="timed_out_inactive" id="timed_out_inactive" value="False">
     <input type="hidden" name="timed_out_task_duration" id="timed_out_task_duration" value="False">
+    <input type="hidden" name="decision_count" id="decision_count" value="0">
+    <input type="hidden" name="decisions_json" id="decisions_json" value="[]">
+    <input type="hidden" name="screen_sequence_json" id="screen_sequence_json" value="[]">
+
+    <textarea id="cs-screen-types-json" hidden>{{ screen_types_json }}</textarea>
+    <textarea id="cs-screen-sequence-json" hidden>{{ screen_sequence_json }}</textarea>
+    <textarea id="cs-color-order-json" hidden>{{ color_order_json }}</textarea>
+    <textarea id="cs-card-deck-json" hidden>{{ card_deck_json }}</textarea>
 
     <div class="cs-status">
         <div class="cs-status-left">
@@ -66,30 +75,8 @@
 
     <div class="cs-cue" id="cs-cue" aria-live="polite"></div>
 
-    <div class="cs-card-row cs-card-row-new" aria-label="Card choices">
-        {{ for card in cards }}
-        <button
-            class="cs-card"
-            type="button"
-            style="--card-color: {{ card.color }};"
-            data-card-id="{{ card.id }}"
-            data-card-label="{{ card.label }}"
-            data-position="{{ card.position }}"
-            data-is-main="{{ card.is_main }}"
-            data-x="{{ card.x }}"
-            data-y="{{ card.y }}"
-            data-z="{{ card.z }}"
-        >
-            <span class="cs-card-label">{{ card.label }}</span>
-            {{ if card.is_main }}
-            {{ else }}
-                <span class="cs-points">Points: {{ card.display_x }}</span>
-                <span class="cs-multiplier">{{ card.display_y }}% of {{ card.display_z }}x</span>
-            {{ endif }}
-        </button>
-        {{ endfor }}
-    </div>
+    <div class="cs-card-row cs-card-row-new" id="cs-card-row" aria-label="Card choices"></div>
 </div>
 
-<script src="{{ static 'global/card_stacking.js' }}?v=20260713-main-card-feedback-v1"></script>
+<script src="{{ static 'global/card_stacking.js' }}?v=20260713-single-round-v1"></script>
 {{ endblock }}

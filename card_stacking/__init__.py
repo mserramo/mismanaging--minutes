@@ -19,7 +19,8 @@ class C(BaseConstants):
 
     MAX_DURATION_MINUTES = 40
     FASTEST_DECISION_SECONDS = 0.5
-    NUM_ROUNDS = int(MAX_DURATION_MINUTES * 60 / FASTEST_DECISION_SECONDS)
+    MAX_DECISIONS = int(MAX_DURATION_MINUTES * 60 / FASTEST_DECISION_SECONDS)
+    NUM_ROUNDS = 1
 
     DEFAULT_DURATION_MINUTES = 1
     DEFAULT_NUM_SCREEN_TYPES = 50
@@ -146,6 +147,9 @@ class Player(BasePlayer):
     points_after = models.FloatField(blank=True)
     timed_out_inactive = models.BooleanField(initial=False)
     timed_out_task_duration = models.BooleanField(initial=False)
+    decision_count = models.IntegerField(initial=0)
+    decisions_json = models.LongStringField(blank=True)
+    screen_sequence_json = models.LongStringField(blank=True)
 
 
 def _session_config(player, key, default):
@@ -303,7 +307,7 @@ def generate_screen_sequence(participant, num_screen_types):
     rng = random.Random(
         f'card-stacking-screen-sequence-{participant.code}-{num_screen_types}'
     )
-    return [rng.randint(1, num_screen_types) for _ in range(C.NUM_ROUNDS)]
+    return [rng.randint(1, num_screen_types) for _ in range(C.MAX_DECISIONS)]
 
 
 def initialize_participant_timed_task(
@@ -814,6 +818,28 @@ class Intro(Page):
         return player.round_number == 1 and not is_inactive(player)
 
 
+def parse_player_decisions(player):
+    decisions_json = player.field_maybe_none('decisions_json') or '[]'
+    try:
+        decisions = json.loads(decisions_json)
+    except json.JSONDecodeError:
+        return []
+    return decisions if isinstance(decisions, list) else []
+
+
+def format_decision_bool(value):
+    if value is True:
+        return 'Yes'
+    if value is False:
+        return 'No'
+    return ''
+
+
+def decision_value(decision, key, default=''):
+    value = decision.get(key, default)
+    return default if value is None else value
+
+
 class Decision(Page):
     form_model = 'player'
     form_fields = [
@@ -835,15 +861,14 @@ class Decision(Page):
         'points_after',
         'timed_out_inactive',
         'timed_out_task_duration',
+        'decision_count',
+        'decisions_json',
+        'screen_sequence_json',
     ]
 
     @staticmethod
     def is_displayed(player):
-        if (
-            player.round_number > C.NUM_ROUNDS
-            or is_inactive(player)
-            or is_time_finished(player)
-        ):
+        if is_inactive(player) or is_time_finished(player):
             return False
         set_round_fields(player)
         return True
@@ -865,7 +890,9 @@ class Decision(Page):
             side_message='',
             side_class_name='',
         )
-        pending_feedback.update(pop_participant_pending_feedback(player.participant))
+        screen_types = participant_screen_types(player.participant)
+        screen_sequence = participant_screen_sequence(player.participant)
+        color_order = participant_color_order(player.participant)
         return dict(
             cards=cards,
             inactivity_seconds=_player_field(
@@ -933,6 +960,11 @@ class Decision(Page):
                 player.participant
             ),
             pending_feedback=pending_feedback,
+            screen_types_json=json.dumps(screen_types),
+            screen_sequence_json=json.dumps(screen_sequence),
+            color_order_json=json.dumps(color_order),
+            main_color_index=participant_main_color_index(player.participant),
+            card_deck_json=json.dumps(C.CARD_DECK),
         )
 
     @staticmethod
@@ -940,85 +972,84 @@ class Decision(Page):
         timed_out = values.get('timed_out_inactive') or values.get(
             'timed_out_task_duration'
         )
-        chosen_card_id = values.get('chosen_card_id')
-        if not timed_out and not chosen_card_id:
+        decisions_json = values.get('decisions_json') or '[]'
+        try:
+            decisions = json.loads(decisions_json)
+        except json.JSONDecodeError:
+            return 'Could not read the decision log.'
+        if not timed_out and not decisions:
             return 'Please choose a card.'
 
     @staticmethod
     def before_next_page(player, timeout_happened):
-        previous_main_count = previous_main_cards_collected(player)
-        player.main_cards_collected = previous_main_count
+        set_round_fields(player)
+        decisions = parse_player_decisions(player)
+        player.decision_count = len(decisions)
+        player.screen_sequence_json = player.field_maybe_none(
+            'screen_sequence_json'
+        ) or json.dumps(participant_screen_sequence(player.participant))
 
         if player.timed_out_inactive:
-            current_points = participant_points_accumulated(player.participant)
-            player.points_before = current_points
-            player.points_after = current_points
             player.participant.card_stacking_inactive = True
             player.participant.card_stacking_inactive_round = player.round_number
-            return
-
-        if player.timed_out_task_duration:
-            current_points = participant_points_accumulated(player.participant)
-            player.points_before = current_points
-            player.points_after = current_points
+        else:
             player.participant.card_stacking_time_finished = True
             player.participant.card_stacking_time_finished_round = player.round_number
-            return
 
-        chosen_card = card_from_round(player, player.chosen_card_id)
-        if chosen_card:
+        if not decisions:
             current_points = participant_points_accumulated(player.participant)
             if player.field_maybe_none('points_before') is None:
                 player.points_before = current_points
-            player.chosen_card_position = chosen_card['position']
-            player.chosen_is_main = chosen_card['is_main']
-            player.chosen_x = chosen_card.get('x')
-            player.chosen_y = chosen_card.get('y')
-            player.chosen_z = chosen_card.get('z')
-            player.main_cards_collected = previous_main_count + int(
-                bool(chosen_card['is_main'])
-            )
-            if chosen_card['is_main']:
-                player.card_points_added = 0
-                player.multiplier_applied = False
-                player.multiplier_y = None
-                player.multiplier_z = None
-                if (
-                    not participant_main_bonus_triggered(player.participant)
-                    and player.main_cards_collected >= player.bonus_threshold_main_cards
-                ):
-                    player.main_bonus_triggered_this_round = True
-                    player.main_bonus_points_added = player.main_bonus_points
-                    player.participant.card_stacking_main_bonus_triggered = True
-                    player.participant.card_stacking_main_bonus_trigger_round = (
-                        player.round_number
-                    )
-                else:
-                    player.main_bonus_triggered_this_round = False
-                    player.main_bonus_points_added = 0
-            else:
-                if player.field_maybe_none('multiplier_applied') is None:
-                    player.multiplier_applied = False
-                player.card_points_added = (
-                    chosen_card['x'] * chosen_card['z']
-                    if player.multiplier_applied
-                    else chosen_card['x']
-                )
-                player.multiplier_y = chosen_card.get('y')
-                player.multiplier_z = chosen_card.get('z')
-                player.main_bonus_triggered_this_round = False
-                player.main_bonus_points_added = 0
-            player.points_after = (
-                player.points_before
-                + (player.field_maybe_none('card_points_added') or 0)
-                + (player.field_maybe_none('main_bonus_points_added') or 0)
-            )
-            player.participant.card_stacking_points_accumulated = player.points_after
-            store_participant_pending_feedback(player)
+            if player.field_maybe_none('points_after') is None:
+                player.points_after = current_points
+            return
 
-        if player.round_number == C.NUM_ROUNDS:
-            player.participant.card_stacking_time_finished = True
-            player.participant.card_stacking_time_finished_round = player.round_number
+        last_decision = decisions[-1]
+        player.chosen_card_id = decision_value(last_decision, 'chosen_card_id')
+        player.chosen_card_position = decision_value(
+            last_decision, 'chosen_card_position', None
+        )
+        player.chosen_is_main = bool(decision_value(last_decision, 'chosen_is_main', False))
+        player.chosen_x = decision_value(last_decision, 'chosen_x', None)
+        player.chosen_y = decision_value(last_decision, 'chosen_y', None)
+        player.chosen_z = decision_value(last_decision, 'chosen_z', None)
+        player.response_time_ms = decision_value(last_decision, 'response_time_ms', None)
+        player.task_elapsed_ms = decision_value(last_decision, 'task_elapsed_ms', None)
+        player.main_cards_collected = decision_value(
+            last_decision, 'main_cards_collected', 0
+        )
+        player.points_before = decision_value(last_decision, 'points_before', 0)
+        player.card_points_added = decision_value(last_decision, 'card_points_added', 0)
+        player.multiplier_applied = bool(
+            decision_value(last_decision, 'multiplier_applied', False)
+        )
+        player.multiplier_y = decision_value(last_decision, 'multiplier_y', None)
+        player.multiplier_z = decision_value(last_decision, 'multiplier_z', None)
+        player.main_bonus_triggered_this_round = bool(
+            decision_value(last_decision, 'main_bonus_triggered_this_round', False)
+        )
+        player.main_bonus_points_added = decision_value(
+            last_decision, 'main_bonus_points_added', 0
+        )
+        player.points_after = decision_value(last_decision, 'points_after', 0)
+        player.participant.card_stacking_points_accumulated = player.points_after
+
+        main_bonus_decision = next(
+            (
+                decision
+                for decision in decisions
+                if decision.get('main_bonus_triggered_this_round')
+            ),
+            None,
+        )
+        player.participant.card_stacking_main_bonus_triggered = (
+            main_bonus_decision is not None
+        )
+        player.participant.card_stacking_main_bonus_trigger_round = (
+            None
+            if main_bonus_decision is None
+            else main_bonus_decision.get('screen_number')
+        )
 
 
 class InactivityLoss(Page):
@@ -1058,81 +1089,62 @@ class Results(Page):
     @staticmethod
     def vars_for_template(player):
         set_round_fields(player)
-        decisions = []
-        answered_rounds = 0
-        total_task_elapsed_ms = None
-        main_cards_collected = 0
-        for round_player in player.in_all_rounds()[: player.round_number]:
-            chosen_card_id = round_player.field_maybe_none('chosen_card_id')
-            if not chosen_card_id:
-                continue
-            answered_rounds += 1
-            response_time_ms = round_player.field_maybe_none('response_time_ms')
-            total_task_elapsed_ms = round_player.field_maybe_none('task_elapsed_ms')
-            main_cards_collected = round_player.field_maybe_none(
-                'main_cards_collected'
-            ) or main_cards_collected
-            chosen_card = card_from_round(round_player, chosen_card_id)
-            chosen_is_main = (
-                ''
-                if chosen_card is None
-                else 'Yes'
-                if chosen_card['is_main']
-                else 'No'
+        decisions = parse_player_decisions(player)
+        debug_decisions = []
+        answered_rounds = len(decisions)
+        total_task_elapsed_ms = player.field_maybe_none('task_elapsed_ms')
+        main_cards_collected = player.field_maybe_none('main_cards_collected') or 0
+        for decision in decisions:
+            response_time_ms = decision.get('response_time_ms')
+            total_task_elapsed_ms = decision.get(
+                'task_elapsed_ms', total_task_elapsed_ms
             )
-            decisions.append(
+            main_cards_collected = decision.get(
+                'main_cards_collected', main_cards_collected
+            )
+            debug_decisions.append(
                 dict(
-                    round_number=round_player.round_number,
-                    screen_type_index=round_player.field_maybe_none(
-                        'screen_type_index'
+                    round_number=decision.get('screen_number', ''),
+                    screen_type_index=decision.get('screen_type_index', ''),
+                    chosen_card_id=decision.get('chosen_card_id', ''),
+                    chosen_card_label=decision.get('chosen_card_label', ''),
+                    chosen_card_position=decision.get('chosen_card_position', ''),
+                    chosen_is_main=format_decision_bool(
+                        decision.get('chosen_is_main')
                     ),
-                    chosen_card_id=chosen_card_id or '',
-                    chosen_card_label='' if chosen_card is None else chosen_card['label'],
-                    chosen_card_position=(
-                        '' if chosen_card is None else chosen_card['position']
-                    ),
-                    chosen_is_main=chosen_is_main,
                     chosen_x=(
                         'N/A'
-                        if chosen_card and chosen_card['is_main']
-                        else format_card_value(round_player.field_maybe_none('chosen_x'))
+                        if decision.get('chosen_is_main')
+                        else format_card_value(decision.get('chosen_x'))
                     ),
                     chosen_y=(
                         'N/A'
-                        if chosen_card and chosen_card['is_main']
-                        else format_card_value(round_player.field_maybe_none('chosen_y'))
+                        if decision.get('chosen_is_main')
+                        else format_card_value(decision.get('chosen_y'))
                     ),
                     chosen_z=(
                         'N/A'
-                        if chosen_card and chosen_card['is_main']
-                        else format_card_value(round_player.field_maybe_none('chosen_z'))
+                        if decision.get('chosen_is_main')
+                        else format_card_value(decision.get('chosen_z'))
                     ),
-                    points_before=format_card_value(
-                        round_player.field_maybe_none('points_before')
-                    ),
-                    card_points_added=format_card_value(
-                        round_player.field_maybe_none('card_points_added')
-                    ),
+                    points_before=format_card_value(decision.get('points_before')),
+                    card_points_added=format_card_value(decision.get('card_points_added')),
                     multiplier_applied=(
                         ''
-                        if chosen_card and chosen_card['is_main']
+                        if decision.get('chosen_is_main')
                         else 'Yes'
-                        if round_player.field_maybe_none('multiplier_applied')
+                        if decision.get('multiplier_applied')
                         else 'No'
                     ),
                     main_bonus_triggered=(
                         'Yes'
-                        if round_player.field_maybe_none(
-                            'main_bonus_triggered_this_round'
-                        )
+                        if decision.get('main_bonus_triggered_this_round')
                         else 'No'
                     ),
                     main_bonus_points_added=format_card_value(
-                        round_player.field_maybe_none('main_bonus_points_added')
+                        decision.get('main_bonus_points_added')
                     ),
-                    points_after=format_card_value(
-                        round_player.field_maybe_none('points_after')
-                    ),
+                    points_after=format_card_value(decision.get('points_after')),
                     response_time_seconds=(
                         ''
                         if response_time_ms is None
@@ -1141,7 +1153,7 @@ class Results(Page):
                 )
             )
         final_elapsed_ms = player.field_maybe_none('task_elapsed_ms')
-        if final_elapsed_ms is not None:
+        if final_elapsed_ms is not None and final_elapsed_ms > 0:
             total_task_elapsed_ms = final_elapsed_ms
         total_task_elapsed_seconds = (
             ''
@@ -1165,7 +1177,7 @@ class Results(Page):
             player, 'main_bonus_points', participant_main_bonus_points(player.participant)
         )
         return dict(
-            decisions=decisions,
+            decisions=debug_decisions,
             task_duration_minutes=task_duration_minutes,
             num_screen_types=num_screen_types,
             show_elapsed_minutes=_player_field(
@@ -1230,7 +1242,10 @@ class Results(Page):
                 participant_screen_types(player.participant), indent=2
             ),
             screen_sequence_json=json.dumps(
-                participant_screen_sequence(player.participant)
+                json.loads(
+                    player.field_maybe_none('screen_sequence_json')
+                    or json.dumps(participant_screen_sequence(player.participant))
+                )
             ),
         )
 
