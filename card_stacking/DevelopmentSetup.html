@@ -3,7 +3,7 @@ Development setup
 {{ endblock }}
 
 {{ block content }}
-<link rel="stylesheet" href="{{ static 'global/card_stacking.css' }}?v=20260713-grouped-setup-v1">
+<link rel="stylesheet" href="{{ static 'global/card_stacking.css' }}?v=20260713-600ms-defaults-v1">
 
 <div class="cs-setup">
     <div class="cs-debug-notice">
@@ -29,6 +29,10 @@ Development setup
         <div class="cs-setup-section">
             <h5>Per-click feedback</h5>
             {{ formfield 'setup_show_click_feedback' }}
+            <p class="cs-field-note">
+                Controls whether participants see point and multiplier feedback
+                after each card choice.
+            </p>
             {{ formfield 'setup_feedback_message_ms' }}
         </div>
 

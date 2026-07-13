@@ -34,10 +34,10 @@
     const timeLeftDisplay = document.getElementById('cs-time-left-display');
     const pointsDisplay = document.getElementById('cs-points-display');
     const cueDisplay = document.getElementById('cs-cue');
-    const configuredFeedbackMessageMs = Number(task.dataset.feedbackMessageMs || 300);
+    const configuredFeedbackMessageMs = Number(task.dataset.feedbackMessageMs || 600);
     const feedbackMessageMs = Number.isFinite(configuredFeedbackMessageMs)
         ? Math.max(0, configuredFeedbackMessageMs)
-        : 300;
+        : 600;
     const configuredPostClickWaitMs = Number(task.dataset.clickFeedbackMs || 0);
     const postClickWaitMs = Number.isFinite(configuredPostClickWaitMs)
         ? Math.max(0, configuredPostClickWaitMs)
