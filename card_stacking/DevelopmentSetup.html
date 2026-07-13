@@ -3,7 +3,7 @@ Development setup
 {{ endblock }}
 
 {{ block content }}
-<link rel="stylesheet" href="{{ static 'global/card_stacking.css' }}">
+<link rel="stylesheet" href="{{ static 'global/card_stacking.css' }}?v=20260713-animation-controls-v1">
 
 <div class="cs-setup">
     <div class="cs-debug-notice">
@@ -13,6 +13,13 @@ Development setup
 
     <div class="cs-debug-panel">
         <h4>Task parameters</h4>
+        <p class="cs-setup-note">
+            The no-delay option governs only the waiting period after a click
+            before the next decision screen. When set to No, the common
+            post-click feedback delay and L-th main-card feedback delay fields
+            are locked. The selected-card and new-screen animation durations
+            remain independent.
+        </p>
         {{ formfields }}
     </div>
 
@@ -23,6 +30,10 @@ Development setup
     (function () {
         const durationInput = document.getElementById('id_setup_duration_minutes');
         const showClickFeedbackInput = document.getElementById('id_setup_show_click_feedback');
+        const useDelayInputs = Array.from(
+            document.querySelectorAll('input[name="setup_use_post_click_delay"]')
+        );
+        const clickDelayInput = document.getElementById('id_setup_click_feedback_ms');
         const mainBonusDelayInput = document.getElementById('id_setup_main_bonus_feedback_ms');
         const thresholdInput = document.getElementById('id_setup_bonus_threshold_main_cards');
         const pointsInput = document.getElementById('id_setup_main_bonus_points');
@@ -44,6 +55,31 @@ Development setup
         if (mainBonusDelayInput && !mainBonusDelayInput.value) {
             mainBonusDelayInput.value = defaultMainBonusDelay;
         }
+
+        function usesPostClickDelay() {
+            const checked = useDelayInputs.find((input) => input.checked);
+            return checked ? checked.value === 'True' : false;
+        }
+
+        function setDelayFieldLocking() {
+            const locked = !usesPostClickDelay();
+            [clickDelayInput, mainBonusDelayInput].forEach((input) => {
+                if (!input) {
+                    return;
+                }
+                input.readOnly = locked;
+                input.setAttribute('aria-disabled', locked ? 'true' : 'false');
+                input.classList.toggle('cs-setup-readonly', locked);
+                input.title = locked
+                    ? 'Locked because post-click feedback delay is set to No.'
+                    : '';
+            });
+        }
+
+        useDelayInputs.forEach((input) => {
+            input.addEventListener('change', setDelayFieldLocking);
+        });
+        setDelayFieldLocking();
 
         function formatNumber(value) {
             return Number.isInteger(value) ? String(value) : value.toFixed(1);

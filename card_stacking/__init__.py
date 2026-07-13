@@ -26,7 +26,10 @@ class C(BaseConstants):
     DEFAULT_SCREEN_TYPES_FILE = 'screen_types.txt'
     DEFAULT_CLICK_FEEDBACK_MS = 600
     DEFAULT_MAIN_BONUS_FEEDBACK_MS = 1000
+    DEFAULT_SELECTION_ANIMATION_MS = 120
+    DEFAULT_NEW_SCREEN_ANIMATION_MS = 260
     MAX_CLICK_FEEDBACK_MS = 5000
+    MAX_ANIMATION_MS = 5000
     MAIN_BONUS_THRESHOLD_PER_MINUTE = 55
     MAIN_BONUS_POINTS_PER_MAIN_CARD = 30
 
@@ -78,6 +81,14 @@ class Player(BasePlayer):
         label='L-th main-card feedback delay in milliseconds',
         initial=C.DEFAULT_MAIN_BONUS_FEEDBACK_MS,
     )
+    setup_selection_animation_ms = models.IntegerField(
+        label='Selected-card animation duration in milliseconds',
+        initial=C.DEFAULT_SELECTION_ANIMATION_MS,
+    )
+    setup_new_screen_animation_ms = models.IntegerField(
+        label='New-screen card row animation duration in milliseconds',
+        initial=C.DEFAULT_NEW_SCREEN_ANIMATION_MS,
+    )
     setup_bonus_threshold_main_cards = models.IntegerField(
         label='Main-card bonus threshold (L)',
         initial=int(C.DEFAULT_DURATION_MINUTES * C.MAIN_BONUS_THRESHOLD_PER_MINUTE),
@@ -98,6 +109,8 @@ class Player(BasePlayer):
     use_post_click_delay = models.BooleanField()
     click_feedback_ms = models.IntegerField()
     main_bonus_feedback_ms = models.IntegerField()
+    selection_animation_ms = models.IntegerField()
+    new_screen_animation_ms = models.IntegerField()
     bonus_threshold_main_cards = models.IntegerField()
     main_bonus_points = models.FloatField()
     inactivity_seconds = models.IntegerField()
@@ -373,6 +386,26 @@ def participant_main_bonus_feedback_ms(participant):
     )
 
 
+def participant_selection_animation_ms(participant):
+    return int(
+        _extra_field(
+            participant,
+            'card_stacking_selection_animation_ms',
+            C.DEFAULT_SELECTION_ANIMATION_MS,
+        )
+    )
+
+
+def participant_new_screen_animation_ms(participant):
+    return int(
+        _extra_field(
+            participant,
+            'card_stacking_new_screen_animation_ms',
+            C.DEFAULT_NEW_SCREEN_ANIMATION_MS,
+        )
+    )
+
+
 def participant_bonus_threshold_main_cards(participant):
     return int(
         _extra_field(
@@ -534,6 +567,12 @@ def set_round_fields(player):
     player.main_bonus_feedback_ms = participant_main_bonus_feedback_ms(
         player.participant
     )
+    player.selection_animation_ms = participant_selection_animation_ms(
+        player.participant
+    )
+    player.new_screen_animation_ms = participant_new_screen_animation_ms(
+        player.participant
+    )
     player.bonus_threshold_main_cards = participant_bonus_threshold_main_cards(
         player.participant
     )
@@ -573,6 +612,12 @@ def creating_session(subsession):
         player.participant.card_stacking_main_bonus_feedback_ms = (
             C.DEFAULT_MAIN_BONUS_FEEDBACK_MS
         )
+        player.participant.card_stacking_selection_animation_ms = (
+            C.DEFAULT_SELECTION_ANIMATION_MS
+        )
+        player.participant.card_stacking_new_screen_animation_ms = (
+            C.DEFAULT_NEW_SCREEN_ANIMATION_MS
+        )
         player.participant.card_stacking_bonus_threshold_main_cards = (
             default_bonus_threshold_main_cards(C.DEFAULT_DURATION_MINUTES)
         )
@@ -604,6 +649,8 @@ class DevelopmentSetup(Page):
         'setup_use_post_click_delay',
         'setup_click_feedback_ms',
         'setup_main_bonus_feedback_ms',
+        'setup_selection_animation_ms',
+        'setup_new_screen_animation_ms',
         'setup_bonus_threshold_main_cards',
         'setup_main_bonus_points',
     ]
@@ -620,6 +667,10 @@ class DevelopmentSetup(Page):
             player.setup_use_post_click_delay = False
         if player.field_maybe_none('setup_main_bonus_feedback_ms') is None:
             player.setup_main_bonus_feedback_ms = C.DEFAULT_MAIN_BONUS_FEEDBACK_MS
+        if player.field_maybe_none('setup_selection_animation_ms') is None:
+            player.setup_selection_animation_ms = C.DEFAULT_SELECTION_ANIMATION_MS
+        if player.field_maybe_none('setup_new_screen_animation_ms') is None:
+            player.setup_new_screen_animation_ms = C.DEFAULT_NEW_SCREEN_ANIMATION_MS
         return {}
 
     @staticmethod
@@ -627,6 +678,8 @@ class DevelopmentSetup(Page):
         duration_minutes = values.get('setup_duration_minutes')
         click_feedback_ms = values.get('setup_click_feedback_ms')
         main_bonus_feedback_ms = values.get('setup_main_bonus_feedback_ms')
+        selection_animation_ms = values.get('setup_selection_animation_ms')
+        new_screen_animation_ms = values.get('setup_new_screen_animation_ms')
         bonus_threshold_main_cards = values.get('setup_bonus_threshold_main_cards')
         main_bonus_points = values.get('setup_main_bonus_points')
         if duration_minutes is None:
@@ -652,6 +705,24 @@ class DevelopmentSetup(Page):
             return (
                 f'L-th main-card feedback delay cannot exceed '
                 f'{C.MAX_CLICK_FEEDBACK_MS} milliseconds.'
+            )
+        if selection_animation_ms is None:
+            return 'Enter the selected-card animation duration in milliseconds.'
+        if selection_animation_ms < 0:
+            return 'Selected-card animation duration cannot be negative.'
+        if selection_animation_ms > C.MAX_ANIMATION_MS:
+            return (
+                f'Selected-card animation duration cannot exceed '
+                f'{C.MAX_ANIMATION_MS} milliseconds.'
+            )
+        if new_screen_animation_ms is None:
+            return 'Enter the new-screen card row animation duration in milliseconds.'
+        if new_screen_animation_ms < 0:
+            return 'New-screen card row animation duration cannot be negative.'
+        if new_screen_animation_ms > C.MAX_ANIMATION_MS:
+            return (
+                f'New-screen card row animation duration cannot exceed '
+                f'{C.MAX_ANIMATION_MS} milliseconds.'
             )
         if bonus_threshold_main_cards is None:
             return 'Enter the main-card bonus threshold.'
@@ -684,6 +755,12 @@ class DevelopmentSetup(Page):
         )
         player.participant.card_stacking_main_bonus_feedback_ms = (
             player.setup_main_bonus_feedback_ms
+        )
+        player.participant.card_stacking_selection_animation_ms = (
+            player.setup_selection_animation_ms
+        )
+        player.participant.card_stacking_new_screen_animation_ms = (
+            player.setup_new_screen_animation_ms
         )
         player.participant.card_stacking_bonus_threshold_main_cards = (
             player.setup_bonus_threshold_main_cards
@@ -760,6 +837,8 @@ class Decision(Page):
             task_duration_seconds=task_duration_seconds,
             click_feedback_ms=player.click_feedback_ms,
             main_bonus_feedback_ms=player.main_bonus_feedback_ms,
+            selection_animation_ms=player.selection_animation_ms,
+            new_screen_animation_ms=player.new_screen_animation_ms,
             use_post_click_delay=player.use_post_click_delay,
             bonus_threshold_main_cards=player.bonus_threshold_main_cards,
             main_bonus_points=player.main_bonus_points,
@@ -995,6 +1074,8 @@ class Results(Page):
             use_post_click_delay=player.use_post_click_delay,
             click_feedback_ms=player.click_feedback_ms,
             main_bonus_feedback_ms=player.main_bonus_feedback_ms,
+            selection_animation_ms=player.selection_animation_ms,
+            new_screen_animation_ms=player.new_screen_animation_ms,
             bonus_threshold_main_cards=player.bonus_threshold_main_cards,
             main_bonus_points=format_card_value(player.main_bonus_points),
             answered_rounds=answered_rounds,

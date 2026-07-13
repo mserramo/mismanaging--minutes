@@ -35,6 +35,8 @@ PARTICIPANT_FIELDS = [
     'card_stacking_use_post_click_delay',
     'card_stacking_click_feedback_ms',
     'card_stacking_main_bonus_feedback_ms',
+    'card_stacking_selection_animation_ms',
+    'card_stacking_new_screen_animation_ms',
     'card_stacking_bonus_threshold_main_cards',
     'card_stacking_main_bonus_points',
     'card_stacking_points_accumulated',

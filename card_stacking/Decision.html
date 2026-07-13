@@ -1,5 +1,5 @@
 {{ block content }}
-<link rel="stylesheet" href="{{ static 'global/card_stacking.css' }}?v=20260713-no-delay-feedback-v2">
+<link rel="stylesheet" href="{{ static 'global/card_stacking.css' }}?v=20260713-animation-controls-v1">
 
 <div
     class="cs-task"
@@ -22,6 +22,10 @@
     data-main-bonus-triggered="{{ main_bonus_already_triggered }}"
     data-show-elapsed-minutes="{{ show_elapsed_minutes }}"
     data-show-main-cards-collected="{{ show_main_cards_collected }}"
+    style="
+        --cs-selection-animation-ms: {{ selection_animation_ms }}ms;
+        --cs-new-screen-animation-ms: {{ new_screen_animation_ms }}ms;
+    "
 >
     <input type="hidden" name="chosen_card_id" id="chosen_card_id">
     <input type="hidden" name="chosen_card_position" id="chosen_card_position">

@@ -116,7 +116,7 @@
 }
 
 .cs-card-row-new {
-    animation: cs-new-screen 260ms ease-out;
+    animation: cs-new-screen var(--cs-new-screen-animation-ms, 260ms) ease-out;
 }
 
 .cs-card {
@@ -133,8 +133,8 @@
     justify-content: space-between;
     box-shadow: 0 1px 3px rgba(15, 23, 42, 0.18);
     transition:
-        box-shadow 120ms ease,
-        transform 120ms ease;
+        box-shadow var(--cs-selection-animation-ms, 120ms) ease,
+        transform var(--cs-selection-animation-ms, 120ms) ease;
 }
 
 .cs-card:hover,
@@ -195,6 +195,19 @@
 
 .cs-debug-panel h4 {
     margin: 0 0 10px;
+}
+
+.cs-setup-note {
+    max-width: 760px;
+    margin: 0 0 14px;
+    color: #475569;
+    font-size: 14px;
+}
+
+.cs-setup-readonly {
+    background: #e2e8f0;
+    color: #64748b;
+    cursor: not-allowed;
 }
 
 .cs-debug-panel dl {
