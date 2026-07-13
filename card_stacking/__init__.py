@@ -38,8 +38,8 @@ class C(BaseConstants):
     CARD_DECK = [
         dict(color_id='blue', label='Blue card', color='#2563eb'),
         dict(color_id='green', label='Green card', color='#16a34a'),
-        dict(color_id='amber', label='Amber card', color='#f59e0b'),
-        dict(color_id='rose', label='Rose card', color='#e11d48'),
+        dict(color_id='amber', label='Yellow card', color='#f59e0b'),
+        dict(color_id='rose', label='Red card', color='#e11d48'),
         dict(color_id='violet', label='Violet card', color='#7c3aed'),
     ]
 
@@ -490,8 +490,16 @@ def store_participant_pending_feedback(player):
             side_class_name='',
         )
     else:
-        player.participant.card_stacking_pending_feedback_json = ''
-        return
+        chosen_card = card_from_round(player, player.chosen_card_id)
+        pending_feedback = dict(
+            message='' if chosen_card is None else f'+1 {chosen_card["label"]}',
+            class_name='cs-cue-points',
+            side_message='',
+            side_class_name='',
+        )
+        if not pending_feedback['message']:
+            player.participant.card_stacking_pending_feedback_json = ''
+            return
     player.participant.card_stacking_pending_feedback_json = json.dumps(
         pending_feedback
     )

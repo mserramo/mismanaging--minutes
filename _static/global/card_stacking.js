@@ -166,6 +166,7 @@
         const cardX = parseCardNumber(cardButton.dataset.x);
         const cardY = parseCardNumber(cardButton.dataset.y);
         const cardZ = parseCardNumber(cardButton.dataset.z);
+        const cardLabel = cardButton.dataset.cardLabel || 'Main card';
         let cardPointsAdded = 0;
         let multiplierApplied = false;
         let mainBonusTriggered = false;
@@ -229,6 +230,8 @@
                 );
             } else if (!isMain) {
                 showCue(`+${formatPoints(cardPointsAdded)} points`, 'cs-cue-points');
+            } else {
+                showCue(`+1 ${cardLabel}`, 'cs-cue-points');
             }
             hideCueAfter(feedbackMessageMs);
             const submitDelayMs = mainBonusTriggered

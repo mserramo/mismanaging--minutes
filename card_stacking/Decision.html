@@ -1,5 +1,5 @@
 {{ block content }}
-<link rel="stylesheet" href="{{ static 'global/card_stacking.css' }}?v=20260713-counter-toggle-v1">
+<link rel="stylesheet" href="{{ static 'global/card_stacking.css' }}?v=20260713-main-card-feedback-v1">
 
 <div
     class="cs-task"
@@ -73,6 +73,7 @@
             type="button"
             style="--card-color: {{ card.color }};"
             data-card-id="{{ card.id }}"
+            data-card-label="{{ card.label }}"
             data-position="{{ card.position }}"
             data-is-main="{{ card.is_main }}"
             data-x="{{ card.x }}"
@@ -90,5 +91,5 @@
     </div>
 </div>
 
-<script src="{{ static 'global/card_stacking.js' }}?v=20260713-counter-toggle-v1"></script>
+<script src="{{ static 'global/card_stacking.js' }}?v=20260713-main-card-feedback-v1"></script>
 {{ endblock }}
