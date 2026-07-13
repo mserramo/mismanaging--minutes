@@ -157,9 +157,15 @@ def configured_screen_types_file(session):
 
 def _extra_field(obj, field_name, default=None):
     try:
-        return getattr(obj, field_name)
+        value = getattr(obj, field_name)
     except KeyError:
         return default
+    return default if value is None else value
+
+
+def _player_field(player, field_name, default=None):
+    value = player.field_maybe_none(field_name)
+    return default if value is None else value
 
 
 def participant_color_order(participant):
@@ -550,10 +556,13 @@ def build_cards_for_player(player):
 
 
 def set_round_fields(player):
-    if player.field_maybe_none('card_params_json'):
-        return
-
-    cards = build_cards_for_player(player)
+    existing_cards_json = player.field_maybe_none('card_params_json')
+    cards = (
+        json.loads(existing_cards_json)
+        if existing_cards_json
+        else build_cards_for_player(player)
+    )
+    cards = [add_display_values(card) for card in cards]
     screen_type = screen_type_for_round(player)
     player.task_duration_minutes = participant_task_duration_minutes(player.participant)
     player.num_screen_types = participant_num_screen_types(player.participant)
@@ -813,9 +822,15 @@ class Decision(Page):
 
     @staticmethod
     def vars_for_template(player):
-        cards = json.loads(player.card_params_json)
+        set_round_fields(player)
+        cards = json.loads(_player_field(player, 'card_params_json', '[]'))
         cards = [add_display_values(card) for card in cards]
-        task_duration_seconds = player.task_duration_minutes * 60
+        task_duration_minutes = _player_field(
+            player,
+            'task_duration_minutes',
+            participant_task_duration_minutes(player.participant),
+        )
+        task_duration_seconds = task_duration_minutes * 60
         pending_feedback = dict(
             message='',
             class_name='',
@@ -825,21 +840,57 @@ class Decision(Page):
         pending_feedback.update(pop_participant_pending_feedback(player.participant))
         return dict(
             cards=cards,
-            inactivity_seconds=player.inactivity_seconds,
+            inactivity_seconds=_player_field(
+                player, 'inactivity_seconds', int(_session_config(player, 'inactivity_seconds', 30))
+            ),
             round_number=player.round_number,
             task_timer_key=f'card_stacking_task_started_at_{player.participant.code}',
             task_duration_seconds=task_duration_seconds,
-            feedback_message_ms=player.feedback_message_ms,
-            click_feedback_ms=player.click_feedback_ms,
-            main_bonus_feedback_ms=player.main_bonus_feedback_ms,
-            screen_motion_ms=player.screen_motion_ms,
-            use_post_click_delay=player.use_post_click_delay,
-            bonus_threshold_main_cards=player.bonus_threshold_main_cards,
-            main_bonus_points=player.main_bonus_points,
+            feedback_message_ms=_player_field(
+                player,
+                'feedback_message_ms',
+                participant_feedback_message_ms(player.participant),
+            ),
+            click_feedback_ms=_player_field(
+                player, 'click_feedback_ms', participant_click_feedback_ms(player.participant)
+            ),
+            main_bonus_feedback_ms=_player_field(
+                player,
+                'main_bonus_feedback_ms',
+                participant_main_bonus_feedback_ms(player.participant),
+            ),
+            screen_motion_ms=_player_field(
+                player, 'screen_motion_ms', participant_screen_motion_ms(player.participant)
+            ),
+            use_post_click_delay=_player_field(
+                player,
+                'use_post_click_delay',
+                participant_use_post_click_delay(player.participant),
+            ),
+            bonus_threshold_main_cards=_player_field(
+                player,
+                'bonus_threshold_main_cards',
+                participant_bonus_threshold_main_cards(player.participant),
+            ),
+            main_bonus_points=_player_field(
+                player, 'main_bonus_points', participant_main_bonus_points(player.participant)
+            ),
             initial_time_left_text=format_clock_seconds(task_duration_seconds),
-            show_elapsed_minutes=player.show_elapsed_minutes,
-            show_main_cards_collected=player.show_main_cards_collected,
-            show_click_feedback=player.show_click_feedback,
+            show_elapsed_minutes=_player_field(
+                player,
+                'show_elapsed_minutes',
+                participant_show_elapsed_minutes(player.participant),
+            ),
+            show_main_cards_collected=_player_field(
+                player,
+                'show_main_cards_collected',
+                participant_show_main_cards_collected(player.participant),
+            ),
+            show_click_feedback=_player_field(
+                player,
+                'show_click_feedback',
+                participant_show_click_feedback(player.participant),
+            ),
             main_cards_collected_so_far=previous_main_cards_collected(player),
             points_accumulated=participant_points_accumulated(player.participant),
             points_accumulated_display=format_card_value(
@@ -950,7 +1001,12 @@ class InactivityLoss(Page):
 
     @staticmethod
     def vars_for_template(player):
-        return dict(inactivity_seconds=player.inactivity_seconds)
+        set_round_fields(player)
+        return dict(
+            inactivity_seconds=_player_field(
+                player, 'inactivity_seconds', int(_session_config(player, 'inactivity_seconds', 30))
+            )
+        )
 
 
 class Results(Page):
@@ -968,6 +1024,7 @@ class Results(Page):
 
     @staticmethod
     def vars_for_template(player):
+        set_round_fields(player)
         decisions = []
         answered_rounds = 0
         total_task_elapsed_ms = None
@@ -1058,20 +1115,64 @@ class Results(Page):
             if total_task_elapsed_ms is None
             else f'{total_task_elapsed_ms / 1000:.1f}'
         )
+        task_duration_minutes = _player_field(
+            player,
+            'task_duration_minutes',
+            participant_task_duration_minutes(player.participant),
+        )
+        num_screen_types = _player_field(
+            player, 'num_screen_types', participant_num_screen_types(player.participant)
+        )
+        bonus_threshold_main_cards = _player_field(
+            player,
+            'bonus_threshold_main_cards',
+            participant_bonus_threshold_main_cards(player.participant),
+        )
+        main_bonus_points = _player_field(
+            player, 'main_bonus_points', participant_main_bonus_points(player.participant)
+        )
         return dict(
             decisions=decisions,
-            task_duration_minutes=player.task_duration_minutes,
-            num_screen_types=player.num_screen_types,
-            show_elapsed_minutes=player.show_elapsed_minutes,
-            show_main_cards_collected=player.show_main_cards_collected,
-            show_click_feedback=player.show_click_feedback,
-            use_post_click_delay=player.use_post_click_delay,
-            feedback_message_ms=player.feedback_message_ms,
-            click_feedback_ms=player.click_feedback_ms,
-            main_bonus_feedback_ms=player.main_bonus_feedback_ms,
-            screen_motion_ms=player.screen_motion_ms,
-            bonus_threshold_main_cards=player.bonus_threshold_main_cards,
-            main_bonus_points=format_card_value(player.main_bonus_points),
+            task_duration_minutes=task_duration_minutes,
+            num_screen_types=num_screen_types,
+            show_elapsed_minutes=_player_field(
+                player,
+                'show_elapsed_minutes',
+                participant_show_elapsed_minutes(player.participant),
+            ),
+            show_main_cards_collected=_player_field(
+                player,
+                'show_main_cards_collected',
+                participant_show_main_cards_collected(player.participant),
+            ),
+            show_click_feedback=_player_field(
+                player,
+                'show_click_feedback',
+                participant_show_click_feedback(player.participant),
+            ),
+            use_post_click_delay=_player_field(
+                player,
+                'use_post_click_delay',
+                participant_use_post_click_delay(player.participant),
+            ),
+            feedback_message_ms=_player_field(
+                player,
+                'feedback_message_ms',
+                participant_feedback_message_ms(player.participant),
+            ),
+            click_feedback_ms=_player_field(
+                player, 'click_feedback_ms', participant_click_feedback_ms(player.participant)
+            ),
+            main_bonus_feedback_ms=_player_field(
+                player,
+                'main_bonus_feedback_ms',
+                participant_main_bonus_feedback_ms(player.participant),
+            ),
+            screen_motion_ms=_player_field(
+                player, 'screen_motion_ms', participant_screen_motion_ms(player.participant)
+            ),
+            bonus_threshold_main_cards=bonus_threshold_main_cards,
+            main_bonus_points=format_card_value(main_bonus_points),
             answered_rounds=answered_rounds,
             main_cards_collected=main_cards_collected,
             points_accumulated=format_card_value(
@@ -1083,7 +1184,9 @@ class Results(Page):
             ),
             color_order_labels=', '.join(color_order_labels(player.participant)),
             main_card_color_label=main_card_color_label(player.participant),
-            inactivity_seconds=player.inactivity_seconds,
+            inactivity_seconds=_player_field(
+                player, 'inactivity_seconds', int(_session_config(player, 'inactivity_seconds', 30))
+            ),
             total_task_elapsed_seconds=total_task_elapsed_seconds,
             screen_types_json=json.dumps(
                 participant_screen_types(player.participant), indent=2
