@@ -116,7 +116,7 @@
 }
 
 .cs-card-row-new {
-    animation: cs-new-screen var(--cs-new-screen-animation-ms, 260ms) ease-out;
+    animation: cs-new-screen var(--cs-screen-motion-ms, 40ms) ease-out;
 }
 
 .cs-card {
@@ -133,8 +133,8 @@
     justify-content: space-between;
     box-shadow: 0 1px 3px rgba(15, 23, 42, 0.18);
     transition:
-        box-shadow var(--cs-selection-animation-ms, 120ms) ease,
-        transform var(--cs-selection-animation-ms, 120ms) ease;
+        box-shadow var(--cs-screen-motion-ms, 40ms) ease,
+        transform var(--cs-screen-motion-ms, 40ms) ease;
 }
 
 .cs-card:hover,

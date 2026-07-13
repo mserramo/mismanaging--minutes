@@ -1,5 +1,5 @@
 {{ block content }}
-<link rel="stylesheet" href="{{ static 'global/card_stacking.css' }}?v=20260713-animation-controls-v1">
+<link rel="stylesheet" href="{{ static 'global/card_stacking.css' }}?v=20260713-snappy-controls-v1">
 
 <div
     class="cs-task"
@@ -7,6 +7,7 @@
     data-round-number="{{ round_number }}"
     data-task-timer-key="{{ task_timer_key }}"
     data-task-duration-seconds="{{ task_duration_seconds }}"
+    data-feedback-message-ms="{{ feedback_message_ms }}"
     data-click-feedback-ms="{{ click_feedback_ms }}"
     data-main-bonus-feedback-ms="{{ main_bonus_feedback_ms }}"
     data-use-post-click-delay="{{ use_post_click_delay }}"
@@ -23,8 +24,7 @@
     data-show-elapsed-minutes="{{ show_elapsed_minutes }}"
     data-show-main-cards-collected="{{ show_main_cards_collected }}"
     style="
-        --cs-selection-animation-ms: {{ selection_animation_ms }}ms;
-        --cs-new-screen-animation-ms: {{ new_screen_animation_ms }}ms;
+        --cs-screen-motion-ms: {{ screen_motion_ms }}ms;
     "
 >
     <input type="hidden" name="chosen_card_id" id="chosen_card_id">
@@ -87,5 +87,5 @@
     </div>
 </div>
 
-<script src="{{ static 'global/card_stacking.js' }}?v=20260713-no-delay-feedback-v2"></script>
+<script src="{{ static 'global/card_stacking.js' }}?v=20260713-snappy-controls-v1"></script>
 {{ endblock }}

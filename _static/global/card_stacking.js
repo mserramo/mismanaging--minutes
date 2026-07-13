@@ -34,16 +34,20 @@
     const timeLeftDisplay = document.getElementById('cs-time-left-display');
     const pointsDisplay = document.getElementById('cs-points-display');
     const cueDisplay = document.getElementById('cs-cue');
-    const configuredFeedbackDelayMs = Number(task.dataset.clickFeedbackMs || 600);
-    const feedbackDelayMs = Number.isFinite(configuredFeedbackDelayMs)
-        ? Math.max(0, configuredFeedbackDelayMs)
-        : 600;
-    const configuredMainBonusFeedbackDelayMs = Number(
-        task.dataset.mainBonusFeedbackMs || 1000
+    const configuredFeedbackMessageMs = Number(task.dataset.feedbackMessageMs || 300);
+    const feedbackMessageMs = Number.isFinite(configuredFeedbackMessageMs)
+        ? Math.max(0, configuredFeedbackMessageMs)
+        : 300;
+    const configuredPostClickWaitMs = Number(task.dataset.clickFeedbackMs || 0);
+    const postClickWaitMs = Number.isFinite(configuredPostClickWaitMs)
+        ? Math.max(0, configuredPostClickWaitMs)
+        : 0;
+    const configuredMainBonusWaitMs = Number(
+        task.dataset.mainBonusFeedbackMs || 0
     );
-    const mainBonusFeedbackDelayMs = Number.isFinite(configuredMainBonusFeedbackDelayMs)
-        ? Math.max(0, configuredMainBonusFeedbackDelayMs)
-        : 1000;
+    const mainBonusWaitMs = Number.isFinite(configuredMainBonusWaitMs)
+        ? Math.max(0, configuredMainBonusWaitMs)
+        : 0;
     let lastActivityAt = Date.now();
     let submitted = false;
 
@@ -126,10 +130,7 @@
             initialFeedbackSideClass
         );
         if (initialFeedbackMessage) {
-            const initialFeedbackDelayMs = initialFeedbackClass === 'cs-cue-main-bonus'
-                ? mainBonusFeedbackDelayMs
-                : feedbackDelayMs;
-            hideCueAfter(initialFeedbackDelayMs);
+            hideCueAfter(feedbackMessageMs);
         }
     }
 
@@ -229,9 +230,10 @@
             } else if (!isMain) {
                 showCue(`+${formatPoints(cardPointsAdded)} points`, 'cs-cue-points');
             }
+            hideCueAfter(feedbackMessageMs);
             const submitDelayMs = mainBonusTriggered
-                ? mainBonusFeedbackDelayMs
-                : feedbackDelayMs;
+                ? mainBonusWaitMs
+                : postClickWaitMs;
             window.setTimeout(() => form.submit(), submitDelayMs);
         } else {
             form.submit();
