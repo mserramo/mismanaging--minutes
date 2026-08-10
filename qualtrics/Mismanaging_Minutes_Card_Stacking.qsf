@@ -1,0 +1,1315 @@
+{
+  "SurveyEntry": {
+    "SurveyID": "SV_07McTW65bCwKmGi",
+    "SurveyName": "Mismanaging Minutes - Card Stacking Game (Qualtrics)",
+    "SurveyDescription": null,
+    "SurveyOwnerID": "UR_cZPMLrEO6JJWxpk",
+    "SurveyBrandID": "stanforduniversity",
+    "DivisionID": null,
+    "SurveyLanguage": "EN",
+    "SurveyActiveResponseSet": "RS_2o559o4WwUGDI6q",
+    "SurveyStatus": "Inactive",
+    "SurveyStartDate": "0000-00-00 00:00:00",
+    "SurveyExpirationDate": "0000-00-00 00:00:00",
+    "SurveyCreationDate": "2026-05-14 23:54:33",
+    "CreatorID": "UR_cZPMLrEO6JJWxpk",
+    "LastModified": "2026-08-10 06:24:49",
+    "LastAccessed": "0000-00-00 00:00:00",
+    "LastActivated": "0000-00-00 00:00:00",
+    "Deleted": null
+  },
+  "SurveyElements": [
+    {
+      "SurveyID": "SV_07McTW65bCwKmGi",
+      "Element": "BL",
+      "PrimaryAttribute": "Survey Blocks",
+      "SecondaryAttribute": null,
+      "TertiaryAttribute": null,
+      "Payload": {
+        "0": {
+          "Type": "Trash",
+          "Description": "Trash / Unused Questions",
+          "ID": "BL_cs_trash",
+          "BlockElements": [],
+          "Options": {
+            "BlockLocking": "false",
+            "RandomizeQuestions": "false",
+            "BlockVisibility": "Expanded"
+          }
+        },
+        "1": {
+          "Type": "Standard",
+          "Description": "Development Setup",
+          "ID": "BL_cs_setup",
+          "BlockElements": [
+            {
+              "Type": "Question",
+              "QuestionID": "QID1"
+            }
+          ],
+          "Options": {
+            "BlockLocking": "false",
+            "RandomizeQuestions": "false",
+            "BlockVisibility": "Expanded"
+          },
+          "SubType": ""
+        },
+        "2": {
+          "Type": "Standard",
+          "Description": "Card Stacking Instructions",
+          "ID": "BL_cs_intro",
+          "BlockElements": [
+            {
+              "Type": "Question",
+              "QuestionID": "QID2"
+            }
+          ],
+          "Options": {
+            "BlockLocking": "false",
+            "RandomizeQuestions": "false",
+            "BlockVisibility": "Expanded"
+          },
+          "SubType": ""
+        },
+        "3": {
+          "Type": "Standard",
+          "Description": "Card Stacking Game",
+          "ID": "BL_cs_game",
+          "BlockElements": [
+            {
+              "Type": "Question",
+              "QuestionID": "QID3"
+            }
+          ],
+          "Options": {
+            "BlockLocking": "false",
+            "RandomizeQuestions": "false",
+            "BlockVisibility": "Expanded"
+          },
+          "SubType": ""
+        },
+        "4": {
+          "Type": "Standard",
+          "Description": "Card Stacking Outcome",
+          "ID": "BL_cs_outcome",
+          "BlockElements": [
+            {
+              "Type": "Question",
+              "QuestionID": "QID4"
+            }
+          ],
+          "Options": {
+            "BlockLocking": "false",
+            "RandomizeQuestions": "false",
+            "BlockVisibility": "Expanded"
+          },
+          "SubType": ""
+        }
+      }
+    },
+    {
+      "SurveyID": "SV_07McTW65bCwKmGi",
+      "Element": "FL",
+      "PrimaryAttribute": "Survey Flow",
+      "SecondaryAttribute": null,
+      "TertiaryAttribute": null,
+      "Payload": {
+        "Type": "Root",
+        "FlowID": "FL_1",
+        "Flow": [
+          {
+            "Type": "EmbeddedData",
+            "FlowID": "FL_2",
+            "EmbeddedData": [
+              {
+                "Description": "cs_duration_minutes",
+                "Type": "Custom",
+                "Field": "cs_duration_minutes",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false,
+                "Value": "1"
+              },
+              {
+                "Description": "cs_num_screen_types",
+                "Type": "Custom",
+                "Field": "cs_num_screen_types",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false,
+                "Value": "50"
+              },
+              {
+                "Description": "cs_show_time_left",
+                "Type": "Custom",
+                "Field": "cs_show_time_left",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false,
+                "Value": "1"
+              },
+              {
+                "Description": "cs_show_main_cards",
+                "Type": "Custom",
+                "Field": "cs_show_main_cards",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false,
+                "Value": "1"
+              },
+              {
+                "Description": "cs_show_total_points",
+                "Type": "Custom",
+                "Field": "cs_show_total_points",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false,
+                "Value": "1"
+              },
+              {
+                "Description": "cs_show_click_feedback",
+                "Type": "Custom",
+                "Field": "cs_show_click_feedback",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false,
+                "Value": "1"
+              },
+              {
+                "Description": "cs_feedback_message_ms",
+                "Type": "Custom",
+                "Field": "cs_feedback_message_ms",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false,
+                "Value": "600"
+              },
+              {
+                "Description": "cs_use_post_click_delay",
+                "Type": "Custom",
+                "Field": "cs_use_post_click_delay",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false,
+                "Value": "0"
+              },
+              {
+                "Description": "cs_post_click_delay_ms",
+                "Type": "Custom",
+                "Field": "cs_post_click_delay_ms",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false,
+                "Value": "0"
+              },
+              {
+                "Description": "cs_main_bonus_delay_ms",
+                "Type": "Custom",
+                "Field": "cs_main_bonus_delay_ms",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false,
+                "Value": "0"
+              },
+              {
+                "Description": "cs_screen_motion_ms",
+                "Type": "Custom",
+                "Field": "cs_screen_motion_ms",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false,
+                "Value": "600"
+              },
+              {
+                "Description": "cs_bonus_threshold_main_cards",
+                "Type": "Custom",
+                "Field": "cs_bonus_threshold_main_cards",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false,
+                "Value": "55"
+              },
+              {
+                "Description": "cs_main_bonus_points",
+                "Type": "Custom",
+                "Field": "cs_main_bonus_points",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false,
+                "Value": "1650"
+              },
+              {
+                "Description": "cs_inactivity_seconds",
+                "Type": "Custom",
+                "Field": "cs_inactivity_seconds",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false,
+                "Value": "30"
+              },
+              {
+                "Description": "cs_task_status",
+                "Type": "Recipient",
+                "Field": "cs_task_status",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "cs_decision_count",
+                "Type": "Recipient",
+                "Field": "cs_decision_count",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "cs_task_elapsed_ms",
+                "Type": "Recipient",
+                "Field": "cs_task_elapsed_ms",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "cs_final_points",
+                "Type": "Recipient",
+                "Field": "cs_final_points",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "cs_main_cards_collected",
+                "Type": "Recipient",
+                "Field": "cs_main_cards_collected",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "cs_main_bonus_triggered",
+                "Type": "Recipient",
+                "Field": "cs_main_bonus_triggered",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "cs_main_bonus_trigger_screen",
+                "Type": "Recipient",
+                "Field": "cs_main_bonus_trigger_screen",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "cs_activity_event_count",
+                "Type": "Recipient",
+                "Field": "cs_activity_event_count",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "cs_last_activity_source",
+                "Type": "Recipient",
+                "Field": "cs_last_activity_source",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "cs_inactivity_elapsed_ms_at_end",
+                "Type": "Recipient",
+                "Field": "cs_inactivity_elapsed_ms_at_end",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "cs_activity_listener_targets",
+                "Type": "Recipient",
+                "Field": "cs_activity_listener_targets",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "cs_event_counts_supported",
+                "Type": "Recipient",
+                "Field": "cs_event_counts_supported",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "cs_game_root_count",
+                "Type": "Recipient",
+                "Field": "cs_game_root_count",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "cs_game_owner_token",
+                "Type": "Recipient",
+                "Field": "cs_game_owner_token",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "cs_game_owner_claim_source",
+                "Type": "Recipient",
+                "Field": "cs_game_owner_claim_source",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "cs_game_owner_claimed_at",
+                "Type": "Recipient",
+                "Field": "cs_game_owner_claimed_at",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "cs_game_instance_token",
+                "Type": "Recipient",
+                "Field": "cs_game_instance_token",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "cs_authoritative_instance",
+                "Type": "Recipient",
+                "Field": "cs_authoritative_instance",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "cs_suppressed_by_peer",
+                "Type": "Recipient",
+                "Field": "cs_suppressed_by_peer",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "cs_authority_channel",
+                "Type": "Recipient",
+                "Field": "cs_authority_channel",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "cs_owner_claim_source",
+                "Type": "Recipient",
+                "Field": "cs_owner_claim_source",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "cs_seed",
+                "Type": "Recipient",
+                "Field": "cs_seed",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "cs_color_order",
+                "Type": "Recipient",
+                "Field": "cs_color_order",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "cs_color_order_indices",
+                "Type": "Recipient",
+                "Field": "cs_color_order_indices",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "cs_main_color",
+                "Type": "Recipient",
+                "Field": "cs_main_color",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "cs_main_color_index",
+                "Type": "Recipient",
+                "Field": "cs_main_color_index",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "cs_screen_sequence",
+                "Type": "Recipient",
+                "Field": "cs_screen_sequence",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "cs_log_columns",
+                "Type": "Custom",
+                "Field": "cs_log_columns",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false,
+                "Value": "screen_number,screen_type_index,chosen_card_id,chosen_card_label,chosen_card_position,chosen_is_main,chosen_x,chosen_y,chosen_z,response_time_ms,task_elapsed_ms,main_cards_collected,points_before,card_points_added,multiplier_applied,multiplier_y,multiplier_z,main_bonus_triggered_this_round,main_bonus_points_added,points_after"
+              },
+              {
+                "Description": "cs_log_chunk_count",
+                "Type": "Recipient",
+                "Field": "cs_log_chunk_count",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "cs_log_format_version",
+                "Type": "Custom",
+                "Field": "cs_log_format_version",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false,
+                "Value": "csv-v1"
+              },
+              {
+                "Description": "cs_log_overflow",
+                "Type": "Recipient",
+                "Field": "cs_log_overflow",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "cs_log_overflow_rows",
+                "Type": "Recipient",
+                "Field": "cs_log_overflow_rows",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "cs_log_chunk_001",
+                "Type": "Recipient",
+                "Field": "cs_log_chunk_001",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "cs_log_chunk_002",
+                "Type": "Recipient",
+                "Field": "cs_log_chunk_002",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "cs_log_chunk_003",
+                "Type": "Recipient",
+                "Field": "cs_log_chunk_003",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "cs_log_chunk_004",
+                "Type": "Recipient",
+                "Field": "cs_log_chunk_004",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "cs_log_chunk_005",
+                "Type": "Recipient",
+                "Field": "cs_log_chunk_005",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "cs_log_chunk_006",
+                "Type": "Recipient",
+                "Field": "cs_log_chunk_006",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "cs_log_chunk_007",
+                "Type": "Recipient",
+                "Field": "cs_log_chunk_007",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "cs_log_chunk_008",
+                "Type": "Recipient",
+                "Field": "cs_log_chunk_008",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "cs_log_chunk_009",
+                "Type": "Recipient",
+                "Field": "cs_log_chunk_009",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "cs_log_chunk_010",
+                "Type": "Recipient",
+                "Field": "cs_log_chunk_010",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "cs_log_chunk_011",
+                "Type": "Recipient",
+                "Field": "cs_log_chunk_011",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "cs_log_chunk_012",
+                "Type": "Recipient",
+                "Field": "cs_log_chunk_012",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "cs_log_chunk_013",
+                "Type": "Recipient",
+                "Field": "cs_log_chunk_013",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "cs_log_chunk_014",
+                "Type": "Recipient",
+                "Field": "cs_log_chunk_014",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "cs_log_chunk_015",
+                "Type": "Recipient",
+                "Field": "cs_log_chunk_015",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "cs_log_chunk_016",
+                "Type": "Recipient",
+                "Field": "cs_log_chunk_016",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "cs_log_chunk_017",
+                "Type": "Recipient",
+                "Field": "cs_log_chunk_017",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "cs_log_chunk_018",
+                "Type": "Recipient",
+                "Field": "cs_log_chunk_018",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "cs_log_chunk_019",
+                "Type": "Recipient",
+                "Field": "cs_log_chunk_019",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "cs_log_chunk_020",
+                "Type": "Recipient",
+                "Field": "cs_log_chunk_020",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "cs_log_chunk_021",
+                "Type": "Recipient",
+                "Field": "cs_log_chunk_021",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "cs_log_chunk_022",
+                "Type": "Recipient",
+                "Field": "cs_log_chunk_022",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "cs_log_chunk_023",
+                "Type": "Recipient",
+                "Field": "cs_log_chunk_023",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "cs_log_chunk_024",
+                "Type": "Recipient",
+                "Field": "cs_log_chunk_024",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "cs_log_chunk_025",
+                "Type": "Recipient",
+                "Field": "cs_log_chunk_025",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "cs_log_chunk_026",
+                "Type": "Recipient",
+                "Field": "cs_log_chunk_026",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "cs_log_chunk_027",
+                "Type": "Recipient",
+                "Field": "cs_log_chunk_027",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "cs_log_chunk_028",
+                "Type": "Recipient",
+                "Field": "cs_log_chunk_028",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "cs_log_chunk_029",
+                "Type": "Recipient",
+                "Field": "cs_log_chunk_029",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "cs_log_chunk_030",
+                "Type": "Recipient",
+                "Field": "cs_log_chunk_030",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "cs_log_chunk_031",
+                "Type": "Recipient",
+                "Field": "cs_log_chunk_031",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "cs_log_chunk_032",
+                "Type": "Recipient",
+                "Field": "cs_log_chunk_032",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "cs_log_chunk_033",
+                "Type": "Recipient",
+                "Field": "cs_log_chunk_033",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "cs_log_chunk_034",
+                "Type": "Recipient",
+                "Field": "cs_log_chunk_034",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "cs_log_chunk_035",
+                "Type": "Recipient",
+                "Field": "cs_log_chunk_035",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "cs_log_chunk_036",
+                "Type": "Recipient",
+                "Field": "cs_log_chunk_036",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "cs_log_chunk_037",
+                "Type": "Recipient",
+                "Field": "cs_log_chunk_037",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "cs_log_chunk_038",
+                "Type": "Recipient",
+                "Field": "cs_log_chunk_038",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "cs_log_chunk_039",
+                "Type": "Recipient",
+                "Field": "cs_log_chunk_039",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "cs_log_chunk_040",
+                "Type": "Recipient",
+                "Field": "cs_log_chunk_040",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "cs_log_chunk_041",
+                "Type": "Recipient",
+                "Field": "cs_log_chunk_041",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "cs_log_chunk_042",
+                "Type": "Recipient",
+                "Field": "cs_log_chunk_042",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "cs_log_chunk_043",
+                "Type": "Recipient",
+                "Field": "cs_log_chunk_043",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "cs_log_chunk_044",
+                "Type": "Recipient",
+                "Field": "cs_log_chunk_044",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "cs_log_chunk_045",
+                "Type": "Recipient",
+                "Field": "cs_log_chunk_045",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "cs_log_chunk_046",
+                "Type": "Recipient",
+                "Field": "cs_log_chunk_046",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "cs_log_chunk_047",
+                "Type": "Recipient",
+                "Field": "cs_log_chunk_047",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "cs_log_chunk_048",
+                "Type": "Recipient",
+                "Field": "cs_log_chunk_048",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "cs_log_chunk_049",
+                "Type": "Recipient",
+                "Field": "cs_log_chunk_049",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "cs_log_chunk_050",
+                "Type": "Recipient",
+                "Field": "cs_log_chunk_050",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "cs_log_chunk_051",
+                "Type": "Recipient",
+                "Field": "cs_log_chunk_051",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "cs_log_chunk_052",
+                "Type": "Recipient",
+                "Field": "cs_log_chunk_052",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "cs_log_chunk_053",
+                "Type": "Recipient",
+                "Field": "cs_log_chunk_053",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "cs_log_chunk_054",
+                "Type": "Recipient",
+                "Field": "cs_log_chunk_054",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "cs_log_chunk_055",
+                "Type": "Recipient",
+                "Field": "cs_log_chunk_055",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "cs_log_chunk_056",
+                "Type": "Recipient",
+                "Field": "cs_log_chunk_056",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "cs_log_chunk_057",
+                "Type": "Recipient",
+                "Field": "cs_log_chunk_057",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "cs_log_chunk_058",
+                "Type": "Recipient",
+                "Field": "cs_log_chunk_058",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "cs_log_chunk_059",
+                "Type": "Recipient",
+                "Field": "cs_log_chunk_059",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "cs_log_chunk_060",
+                "Type": "Recipient",
+                "Field": "cs_log_chunk_060",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "cs_log_chunk_061",
+                "Type": "Recipient",
+                "Field": "cs_log_chunk_061",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "cs_log_chunk_062",
+                "Type": "Recipient",
+                "Field": "cs_log_chunk_062",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "cs_log_chunk_063",
+                "Type": "Recipient",
+                "Field": "cs_log_chunk_063",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "cs_log_chunk_064",
+                "Type": "Recipient",
+                "Field": "cs_log_chunk_064",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              }
+            ]
+          },
+          {
+            "Type": "Standard",
+            "FlowID": "FL_3",
+            "ID": "BL_cs_setup",
+            "Autofill": []
+          },
+          {
+            "Type": "Standard",
+            "FlowID": "FL_4",
+            "ID": "BL_cs_intro",
+            "Autofill": []
+          },
+          {
+            "Type": "Standard",
+            "FlowID": "FL_5",
+            "ID": "BL_cs_game",
+            "Autofill": []
+          },
+          {
+            "Type": "Standard",
+            "FlowID": "FL_6",
+            "ID": "BL_cs_outcome",
+            "Autofill": []
+          }
+        ],
+        "Properties": {
+          "Count": 6
+        }
+      }
+    },
+    {
+      "SurveyID": "SV_07McTW65bCwKmGi",
+      "Element": "PL",
+      "PrimaryAttribute": "Preview Link",
+      "SecondaryAttribute": null,
+      "TertiaryAttribute": null,
+      "Payload": {
+        "PreviewType": "Brand",
+        "PreviewID": "a65c044a-ce6d-4d31-bfa1-152041cc2f9d"
+      }
+    },
+    {
+      "SurveyID": "SV_07McTW65bCwKmGi",
+      "Element": "PROJ",
+      "PrimaryAttribute": "CORE",
+      "SecondaryAttribute": null,
+      "TertiaryAttribute": "1.1.0",
+      "Payload": {
+        "ProjectCategory": "CORE",
+        "SchemaVersion": "1.1.0"
+      }
+    },
+    {
+      "SurveyID": "SV_07McTW65bCwKmGi",
+      "Element": "QC",
+      "PrimaryAttribute": "Survey Question Count",
+      "SecondaryAttribute": "4",
+      "TertiaryAttribute": null,
+      "Payload": null
+    },
+    {
+      "SurveyID": "SV_07McTW65bCwKmGi",
+      "Element": "RS",
+      "PrimaryAttribute": "RS_2o559o4WwUGDI6q",
+      "SecondaryAttribute": "Default Response Set",
+      "TertiaryAttribute": null,
+      "Payload": null
+    },
+    {
+      "SurveyID": "SV_07McTW65bCwKmGi",
+      "Element": "SCO",
+      "PrimaryAttribute": "Scoring",
+      "SecondaryAttribute": null,
+      "TertiaryAttribute": null,
+      "Payload": {
+        "ScoringCategories": [],
+        "ScoringCategoryGroups": [],
+        "ScoringSummaryCategory": null,
+        "ScoringSummaryAfterQuestions": 0,
+        "ScoringSummaryAfterSurvey": 0,
+        "DefaultScoringCategory": null,
+        "AutoScoringCategory": null
+      }
+    },
+    {
+      "SurveyID": "SV_07McTW65bCwKmGi",
+      "Element": "SO",
+      "PrimaryAttribute": "Survey Options",
+      "SecondaryAttribute": null,
+      "TertiaryAttribute": null,
+      "Payload": {
+        "BackButton": "false",
+        "SaveAndContinue": "false",
+        "SurveyProtection": "PublicSurvey",
+        "BallotBoxStuffingPrevention": "false",
+        "NoIndex": "Yes",
+        "SecureResponseFiles": "true",
+        "SurveyExpiration": "None",
+        "SurveyTermination": "DefaultMessage",
+        "Header": "<style>\n.cs-shell {\n    max-width: 760px;\n    margin: 0 auto;\n    line-height: 1.5;\n}\n\n.cs-task {\n    width: min(1120px, 100%);\n    margin: 0 auto;\n    padding: 20px 22px 24px;\n    border: 1px solid #b8c4d4;\n    border-radius: 8px;\n    background: #f6f8fb;\n    box-shadow: inset 0 1px 0 #ffffff;\n}\n\n.cs-status {\n    display: flex;\n    justify-content: space-between;\n    align-items: flex-start;\n    gap: 8px 16px;\n    margin-bottom: 18px;\n    color: #334155;\n    font-weight: 600;\n}\n\n.cs-status span {\n    white-space: nowrap;\n}\n\n.cs-status-left,\n.cs-status-right {\n    display: flex;\n    flex-direction: column;\n    gap: 4px;\n}\n\n.cs-status-left {\n    text-align: left;\n    align-items: flex-start;\n}\n\n.cs-status-right {\n    text-align: right;\n    align-items: flex-end;\n    margin-left: auto;\n}\n\n.cs-cue {\n    min-height: 32px;\n    margin-bottom: 10px;\n    text-align: center;\n    font-size: 20px;\n    font-weight: 800;\n    color: #0f172a;\n    display: flex;\n    justify-content: center;\n    align-items: center;\n    gap: 8px;\n    opacity: 0;\n    transform: scale(0.96);\n    transition:\n        opacity 80ms ease,\n        transform 80ms ease;\n}\n\n.cs-cue-visible {\n    opacity: 1;\n    transform: scale(1);\n}\n\n.cs-cue-box {\n    display: block;\n    width: fit-content;\n    max-width: 100%;\n    padding: 2px 12px;\n    border: 2px solid currentColor;\n    border-radius: 6px;\n}\n\n.cs-cue-multiplier {\n    border-color: #0e7490;\n    background: #ecfeff;\n    color: #0e7490;\n    text-shadow: 0 0 18px rgba(6, 182, 212, 0.35);\n}\n\n.cs-cue-points {\n    border-color: #334155;\n    background: #f8fafc;\n    color: #334155;\n    text-shadow: 0 0 14px rgba(100, 116, 139, 0.28);\n}\n\n.cs-cue-main-bonus {\n    border: 2px solid #047857;\n    background: #ecfdf5;\n    color: #047857;\n    text-shadow: 0 0 18px rgba(16, 185, 129, 0.32);\n}\n\n.cs-cue-multiplier-badge {\n    min-width: 52px;\n    border-color: #0e7490;\n    background: #ecfeff;\n    color: #0e7490;\n    font-size: 24px;\n    text-shadow: 0 0 18px rgba(6, 182, 212, 0.42);\n}\n\n.cs-card-row {\n    display: grid;\n    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));\n    gap: 14px;\n    align-items: stretch;\n}\n\n.cs-card-row-new {\n    animation: cs-new-screen var(--cs-screen-motion-ms, 600ms) ease-out;\n}\n\n.cs-card {\n    min-height: 210px;\n    border: 3px solid var(--card-color);\n    border-radius: 8px;\n    background: #ffffff;\n    color: #0f172a;\n    cursor: pointer;\n    padding: 16px 12px;\n    text-align: center;\n    display: flex;\n    flex-direction: column;\n    justify-content: space-between;\n    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.18);\n    transition:\n        box-shadow var(--cs-screen-motion-ms, 600ms) ease,\n        transform var(--cs-screen-motion-ms, 600ms) ease;\n}\n\n.cs-card:hover,\n.cs-card:focus {\n    outline: 3px solid color-mix(in srgb, var(--card-color) 45%, white);\n    outline-offset: 2px;\n}\n\n.cs-card-selected {\n    box-shadow:\n        0 0 0 5px color-mix(in srgb, var(--card-color) 26%, white),\n        0 14px 24px rgba(15, 23, 42, 0.22);\n    transform: translateY(-3px) scale(1.015);\n}\n\n.cs-card:disabled {\n    cursor: default;\n}\n\n.cs-card-label {\n    color: var(--card-color);\n    font-weight: 700;\n}\n\n.cs-points {\n    font-size: 24px;\n    font-weight: 800;\n}\n\n.cs-multiplier,\n.cs-main-mark {\n    font-size: 14px;\n    font-weight: 650;\n    white-space: nowrap;\n}\n\n.cs-setup,\n.cs-debug {\n    max-width: 980px;\n    margin: 0 auto;\n}\n\n.cs-debug-notice {\n    border: 2px solid #b91c1c;\n    background: #fef2f2;\n    color: #7f1d1d;\n    font-weight: 700;\n    padding: 12px 14px;\n    margin-bottom: 16px;\n}\n\n.cs-debug-panel {\n    border: 1px solid #cbd5e1;\n    background: #f8fafc;\n    padding: 14px;\n    margin-bottom: 18px;\n}\n\n.cs-debug-panel h4 {\n    margin: 0 0 10px;\n}\n\n.cs-setup-note {\n    max-width: 760px;\n    margin: 0 0 14px;\n    color: #475569;\n    font-size: 14px;\n}\n\n.cs-setup-section {\n    border-top: 1px solid #cbd5e1;\n    padding-top: 14px;\n    margin-top: 14px;\n}\n\n.cs-setup-section:first-of-type {\n    margin-top: 0;\n}\n\n.cs-setup-section h5 {\n    margin: 0 0 12px;\n    color: #334155;\n    font-size: 16px;\n    font-weight: 700;\n}\n\n.cs-field-note {\n    max-width: 620px;\n    margin: -4px 0 8px;\n    color: #64748b;\n    font-size: 13px;\n}\n\n.cs-setup-readonly {\n    background: #e2e8f0;\n    color: #64748b;\n    cursor: not-allowed;\n}\n\n.cs-debug-panel dl {\n    display: grid;\n    grid-template-columns: 220px 1fr;\n    gap: 6px 12px;\n    margin: 0;\n}\n\n.cs-debug-panel dt {\n    font-weight: 700;\n}\n\n.cs-debug-panel dd {\n    margin: 0;\n}\n\n.cs-debug-table {\n    width: 100%;\n    border-collapse: collapse;\n    font-size: 14px;\n    margin-bottom: 18px;\n}\n\n.cs-debug-table th,\n.cs-debug-table td {\n    border: 1px solid #cbd5e1;\n    padding: 6px 8px;\n    text-align: left;\n}\n\n.cs-debug-table th {\n    background: #f1f5f9;\n}\n\n.cs-debug-details {\n    border: 1px solid #cbd5e1;\n    margin-bottom: 12px;\n    padding: 10px 12px;\n}\n\n.cs-debug-details summary {\n    cursor: pointer;\n    font-weight: 700;\n}\n\n.cs-debug-details pre {\n    max-height: 260px;\n    overflow: auto;\n    white-space: pre-wrap;\n}\n\n.cs-debug-end {\n    color: #334155;\n    font-weight: 650;\n}\n\n@keyframes cs-new-screen {\n    0% {\n        opacity: 0.68;\n        transform: translateY(8px);\n    }\n\n    100% {\n        opacity: 1;\n        transform: translateY(0);\n    }\n}\n\n@media (min-width: 920px) {\n    .cs-card-row {\n        grid-template-columns: repeat(5, minmax(0, 1fr));\n    }\n}\n\n@media (max-width: 680px) {\n    .cs-status {\n        flex-direction: column;\n    }\n\n    .cs-status-right {\n        align-items: flex-start;\n        margin-left: 0;\n        text-align: left;\n    }\n\n    .cs-card {\n        min-height: 160px;\n    }\n}\n\n/* Qualtrics host-page adjustments, scoped to the Card Stacking survey. */\n.Skin .SkinInner { width: min(1180px, 96vw); max-width: none; }\n.Skin .QuestionOuter { max-width: none; }\n.cs-task { box-sizing: border-box; }\n.csq-field {\n  display: grid;\n  grid-template-columns: minmax(240px, 1fr) minmax(150px, 220px);\n  align-items: center;\n  gap: 10px 24px;\n  margin: 12px 0;\n}\n.csq-checkbox-field { display: block; }\n.csq-label { font-weight: 650; }\n.csq-checkbox-label {\n  position: relative;\n  display: flex;\n  align-items: center;\n  gap: 9px;\n  width: fit-content;\n  cursor: pointer;\n}\n.csq-checkbox {\n  position: absolute !important;\n  width: 1px !important;\n  height: 1px !important;\n  margin: 0 !important;\n  padding: 0 !important;\n  border: 0 !important;\n  opacity: 0 !important;\n  overflow: hidden !important;\n  pointer-events: none !important;\n}\n.csq-checkbox-box {\n  box-sizing: border-box;\n  display: inline-flex !important;\n  flex: 0 0 20px;\n  align-items: center;\n  justify-content: center;\n  width: 20px;\n  height: 20px;\n  border: 2px solid #64748b;\n  border-radius: 4px;\n  background: #fff;\n  color: #fff;\n}\n.csq-checkbox:checked + .csq-checkbox-box {\n  border-color: #0f4c81;\n  background: #0f4c81;\n}\n.csq-checkbox:checked + .csq-checkbox-box::after {\n  content: \"\";\n  width: 5px;\n  height: 10px;\n  margin-top: -2px;\n  border: solid currentColor;\n  border-width: 0 2px 2px 0;\n  transform: rotate(45deg);\n}\n.csq-checkbox:focus + .csq-checkbox-box,\n.csq-checkbox:focus-visible + .csq-checkbox-box {\n  outline: 3px solid rgba(15, 76, 129, 0.28);\n  outline-offset: 2px;\n}\n.csq-checkbox:disabled + .csq-checkbox-box {\n  border-color: #9ca3af;\n  background: #e5e7eb;\n}\n.csq-input {\n  box-sizing: border-box;\n  width: 100%;\n  min-height: 42px;\n  padding: 8px 10px;\n  border: 1px solid #9ca3af;\n  border-radius: 6px;\n  background: #fff;\n  color: #111827;\n  font: inherit;\n}\n.csq-input:disabled { background: #f3f4f6; color: #6b7280; }\n.csq-continue-button {\n  min-height: 44px;\n  margin-top: 16px;\n  padding: 10px 22px;\n  border: 0;\n  border-radius: 6px;\n  background: #0f4c81;\n  color: #fff;\n  cursor: pointer;\n  font: inherit;\n  font-weight: 700;\n}\n.csq-continue-button:hover, .csq-continue-button:focus { background: #0b365b; }\n.csq-validation-errors { color: #991b1b; font-weight: 700; margin-top: 12px; }\n.csq-debug-table-wrap { overflow-x: auto; }\n@media (max-width: 680px) {\n  .csq-field { grid-template-columns: 1fr; gap: 5px; }\n}\n</style>\n<script>\nwindow.CSQ_BOOTSTRAP = {\"cardDeck\":[{\"color\":\"#2563eb\",\"color_id\":\"blue\",\"label\":\"Blue card\"},{\"color\":\"#16a34a\",\"color_id\":\"green\",\"label\":\"Green card\"},{\"color\":\"#f59e0b\",\"color_id\":\"amber\",\"label\":\"Yellow card\"},{\"color\":\"#e11d48\",\"color_id\":\"rose\",\"label\":\"Red card\"},{\"color\":\"#7c3aed\",\"color_id\":\"violet\",\"label\":\"Violet card\"}],\"chunkCount\":64,\"chunkMaxBytes\":18000,\"logColumns\":[\"screen_number\",\"screen_type_index\",\"chosen_card_id\",\"chosen_card_label\",\"chosen_card_position\",\"chosen_is_main\",\"chosen_x\",\"chosen_y\",\"chosen_z\",\"response_time_ms\",\"task_elapsed_ms\",\"main_cards_collected\",\"points_before\",\"card_points_added\",\"multiplier_applied\",\"multiplier_y\",\"multiplier_z\",\"main_bonus_triggered_this_round\",\"main_bonus_points_added\",\"points_after\"],\"maxAnimationMs\":5000,\"maxDecisions\":4800,\"maxDurationMinutes\":40,\"pointsPerMainCard\":30,\"screenTypes\":[{\"side_values\":[{\"x\":5,\"y\":10,\"z\":1},{\"x\":6,\"y\":12,\"z\":2},{\"x\":7,\"y\":14,\"z\":3},{\"x\":8,\"y\":16,\"z\":4}],\"type_index\":1},{\"side_values\":[{\"x\":6,\"y\":11,\"z\":2},{\"x\":7,\"y\":13,\"z\":3},{\"x\":8,\"y\":15,\"z\":4},{\"x\":9,\"y\":17,\"z\":1}],\"type_index\":2},{\"side_values\":[{\"x\":7,\"y\":12,\"z\":3},{\"x\":8,\"y\":14,\"z\":4},{\"x\":9,\"y\":16,\"z\":1},{\"x\":10,\"y\":18,\"z\":2}],\"type_index\":3},{\"side_values\":[{\"x\":8,\"y\":13,\"z\":4},{\"x\":9,\"y\":15,\"z\":1},{\"x\":10,\"y\":17,\"z\":2},{\"x\":11,\"y\":19,\"z\":3}],\"type_index\":4},{\"side_values\":[{\"x\":9,\"y\":14,\"z\":1},{\"x\":10,\"y\":16,\"z\":2},{\"x\":11,\"y\":18,\"z\":3},{\"x\":12,\"y\":20,\"z\":4}],\"type_index\":5},{\"side_values\":[{\"x\":10,\"y\":15,\"z\":2},{\"x\":11,\"y\":17,\"z\":3},{\"x\":12,\"y\":19,\"z\":4},{\"x\":5,\"y\":21,\"z\":1}],\"type_index\":6},{\"side_values\":[{\"x\":11,\"y\":16,\"z\":3},{\"x\":12,\"y\":18,\"z\":4},{\"x\":5,\"y\":20,\"z\":1},{\"x\":6,\"y\":22,\"z\":2}],\"type_index\":7},{\"side_values\":[{\"x\":12,\"y\":17,\"z\":4},{\"x\":5,\"y\":19,\"z\":1},{\"x\":6,\"y\":21,\"z\":2},{\"x\":7,\"y\":23,\"z\":3}],\"type_index\":8},{\"side_values\":[{\"x\":5,\"y\":18,\"z\":1},{\"x\":6,\"y\":20,\"z\":2},{\"x\":7,\"y\":22,\"z\":3},{\"x\":8,\"y\":24,\"z\":4}],\"type_index\":9},{\"side_values\":[{\"x\":6,\"y\":19,\"z\":2},{\"x\":7,\"y\":21,\"z\":3},{\"x\":8,\"y\":23,\"z\":4},{\"x\":9,\"y\":25,\"z\":1}],\"type_index\":10},{\"side_values\":[{\"x\":7,\"y\":20,\"z\":3},{\"x\":8,\"y\":22,\"z\":4},{\"x\":9,\"y\":24,\"z\":1},{\"x\":10,\"y\":26,\"z\":2}],\"type_index\":11},{\"side_values\":[{\"x\":8,\"y\":21,\"z\":4},{\"x\":9,\"y\":23,\"z\":1},{\"x\":10,\"y\":25,\"z\":2},{\"x\":11,\"y\":27,\"z\":3}],\"type_index\":12},{\"side_values\":[{\"x\":9,\"y\":22,\"z\":1},{\"x\":10,\"y\":24,\"z\":2},{\"x\":11,\"y\":26,\"z\":3},{\"x\":12,\"y\":28,\"z\":4}],\"type_index\":13},{\"side_values\":[{\"x\":10,\"y\":23,\"z\":2},{\"x\":11,\"y\":25,\"z\":3},{\"x\":12,\"y\":27,\"z\":4},{\"x\":5,\"y\":29,\"z\":1}],\"type_index\":14},{\"side_values\":[{\"x\":11,\"y\":24,\"z\":3},{\"x\":12,\"y\":26,\"z\":4},{\"x\":5,\"y\":28,\"z\":1},{\"x\":6,\"y\":30,\"z\":2}],\"type_index\":15},{\"side_values\":[{\"x\":12,\"y\":25,\"z\":4},{\"x\":5,\"y\":27,\"z\":1},{\"x\":6,\"y\":29,\"z\":2},{\"x\":7,\"y\":10,\"z\":3}],\"type_index\":16},{\"side_values\":[{\"x\":5,\"y\":26,\"z\":1},{\"x\":6,\"y\":28,\"z\":2},{\"x\":7,\"y\":30,\"z\":3},{\"x\":8,\"y\":11,\"z\":4}],\"type_index\":17},{\"side_values\":[{\"x\":6,\"y\":27,\"z\":2},{\"x\":7,\"y\":29,\"z\":3},{\"x\":8,\"y\":10,\"z\":4},{\"x\":9,\"y\":12,\"z\":1}],\"type_index\":18},{\"side_values\":[{\"x\":7,\"y\":28,\"z\":3},{\"x\":8,\"y\":30,\"z\":4},{\"x\":9,\"y\":11,\"z\":1},{\"x\":10,\"y\":13,\"z\":2}],\"type_index\":19},{\"side_values\":[{\"x\":8,\"y\":29,\"z\":4},{\"x\":9,\"y\":10,\"z\":1},{\"x\":10,\"y\":12,\"z\":2},{\"x\":11,\"y\":14,\"z\":3}],\"type_index\":20},{\"side_values\":[{\"x\":9,\"y\":30,\"z\":1},{\"x\":10,\"y\":11,\"z\":2},{\"x\":11,\"y\":13,\"z\":3},{\"x\":12,\"y\":15,\"z\":4}],\"type_index\":21},{\"side_values\":[{\"x\":10,\"y\":10,\"z\":2},{\"x\":11,\"y\":12,\"z\":3},{\"x\":12,\"y\":14,\"z\":4},{\"x\":5,\"y\":16,\"z\":1}],\"type_index\":22},{\"side_values\":[{\"x\":11,\"y\":11,\"z\":3},{\"x\":12,\"y\":13,\"z\":4},{\"x\":5,\"y\":15,\"z\":1},{\"x\":6,\"y\":17,\"z\":2}],\"type_index\":23},{\"side_values\":[{\"x\":12,\"y\":12,\"z\":4},{\"x\":5,\"y\":14,\"z\":1},{\"x\":6,\"y\":16,\"z\":2},{\"x\":7,\"y\":18,\"z\":3}],\"type_index\":24},{\"side_values\":[{\"x\":5,\"y\":13,\"z\":1},{\"x\":6,\"y\":15,\"z\":2},{\"x\":7,\"y\":17,\"z\":3},{\"x\":8,\"y\":19,\"z\":4}],\"type_index\":25},{\"side_values\":[{\"x\":6,\"y\":14,\"z\":2},{\"x\":7,\"y\":16,\"z\":3},{\"x\":8,\"y\":18,\"z\":4},{\"x\":9,\"y\":20,\"z\":1}],\"type_index\":26},{\"side_values\":[{\"x\":7,\"y\":15,\"z\":3},{\"x\":8,\"y\":17,\"z\":4},{\"x\":9,\"y\":19,\"z\":1},{\"x\":10,\"y\":21,\"z\":2}],\"type_index\":27},{\"side_values\":[{\"x\":8,\"y\":16,\"z\":4},{\"x\":9,\"y\":18,\"z\":1},{\"x\":10,\"y\":20,\"z\":2},{\"x\":11,\"y\":22,\"z\":3}],\"type_index\":28},{\"side_values\":[{\"x\":9,\"y\":17,\"z\":1},{\"x\":10,\"y\":19,\"z\":2},{\"x\":11,\"y\":21,\"z\":3},{\"x\":12,\"y\":23,\"z\":4}],\"type_index\":29},{\"side_values\":[{\"x\":10,\"y\":18,\"z\":2},{\"x\":11,\"y\":20,\"z\":3},{\"x\":12,\"y\":22,\"z\":4},{\"x\":5,\"y\":24,\"z\":1}],\"type_index\":30},{\"side_values\":[{\"x\":11,\"y\":19,\"z\":3},{\"x\":12,\"y\":21,\"z\":4},{\"x\":5,\"y\":23,\"z\":1},{\"x\":6,\"y\":25,\"z\":2}],\"type_index\":31},{\"side_values\":[{\"x\":12,\"y\":20,\"z\":4},{\"x\":5,\"y\":22,\"z\":1},{\"x\":6,\"y\":24,\"z\":2},{\"x\":7,\"y\":26,\"z\":3}],\"type_index\":32},{\"side_values\":[{\"x\":5,\"y\":21,\"z\":1},{\"x\":6,\"y\":23,\"z\":2},{\"x\":7,\"y\":25,\"z\":3},{\"x\":8,\"y\":27,\"z\":4}],\"type_index\":33},{\"side_values\":[{\"x\":6,\"y\":22,\"z\":2},{\"x\":7,\"y\":24,\"z\":3},{\"x\":8,\"y\":26,\"z\":4},{\"x\":9,\"y\":28,\"z\":1}],\"type_index\":34},{\"side_values\":[{\"x\":7,\"y\":23,\"z\":3},{\"x\":8,\"y\":25,\"z\":4},{\"x\":9,\"y\":27,\"z\":1},{\"x\":10,\"y\":29,\"z\":2}],\"type_index\":35},{\"side_values\":[{\"x\":8,\"y\":24,\"z\":4},{\"x\":9,\"y\":26,\"z\":1},{\"x\":10,\"y\":28,\"z\":2},{\"x\":11,\"y\":30,\"z\":3}],\"type_index\":36},{\"side_values\":[{\"x\":9,\"y\":25,\"z\":1},{\"x\":10,\"y\":27,\"z\":2},{\"x\":11,\"y\":29,\"z\":3},{\"x\":12,\"y\":10,\"z\":4}],\"type_index\":37},{\"side_values\":[{\"x\":10,\"y\":26,\"z\":2},{\"x\":11,\"y\":28,\"z\":3},{\"x\":12,\"y\":30,\"z\":4},{\"x\":5,\"y\":11,\"z\":1}],\"type_index\":38},{\"side_values\":[{\"x\":11,\"y\":27,\"z\":3},{\"x\":12,\"y\":29,\"z\":4},{\"x\":5,\"y\":10,\"z\":1},{\"x\":6,\"y\":12,\"z\":2}],\"type_index\":39},{\"side_values\":[{\"x\":12,\"y\":28,\"z\":4},{\"x\":5,\"y\":30,\"z\":1},{\"x\":6,\"y\":11,\"z\":2},{\"x\":7,\"y\":13,\"z\":3}],\"type_index\":40},{\"side_values\":[{\"x\":5,\"y\":29,\"z\":1},{\"x\":6,\"y\":10,\"z\":2},{\"x\":7,\"y\":12,\"z\":3},{\"x\":8,\"y\":14,\"z\":4}],\"type_index\":41},{\"side_values\":[{\"x\":6,\"y\":30,\"z\":2},{\"x\":7,\"y\":11,\"z\":3},{\"x\":8,\"y\":13,\"z\":4},{\"x\":9,\"y\":15,\"z\":1}],\"type_index\":42},{\"side_values\":[{\"x\":7,\"y\":10,\"z\":3},{\"x\":8,\"y\":12,\"z\":4},{\"x\":9,\"y\":14,\"z\":1},{\"x\":10,\"y\":16,\"z\":2}],\"type_index\":43},{\"side_values\":[{\"x\":8,\"y\":11,\"z\":4},{\"x\":9,\"y\":13,\"z\":1},{\"x\":10,\"y\":15,\"z\":2},{\"x\":11,\"y\":17,\"z\":3}],\"type_index\":44},{\"side_values\":[{\"x\":9,\"y\":12,\"z\":1},{\"x\":10,\"y\":14,\"z\":2},{\"x\":11,\"y\":16,\"z\":3},{\"x\":12,\"y\":18,\"z\":4}],\"type_index\":45},{\"side_values\":[{\"x\":10,\"y\":13,\"z\":2},{\"x\":11,\"y\":15,\"z\":3},{\"x\":12,\"y\":17,\"z\":4},{\"x\":5,\"y\":19,\"z\":1}],\"type_index\":46},{\"side_values\":[{\"x\":11,\"y\":14,\"z\":3},{\"x\":12,\"y\":16,\"z\":4},{\"x\":5,\"y\":18,\"z\":1},{\"x\":6,\"y\":20,\"z\":2}],\"type_index\":47},{\"side_values\":[{\"x\":12,\"y\":15,\"z\":4},{\"x\":5,\"y\":17,\"z\":1},{\"x\":6,\"y\":19,\"z\":2},{\"x\":7,\"y\":21,\"z\":3}],\"type_index\":48},{\"side_values\":[{\"x\":5,\"y\":16,\"z\":1},{\"x\":6,\"y\":18,\"z\":2},{\"x\":7,\"y\":20,\"z\":3},{\"x\":8,\"y\":22,\"z\":4}],\"type_index\":49},{\"side_values\":[{\"x\":6,\"y\":17,\"z\":2},{\"x\":7,\"y\":19,\"z\":3},{\"x\":8,\"y\":21,\"z\":4},{\"x\":9,\"y\":23,\"z\":1}],\"type_index\":50}],\"thresholdPerMinute\":55};\n</script>\n<script>\n(function (global) {\n    \"use strict\";\n\n    var DEFAULTS = {\n        durationMinutes: 1,\n        numScreenTypes: 50,\n        showTimeLeft: true,\n        showMainCards: true,\n        showTotalPoints: true,\n        showClickFeedback: true,\n        feedbackMessageMs: 600,\n        usePostClickDelay: false,\n        postClickDelayMs: 0,\n        mainBonusDelayMs: 0,\n        screenMotionMs: 600,\n        bonusThresholdMainCards: 55,\n        mainBonusPoints: 1650,\n        inactivitySeconds: 30\n    };\n\n    var LIMITS = {\n        maxDurationMinutes: 40,\n        maxFeedbackMs: 5000,\n        maxMotionMs: 5000,\n        thresholdPerMinute: 55,\n        pointsPerMainCard: 30\n    };\n\n    var DECISION_COLUMNS = [\n        \"screen_number\",\n        \"screen_type_index\",\n        \"chosen_card_id\",\n        \"chosen_card_label\",\n        \"chosen_card_position\",\n        \"chosen_is_main\",\n        \"chosen_x\",\n        \"chosen_y\",\n        \"chosen_z\",\n        \"response_time_ms\",\n        \"task_elapsed_ms\",\n        \"main_cards_collected\",\n        \"points_before\",\n        \"card_points_added\",\n        \"multiplier_applied\",\n        \"multiplier_y\",\n        \"multiplier_z\",\n        \"main_bonus_triggered_this_round\",\n        \"main_bonus_points_added\",\n        \"points_after\"\n    ];\n\n    var localEmbeddedData = {};\n    var activeController = null;\n    var lastResult = null;\n    var GAME_OWNER_STORAGE_KEY = \"csq-card-stacking-active-instance-v1\";\n    var GAME_OWNER_TOP_KEY = \"__CSQ_CARD_STACKING_ACTIVE_INSTANCE_V1__\";\n\n    function own(object, key) {\n        return Object.prototype.hasOwnProperty.call(object, key);\n    }\n\n    function isFiniteNumber(value) {\n        return typeof value === \"number\" && isFinite(value);\n    }\n\n    function numberValue(value, fallback) {\n        var parsed = Number(value);\n        return isFiniteNumber(parsed) ? parsed : fallback;\n    }\n\n    function nonnegativeNumber(value, fallback) {\n        return Math.max(0, numberValue(value, fallback));\n    }\n\n    function positiveInteger(value, fallback) {\n        var parsed = Math.floor(numberValue(value, fallback));\n        return parsed > 0 ? parsed : fallback;\n    }\n\n    function clamp(value, minimum, maximum) {\n        return Math.min(maximum, Math.max(minimum, value));\n    }\n\n    function parseBoolean(value, fallback) {\n        var normalized;\n        if (typeof value === \"boolean\") {\n            return value;\n        }\n        if (value === null || typeof value === \"undefined\" || value === \"\") {\n            return fallback;\n        }\n        normalized = String(value).toLowerCase();\n        if (normalized === \"1\" || normalized === \"true\" || normalized === \"yes\") {\n            return true;\n        }\n        if (normalized === \"0\" || normalized === \"false\" || normalized === \"no\") {\n            return false;\n        }\n        return fallback;\n    }\n\n    function surveyEngine() {\n        if (global.Qualtrics && global.Qualtrics.SurveyEngine) {\n            return global.Qualtrics.SurveyEngine;\n        }\n        return null;\n    }\n\n    function getEmbeddedData(name) {\n        var engine;\n        var value;\n        if (own(localEmbeddedData, name)) {\n            return localEmbeddedData[name];\n        }\n        engine = surveyEngine();\n        if (engine && typeof engine.getEmbeddedData === \"function\") {\n            try {\n                value = engine.getEmbeddedData(name);\n                return value === null || typeof value === \"undefined\" ? \"\" : value;\n            } catch (error) {\n                return \"\";\n            }\n        }\n        return \"\";\n    }\n\n    function setEmbeddedData(name, value) {\n        var engine = surveyEngine();\n        var stored = value === null || typeof value === \"undefined\" ? \"\" : String(value);\n        localEmbeddedData[name] = stored;\n        if (engine && typeof engine.setEmbeddedData === \"function\") {\n            try {\n                engine.setEmbeddedData(name, stored);\n            } catch (error) {\n                /* The local copy still lets the outcome page render in a test harness. */\n            }\n        }\n    }\n\n    function directEmbeddedData(name) {\n        var engine = surveyEngine();\n        var value;\n        if (!engine || typeof engine.getEmbeddedData !== \"function\") {\n            return \"\";\n        }\n        try {\n            value = engine.getEmbeddedData(name);\n            return value === null || typeof value === \"undefined\" ? \"\" : String(value);\n        } catch (error) {\n            return \"\";\n        }\n    }\n\n    function sessionOwnerRecord() {\n        var raw;\n        var parsed;\n        try {\n            if (!global.sessionStorage) {\n                return null;\n            }\n            raw = global.sessionStorage.getItem(GAME_OWNER_STORAGE_KEY);\n            if (!raw) {\n                return null;\n            }\n            parsed = JSON.parse(raw);\n            return parsed && parsed.token ? parsed : null;\n        } catch (error) {\n            return null;\n        }\n    }\n\n    function topOwnerRecord() {\n        try {\n            if (global.top && global.top[GAME_OWNER_TOP_KEY] &&\n                    global.top[GAME_OWNER_TOP_KEY].token) {\n                return global.top[GAME_OWNER_TOP_KEY];\n            }\n        } catch (error) {\n            /* A cross-origin preview parent cannot be used as a shared store. */\n        }\n        return null;\n    }\n\n    function readOwnerRecord() {\n        var record = sessionOwnerRecord() || topOwnerRecord();\n        var token;\n        if (record) {\n            return record;\n        }\n        token = directEmbeddedData(\"cs_game_owner_token\");\n        if (!token) {\n            return null;\n        }\n        return {\n            token: token,\n            source: directEmbeddedData(\"cs_game_owner_claim_source\"),\n            channel: \"embedded_data\"\n        };\n    }\n\n    function writeOwnerRecord(token, source) {\n        var channels = [];\n        var record = {\n            token: token,\n            source: source || \"activity\",\n            claimedAt: Date.now(),\n            channel: \"\"\n        };\n        try {\n            if (global.sessionStorage) {\n                global.sessionStorage.setItem(GAME_OWNER_STORAGE_KEY, JSON.stringify(record));\n                channels.push(\"session_storage\");\n            }\n        } catch (error) {\n            /* Qualtrics privacy settings can disable storage. */\n        }\n        try {\n            if (global.top) {\n                global.top[GAME_OWNER_TOP_KEY] = record;\n                channels.push(\"top_window\");\n            }\n        } catch (error) {\n            /* Cross-origin parents are expected in some preview layouts. */\n        }\n        setEmbeddedData(\"cs_game_owner_token\", token);\n        setEmbeddedData(\"cs_game_owner_claim_source\", record.source);\n        setEmbeddedData(\"cs_game_owner_claimed_at\", record.claimedAt);\n        channels.push(\"embedded_data\");\n        record.channel = channels.join(\"+\");\n        return record;\n    }\n\n    function clearOwnerCoordination() {\n        try {\n            if (global.sessionStorage) {\n                global.sessionStorage.removeItem(GAME_OWNER_STORAGE_KEY);\n            }\n        } catch (error) {\n            /* Qualtrics privacy settings can disable storage. */\n        }\n        try {\n            if (global.top) {\n                global.top[GAME_OWNER_TOP_KEY] = null;\n            }\n        } catch (error) {\n            /* Cross-origin parents are expected in some preview layouts. */\n        }\n        setEmbeddedData(\"cs_game_owner_token\", \"\");\n        setEmbeddedData(\"cs_game_owner_claim_source\", \"\");\n        setEmbeddedData(\"cs_game_owner_claimed_at\", \"\");\n    }\n\n    function isLikelyVisible(root) {\n        var documentNode;\n        var view;\n        var style;\n        var rect;\n        var frame;\n        if (!root || typeof root.getBoundingClientRect !== \"function\") {\n            return false;\n        }\n        documentNode = root.ownerDocument;\n        if (documentNode && documentNode.visibilityState === \"hidden\") {\n            return false;\n        }\n        view = documentNode && documentNode.defaultView;\n        try {\n            style = view && typeof view.getComputedStyle === \"function\" ?\n                view.getComputedStyle(root) : null;\n            if (style && (style.display === \"none\" || style.visibility === \"hidden\" ||\n                    Number(style.opacity) === 0)) {\n                return false;\n            }\n            rect = root.getBoundingClientRect();\n            if (!rect || rect.width <= 0 || rect.height <= 0) {\n                return false;\n            }\n            frame = view && view.frameElement;\n            if (frame) {\n                style = frame.ownerDocument && frame.ownerDocument.defaultView ?\n                    frame.ownerDocument.defaultView.getComputedStyle(frame) : null;\n                rect = frame.getBoundingClientRect();\n                if ((style && (style.display === \"none\" || style.visibility === \"hidden\" ||\n                        Number(style.opacity) === 0)) || !rect || rect.width <= 0 || rect.height <= 0) {\n                    return false;\n                }\n            }\n        } catch (error) {\n            /* The root itself was measurable; inaccessible ancestors are not fatal. */\n        }\n        return true;\n    }\n\n    function readBootstrap() {\n        var source = global.CSQ_BOOTSTRAP || {};\n        var screenTypes = Array.isArray(source.screenTypes) ? source.screenTypes : [];\n        var cardDeck = Array.isArray(source.cardDeck) ? source.cardDeck : [];\n        return {\n            screenTypes: screenTypes,\n            cardDeck: cardDeck,\n            maxDecisions: positiveInteger(source.maxDecisions, 4800),\n            chunkCount: positiveInteger(source.chunkCount, 64),\n            chunkMaxBytes: positiveInteger(source.chunkMaxBytes, 18000)\n        };\n    }\n\n    function validateBootstrap(bootstrap) {\n        var index;\n        var expectedSideCards;\n        if (!bootstrap.screenTypes.length) {\n            return \"No card-stacking screen types were provided.\";\n        }\n        if (bootstrap.cardDeck.length < 2) {\n            return \"The card deck must contain at least two cards.\";\n        }\n        expectedSideCards = bootstrap.cardDeck.length - 1;\n        for (index = 0; index < bootstrap.screenTypes.length; index += 1) {\n            if (!bootstrap.screenTypes[index] ||\n                    !Array.isArray(bootstrap.screenTypes[index].side_values) ||\n                    bootstrap.screenTypes[index].side_values.length < expectedSideCards) {\n                return \"Each screen type must provide values for every non-main card.\";\n            }\n        }\n        if (bootstrap.chunkMaxBytes > 18000) {\n            return \"The decision-log chunk byte limit cannot exceed 18,000 bytes.\";\n        }\n        return \"\";\n    }\n\n    function getRoot(id, question) {\n        var root = null;\n        var container;\n        if (question && typeof question.getQuestionContainer === \"function\") {\n            container = question.getQuestionContainer();\n            if (container && typeof container.querySelector === \"function\") {\n                root = container.querySelector(\"#\" + id);\n            }\n        }\n        if (!root && global.document) {\n            root = global.document.getElementById(id);\n        }\n        return root;\n    }\n\n    function clearElement(element) {\n        while (element && element.firstChild) {\n            element.removeChild(element.firstChild);\n        }\n    }\n\n    function element(tagName, className, text) {\n        var node = global.document.createElement(tagName);\n        if (className) {\n            node.className = className;\n        }\n        if (text !== null && typeof text !== \"undefined\") {\n            node.textContent = String(text);\n        }\n        return node;\n    }\n\n    function appendText(parent, tagName, text, className) {\n        var node = element(tagName, className || \"\", text);\n        parent.appendChild(node);\n        return node;\n    }\n\n    function formatNumber(value) {\n        var number = Number(value);\n        if (!isFiniteNumber(number)) {\n            return \"0\";\n        }\n        return Math.floor(number) === number ? String(number) : number.toFixed(1);\n    }\n\n    function formatClock(milliseconds) {\n        var totalSeconds = Math.max(0, Math.ceil(milliseconds / 1000));\n        var minutes = Math.floor(totalSeconds / 60);\n        var seconds = totalSeconds % 60;\n        return (minutes < 10 ? \"0\" : \"\") + minutes + \":\" +\n            (seconds < 10 ? \"0\" : \"\") + seconds;\n    }\n\n    function nowMonotonic() {\n        if (global.performance && typeof global.performance.now === \"function\") {\n            return global.performance.now();\n        }\n        return Date.now();\n    }\n\n    function hideNextButton(question) {\n        var nativeButton;\n        if (question && typeof question.hideNextButton === \"function\") {\n            question.hideNextButton();\n        }\n        nativeButton = global.document && global.document.getElementById(\"NextButton\");\n        if (nativeButton) {\n            nativeButton.style.display = \"none\";\n        }\n    }\n\n    function showNextButton(question) {\n        var nativeButton;\n        if (question && typeof question.showNextButton === \"function\") {\n            question.showNextButton();\n        }\n        nativeButton = global.document && global.document.getElementById(\"NextButton\");\n        if (nativeButton) {\n            nativeButton.style.display = \"\";\n        }\n    }\n\n    function clickNextButton(question) {\n        var nativeButton;\n        if (question && typeof question.clickNextButton === \"function\") {\n            question.clickNextButton();\n            return;\n        }\n        nativeButton = global.document && global.document.getElementById(\"NextButton\");\n        if (nativeButton && typeof nativeButton.click === \"function\") {\n            nativeButton.click();\n        }\n    }\n\n    function setFinishButtonLabel(question) {\n        var nativeButton;\n        if (question && typeof question.setNextButtonText === \"function\") {\n            try {\n                question.setNextButtonText(\"Finish\");\n            } catch (error) {\n                /* Fall through to the DOM label below. */\n            }\n        }\n        nativeButton = global.document && global.document.getElementById(\"NextButton\");\n        if (!nativeButton) {\n            return;\n        }\n        if (String(nativeButton.tagName).toLowerCase() === \"input\") {\n            nativeButton.value = \"Finish\";\n        } else {\n            nativeButton.textContent = \"Finish\";\n        }\n        nativeButton.setAttribute(\"aria-label\", \"Finish\");\n    }\n\n    function registerUnload(question, callback) {\n        var engine = surveyEngine();\n        if (question && typeof question.addOnUnload === \"function\") {\n            question.addOnUnload(callback);\n        } else if (engine && typeof engine.addOnUnload === \"function\") {\n            engine.addOnUnload(callback);\n        }\n    }\n\n    function activateController(question, controller) {\n        if (activeController && typeof activeController.cleanup === \"function\") {\n            activeController.cleanup();\n        }\n        activeController = controller;\n        registerUnload(question, function () {\n            if (activeController === controller) {\n                controller.cleanup();\n                activeController = null;\n            }\n        });\n    }\n\n    function cleanup() {\n        if (activeController && typeof activeController.cleanup === \"function\") {\n            activeController.cleanup();\n        }\n        activeController = null;\n    }\n\n    function defaultThreshold(durationMinutes) {\n        return Math.max(1, Math.round(durationMinutes * LIMITS.thresholdPerMinute));\n    }\n\n    function defaultBonusPoints(threshold) {\n        return Math.max(0, threshold * LIMITS.pointsPerMainCard);\n    }\n\n    function getConfigNumber(fieldName, fallback) {\n        var raw = getEmbeddedData(fieldName);\n        return raw === \"\" ? fallback : numberValue(raw, fallback);\n    }\n\n    function getConfigBoolean(fieldName, fallback) {\n        return parseBoolean(getEmbeddedData(fieldName), fallback);\n    }\n\n    function readConfig(bootstrap) {\n        var maximumTypes = Math.max(1, bootstrap.screenTypes.length);\n        return {\n            durationMinutes: getConfigNumber(\"cs_duration_minutes\", DEFAULTS.durationMinutes),\n            numScreenTypes: clamp(\n                Math.floor(getConfigNumber(\"cs_num_screen_types\", Math.min(DEFAULTS.numScreenTypes, maximumTypes))),\n                1,\n                maximumTypes\n            ),\n            showTimeLeft: getConfigBoolean(\"cs_show_time_left\", DEFAULTS.showTimeLeft),\n            showMainCards: getConfigBoolean(\"cs_show_main_cards\", DEFAULTS.showMainCards),\n            showTotalPoints: getConfigBoolean(\"cs_show_total_points\", DEFAULTS.showTotalPoints),\n            showClickFeedback: getConfigBoolean(\"cs_show_click_feedback\", DEFAULTS.showClickFeedback),\n            feedbackMessageMs: getConfigNumber(\"cs_feedback_message_ms\", DEFAULTS.feedbackMessageMs),\n            usePostClickDelay: getConfigBoolean(\"cs_use_post_click_delay\", DEFAULTS.usePostClickDelay),\n            postClickDelayMs: getConfigNumber(\"cs_post_click_delay_ms\", DEFAULTS.postClickDelayMs),\n            mainBonusDelayMs: getConfigNumber(\"cs_main_bonus_delay_ms\", DEFAULTS.mainBonusDelayMs),\n            screenMotionMs: getConfigNumber(\"cs_screen_motion_ms\", DEFAULTS.screenMotionMs),\n            bonusThresholdMainCards: getConfigNumber(\n                \"cs_bonus_threshold_main_cards\",\n                DEFAULTS.bonusThresholdMainCards\n            ),\n            mainBonusPoints: getConfigNumber(\"cs_main_bonus_points\", DEFAULTS.mainBonusPoints),\n            inactivitySeconds: getConfigNumber(\"cs_inactivity_seconds\", DEFAULTS.inactivitySeconds)\n        };\n    }\n\n    function validateConfig(config, maximumScreenTypes) {\n        var errors = [];\n\n        function add(field, message) {\n            errors.push({ field: field, message: message });\n        }\n\n        if (!isFiniteNumber(config.durationMinutes)) {\n            add(\"cs_duration_minutes\", \"Enter the task duration in minutes.\");\n        } else if (config.durationMinutes <= 0) {\n            add(\"cs_duration_minutes\", \"Task duration must be greater than 0 minutes.\");\n        } else if (config.durationMinutes > LIMITS.maxDurationMinutes) {\n            add(\"cs_duration_minutes\", \"Task duration cannot exceed 40 minutes.\");\n        }\n\n        if (!isFiniteNumber(config.numScreenTypes) || Math.floor(config.numScreenTypes) !== config.numScreenTypes) {\n            add(\"cs_num_screen_types\", \"Enter a whole-number screen-type count.\");\n        } else if (config.numScreenTypes < 1 || config.numScreenTypes > maximumScreenTypes) {\n            add(\n                \"cs_num_screen_types\",\n                \"Screen-type count must be between 1 and \" + maximumScreenTypes + \".\"\n            );\n        }\n\n        if (!isFiniteNumber(config.feedbackMessageMs)) {\n            add(\"cs_feedback_message_ms\", \"Enter the feedback message duration in milliseconds.\");\n        } else if (Math.floor(config.feedbackMessageMs) !== config.feedbackMessageMs) {\n            add(\"cs_feedback_message_ms\", \"Feedback message duration must be a whole number.\");\n        } else if (config.feedbackMessageMs < 0) {\n            add(\"cs_feedback_message_ms\", \"Feedback message duration cannot be negative.\");\n        } else if (config.feedbackMessageMs > LIMITS.maxFeedbackMs) {\n            add(\"cs_feedback_message_ms\", \"Feedback message duration cannot exceed 5000 milliseconds.\");\n        }\n\n        if (!isFiniteNumber(config.postClickDelayMs)) {\n            add(\"cs_post_click_delay_ms\", \"Enter the wait before next screen in milliseconds.\");\n        } else if (Math.floor(config.postClickDelayMs) !== config.postClickDelayMs) {\n            add(\"cs_post_click_delay_ms\", \"Wait before next screen must be a whole number.\");\n        } else if (config.postClickDelayMs < 0) {\n            add(\"cs_post_click_delay_ms\", \"Wait before next screen cannot be negative.\");\n        } else if (config.postClickDelayMs > LIMITS.maxFeedbackMs) {\n            add(\"cs_post_click_delay_ms\", \"Wait before next screen cannot exceed 5000 milliseconds.\");\n        }\n\n        if (!isFiniteNumber(config.mainBonusDelayMs)) {\n            add(\"cs_main_bonus_delay_ms\", \"Enter the L-th main-card wait before next screen.\");\n        } else if (Math.floor(config.mainBonusDelayMs) !== config.mainBonusDelayMs) {\n            add(\"cs_main_bonus_delay_ms\", \"L-th main-card wait must be a whole number.\");\n        } else if (config.mainBonusDelayMs < 0) {\n            add(\"cs_main_bonus_delay_ms\", \"L-th main-card wait before next screen cannot be negative.\");\n        } else if (config.mainBonusDelayMs > LIMITS.maxFeedbackMs) {\n            add(\"cs_main_bonus_delay_ms\", \"L-th main-card wait before next screen cannot exceed 5000 milliseconds.\");\n        }\n\n        if (!isFiniteNumber(config.screenMotionMs)) {\n            add(\"cs_screen_motion_ms\", \"Enter the screen motion duration in milliseconds.\");\n        } else if (Math.floor(config.screenMotionMs) !== config.screenMotionMs) {\n            add(\"cs_screen_motion_ms\", \"Screen motion duration must be a whole number.\");\n        } else if (config.screenMotionMs < 0) {\n            add(\"cs_screen_motion_ms\", \"Screen motion duration cannot be negative.\");\n        } else if (config.screenMotionMs > LIMITS.maxMotionMs) {\n            add(\"cs_screen_motion_ms\", \"Screen motion duration cannot exceed 5000 milliseconds.\");\n        }\n\n        if (!isFiniteNumber(config.bonusThresholdMainCards)) {\n            add(\"cs_bonus_threshold_main_cards\", \"Enter the main-card bonus threshold.\");\n        } else if (Math.floor(config.bonusThresholdMainCards) !== config.bonusThresholdMainCards) {\n            add(\"cs_bonus_threshold_main_cards\", \"Main-card bonus threshold must be a whole number.\");\n        } else if (config.bonusThresholdMainCards < 1) {\n            add(\"cs_bonus_threshold_main_cards\", \"Main-card bonus threshold must be at least 1.\");\n        }\n\n        if (!isFiniteNumber(config.mainBonusPoints)) {\n            add(\"cs_main_bonus_points\", \"Enter the main-card bonus points.\");\n        } else if (config.mainBonusPoints < 0) {\n            add(\"cs_main_bonus_points\", \"Main-card bonus points cannot be negative.\");\n        }\n\n        if (!isFiniteNumber(config.inactivitySeconds)) {\n            add(\"cs_inactivity_seconds\", \"Enter the inactivity cutoff in seconds.\");\n        } else if (Math.floor(config.inactivitySeconds) !== config.inactivitySeconds) {\n            add(\"cs_inactivity_seconds\", \"Inactivity cutoff must be a whole number.\");\n        } else if (config.inactivitySeconds < 1) {\n            add(\"cs_inactivity_seconds\", \"Inactivity cutoff must be at least 1 second.\");\n        }\n\n        return { valid: errors.length === 0, errors: errors };\n    }\n\n    function persistConfig(config) {\n        setEmbeddedData(\"cs_duration_minutes\", config.durationMinutes);\n        setEmbeddedData(\"cs_num_screen_types\", config.numScreenTypes);\n        setEmbeddedData(\"cs_show_time_left\", config.showTimeLeft ? \"1\" : \"0\");\n        setEmbeddedData(\"cs_show_main_cards\", config.showMainCards ? \"1\" : \"0\");\n        setEmbeddedData(\"cs_show_total_points\", config.showTotalPoints ? \"1\" : \"0\");\n        setEmbeddedData(\"cs_show_click_feedback\", config.showClickFeedback ? \"1\" : \"0\");\n        setEmbeddedData(\"cs_feedback_message_ms\", config.feedbackMessageMs);\n        setEmbeddedData(\"cs_use_post_click_delay\", config.usePostClickDelay ? \"1\" : \"0\");\n        setEmbeddedData(\"cs_post_click_delay_ms\", config.postClickDelayMs);\n        setEmbeddedData(\"cs_main_bonus_delay_ms\", config.mainBonusDelayMs);\n        setEmbeddedData(\"cs_screen_motion_ms\", config.screenMotionMs);\n        setEmbeddedData(\"cs_bonus_threshold_main_cards\", config.bonusThresholdMainCards);\n        setEmbeddedData(\"cs_main_bonus_points\", config.mainBonusPoints);\n        setEmbeddedData(\"cs_inactivity_seconds\", config.inactivitySeconds);\n    }\n\n    function createNumberField(parent, options) {\n        var wrapper = element(\"div\", \"csq-field\");\n        var label = element(\"label\", \"csq-label\", options.label);\n        var input = element(\"input\", \"csq-input\");\n        var note;\n        label.setAttribute(\"for\", options.id);\n        input.type = \"number\";\n        input.id = options.id;\n        input.name = options.id;\n        input.value = String(options.value);\n        if (typeof options.min !== \"undefined\") {\n            input.min = String(options.min);\n        }\n        if (typeof options.max !== \"undefined\") {\n            input.max = String(options.max);\n        }\n        input.step = String(typeof options.step === \"undefined\" ? 1 : options.step);\n        wrapper.appendChild(label);\n        if (options.note) {\n            note = element(\"p\", \"cs-field-note\", options.note);\n            wrapper.appendChild(note);\n        }\n        wrapper.appendChild(input);\n        parent.appendChild(wrapper);\n        return input;\n    }\n\n    function createCheckboxField(parent, options) {\n        var wrapper = element(\"div\", \"csq-field csq-checkbox-field\");\n        var label = element(\"label\", \"csq-checkbox-label\");\n        var input = element(\"input\", \"csq-checkbox\");\n        var indicator = element(\"span\", \"csq-checkbox-box\");\n        var span = element(\"span\", \"csq-checkbox-text\", options.label);\n        input.type = \"checkbox\";\n        input.id = options.id;\n        input.name = options.id;\n        input.checked = Boolean(options.value);\n        indicator.setAttribute(\"aria-hidden\", \"true\");\n        label.setAttribute(\"for\", options.id);\n        label.appendChild(input);\n        label.appendChild(indicator);\n        label.appendChild(span);\n        wrapper.appendChild(label);\n        if (options.note) {\n            wrapper.appendChild(element(\"p\", \"cs-field-note\", options.note));\n        }\n        parent.appendChild(wrapper);\n        return input;\n    }\n\n    function createSetupSection(parent, title) {\n        var section = element(\"section\", \"cs-setup-section\");\n        appendText(section, \"h3\", title);\n        parent.appendChild(section);\n        return section;\n    }\n\n    function initSetup(question) {\n        var root = getRoot(\"csq-setup-root\", question);\n        var bootstrap = readBootstrap();\n        var config;\n        var controller;\n        var panel;\n        var section;\n        var inputs = {};\n        var errorBox;\n        var continueButton;\n        var thresholdOverridden = false;\n        var pointsOverridden = false;\n        var listeners = [];\n\n        if (!root) {\n            return null;\n        }\n        if (root.__csqController) {\n            return root.__csqController;\n        }\n\n        hideNextButton(question);\n        clearElement(root);\n        root.className = (root.className + \" cs-setup\").replace(/^\\s+|\\s+$/g, \"\");\n        root.appendChild(element(\n            \"div\",\n            \"cs-debug-notice\",\n            \"Development-only experimenter setup. Do not show this page in the production experiment or to participants.\"\n        ));\n\n        panel = element(\"div\", \"cs-debug-panel\");\n        appendText(panel, \"h2\", \"Task parameters\");\n        root.appendChild(panel);\n        config = readConfig(bootstrap);\n\n        section = createSetupSection(panel, \"Task and bonus\");\n        inputs.durationMinutes = createNumberField(section, {\n            id: \"cs_duration_minutes\",\n            label: \"Task duration in minutes\",\n            value: config.durationMinutes,\n            min: 0.01,\n            max: LIMITS.maxDurationMinutes,\n            step: 0.1\n        });\n        inputs.numScreenTypes = createNumberField(section, {\n            id: \"cs_num_screen_types\",\n            label: \"Possible screen types\",\n            value: config.numScreenTypes,\n            min: 1,\n            max: Math.max(1, bootstrap.screenTypes.length),\n            step: 1\n        });\n        inputs.bonusThresholdMainCards = createNumberField(section, {\n            id: \"cs_bonus_threshold_main_cards\",\n            label: \"Main-card bonus threshold (L)\",\n            value: config.bonusThresholdMainCards,\n            min: 1,\n            step: 1\n        });\n        inputs.mainBonusPoints = createNumberField(section, {\n            id: \"cs_main_bonus_points\",\n            label: \"Main-card bonus points (Q)\",\n            value: config.mainBonusPoints,\n            min: 0,\n            step: 0.1\n        });\n        inputs.inactivitySeconds = createNumberField(section, {\n            id: \"cs_inactivity_seconds\",\n            label: \"Inactivity cutoff in seconds\",\n            value: config.inactivitySeconds,\n            min: 1,\n            step: 1\n        });\n\n        section = createSetupSection(panel, \"Participant counters\");\n        inputs.showTimeLeft = createCheckboxField(section, {\n            id: \"cs_show_time_left\",\n            label: \"Show time-left counter to participant?\",\n            value: config.showTimeLeft\n        });\n        inputs.showMainCards = createCheckboxField(section, {\n            id: \"cs_show_main_cards\",\n            label: \"Show main-card counter to participant?\",\n            value: config.showMainCards\n        });\n        inputs.showTotalPoints = createCheckboxField(section, {\n            id: \"cs_show_total_points\",\n            label: \"Show total-points counter to participant?\",\n            value: config.showTotalPoints\n        });\n\n        section = createSetupSection(panel, \"Per-click feedback\");\n        inputs.showClickFeedback = createCheckboxField(section, {\n            id: \"cs_show_click_feedback\",\n            label: \"Show per-click point feedback?\",\n            value: config.showClickFeedback,\n            note: \"Controls whether participants see point and multiplier feedback after each card choice.\"\n        });\n        inputs.feedbackMessageMs = createNumberField(section, {\n            id: \"cs_feedback_message_ms\",\n            label: \"Feedback message duration in milliseconds\",\n            value: config.feedbackMessageMs,\n            min: 0,\n            max: LIMITS.maxFeedbackMs,\n            step: 1\n        });\n\n        section = createSetupSection(panel, \"Screen advance and motion\");\n        inputs.usePostClickDelay = createCheckboxField(section, {\n            id: \"cs_use_post_click_delay\",\n            label: \"Wait before next screen?\",\n            value: config.usePostClickDelay,\n            note: \"Controls whether the current screen remains visible briefly after a card click before advancing.\"\n        });\n        inputs.postClickDelayMs = createNumberField(section, {\n            id: \"cs_post_click_delay_ms\",\n            label: \"Wait before next screen in milliseconds\",\n            value: config.postClickDelayMs,\n            min: 0,\n            max: LIMITS.maxFeedbackMs,\n            step: 1\n        });\n        inputs.mainBonusDelayMs = createNumberField(section, {\n            id: \"cs_main_bonus_delay_ms\",\n            label: \"L-th main-card wait before next screen in milliseconds\",\n            value: config.mainBonusDelayMs,\n            min: 0,\n            max: LIMITS.maxFeedbackMs,\n            step: 1\n        });\n        inputs.screenMotionMs = createNumberField(section, {\n            id: \"cs_screen_motion_ms\",\n            label: \"Screen motion duration in milliseconds\",\n            value: config.screenMotionMs,\n            min: 0,\n            max: LIMITS.maxMotionMs,\n            step: 1\n        });\n\n        errorBox = element(\"div\", \"csq-validation-errors\");\n        errorBox.id = \"csq-setup-errors\";\n        errorBox.setAttribute(\"role\", \"alert\");\n        errorBox.setAttribute(\"aria-live\", \"polite\");\n        root.appendChild(errorBox);\n\n        continueButton = element(\"button\", \"csq-continue-button\", \"Continue\");\n        continueButton.type = \"button\";\n        continueButton.id = \"csq-setup-continue\";\n        root.appendChild(continueButton);\n\n        function listen(target, eventName, callback) {\n            target.addEventListener(eventName, callback, false);\n            listeners.push({ target: target, eventName: eventName, callback: callback });\n        }\n\n        function setReadOnly(input, locked, title) {\n            input.readOnly = locked;\n            input.setAttribute(\"aria-disabled\", locked ? \"true\" : \"false\");\n            if (locked) {\n                input.className = (input.className + \" cs-setup-readonly\").replace(/^\\s+|\\s+$/g, \"\");\n                input.title = title;\n            } else {\n                input.className = input.className.replace(/(?:^|\\s)cs-setup-readonly(?=\\s|$)/g, \"\").replace(/^\\s+|\\s+$/g, \"\");\n                input.title = \"\";\n            }\n        }\n\n        function updateLocking() {\n            setReadOnly(\n                inputs.feedbackMessageMs,\n                !inputs.showClickFeedback.checked,\n                \"Locked because per-click point feedback is set to No.\"\n            );\n            setReadOnly(\n                inputs.postClickDelayMs,\n                !inputs.usePostClickDelay.checked,\n                \"Locked because wait before next screen is set to No.\"\n            );\n            setReadOnly(\n                inputs.mainBonusDelayMs,\n                !inputs.usePostClickDelay.checked,\n                \"Locked because wait before next screen is set to No.\"\n            );\n        }\n\n        function updateAutomaticValues() {\n            var duration = numberValue(inputs.durationMinutes.value, 0);\n            var threshold;\n            if (!thresholdOverridden) {\n                inputs.bonusThresholdMainCards.value = String(defaultThreshold(duration));\n            }\n            threshold = numberValue(inputs.bonusThresholdMainCards.value, 0);\n            if (!pointsOverridden) {\n                inputs.mainBonusPoints.value = formatNumber(defaultBonusPoints(threshold));\n            }\n        }\n\n        function configFromInputs() {\n            function inputNumber(input) {\n                return input.value === \"\" ? NaN : Number(input.value);\n            }\n            return {\n                durationMinutes: inputNumber(inputs.durationMinutes),\n                numScreenTypes: inputNumber(inputs.numScreenTypes),\n                showTimeLeft: inputs.showTimeLeft.checked,\n                showMainCards: inputs.showMainCards.checked,\n                showTotalPoints: inputs.showTotalPoints.checked,\n                showClickFeedback: inputs.showClickFeedback.checked,\n                feedbackMessageMs: inputNumber(inputs.feedbackMessageMs),\n                usePostClickDelay: inputs.usePostClickDelay.checked,\n                postClickDelayMs: inputNumber(inputs.postClickDelayMs),\n                mainBonusDelayMs: inputNumber(inputs.mainBonusDelayMs),\n                screenMotionMs: inputNumber(inputs.screenMotionMs),\n                bonusThresholdMainCards: inputNumber(inputs.bonusThresholdMainCards),\n                mainBonusPoints: inputNumber(inputs.mainBonusPoints),\n                inactivitySeconds: inputNumber(inputs.inactivitySeconds)\n            };\n        }\n\n        function showErrors(result) {\n            var list;\n            var index;\n            var inputNodes = root.querySelectorAll(\"input\");\n            for (index = 0; index < inputNodes.length; index += 1) {\n                inputNodes[index].removeAttribute(\"aria-invalid\");\n            }\n            clearElement(errorBox);\n            if (result.valid) {\n                return;\n            }\n            appendText(errorBox, \"p\", \"Please correct the following setup values:\");\n            list = element(\"ul\");\n            for (index = 0; index < result.errors.length; index += 1) {\n                appendText(list, \"li\", result.errors[index].message);\n                if (global.document.getElementById(result.errors[index].field)) {\n                    global.document.getElementById(result.errors[index].field).setAttribute(\"aria-invalid\", \"true\");\n                }\n            }\n            errorBox.appendChild(list);\n            if (global.document.getElementById(result.errors[0].field)) {\n                global.document.getElementById(result.errors[0].field).focus();\n            }\n        }\n\n        function continueToIntro() {\n            var nextConfig = configFromInputs();\n            var validation = validateConfig(nextConfig, Math.max(1, bootstrap.screenTypes.length));\n            showErrors(validation);\n            if (!validation.valid) {\n                return;\n            }\n            clearOwnerCoordination();\n            persistConfig(nextConfig);\n            controller.cleanup();\n            activeController = null;\n            clickNextButton(question);\n        }\n\n        listen(inputs.showClickFeedback, \"change\", updateLocking);\n        listen(inputs.usePostClickDelay, \"change\", updateLocking);\n        listen(inputs.durationMinutes, \"input\", updateAutomaticValues);\n        listen(inputs.bonusThresholdMainCards, \"input\", function () {\n            thresholdOverridden = true;\n            if (!pointsOverridden) {\n                inputs.mainBonusPoints.value = formatNumber(\n                    defaultBonusPoints(numberValue(inputs.bonusThresholdMainCards.value, 0))\n                );\n            }\n        });\n        listen(inputs.mainBonusPoints, \"input\", function () {\n            pointsOverridden = true;\n        });\n        listen(continueButton, \"click\", continueToIntro);\n        updateLocking();\n\n        controller = {\n            inputs: inputs,\n            getConfig: configFromInputs,\n            cleanup: function () {\n                var index;\n                for (index = 0; index < listeners.length; index += 1) {\n                    listeners[index].target.removeEventListener(\n                        listeners[index].eventName,\n                        listeners[index].callback,\n                        false\n                    );\n                }\n                listeners = [];\n                root.__csqController = null;\n            }\n        };\n        root.__csqController = controller;\n        activateController(question, controller);\n        return controller;\n    }\n\n    function createPrng(seed) {\n        var state = Number(seed) >>> 0;\n        return function () {\n            var value;\n            state = (state + 0x6D2B79F5) >>> 0;\n            value = state;\n            value = Math.imul(value ^ (value >>> 15), value | 1);\n            value ^= value + Math.imul(value ^ (value >>> 7), value | 61);\n            return ((value ^ (value >>> 14)) >>> 0) / 4294967296;\n        };\n    }\n\n    function randomSeed() {\n        var values;\n        if (global.crypto && typeof global.crypto.getRandomValues === \"function\" && global.Uint32Array) {\n            values = new global.Uint32Array(1);\n            global.crypto.getRandomValues(values);\n            return values[0] >>> 0;\n        }\n        return ((Date.now() ^ Math.floor(Math.random() * 4294967296)) >>> 0);\n    }\n\n    function shuffledIndices(length, random) {\n        var output = [];\n        var index;\n        var swapIndex;\n        var held;\n        for (index = 0; index < length; index += 1) {\n            output.push(index);\n        }\n        for (index = output.length - 1; index > 0; index -= 1) {\n            swapIndex = Math.floor(random() * (index + 1));\n            held = output[index];\n            output[index] = output[swapIndex];\n            output[swapIndex] = held;\n        }\n        return output;\n    }\n\n    function generateRandomization(seed, deckLength, numScreenTypes, maxDecisions) {\n        var random = createPrng(seed);\n        var colorOrder = shuffledIndices(deckLength, random);\n        var mainColorIndex = colorOrder[Math.floor(random() * colorOrder.length)];\n        var screenSequence = [];\n        var index;\n        for (index = 0; index < maxDecisions; index += 1) {\n            screenSequence.push(Math.floor(random() * numScreenTypes) + 1);\n        }\n        return {\n            seed: Number(seed) >>> 0,\n            colorOrder: colorOrder,\n            mainColorIndex: mainColorIndex,\n            screenSequence: screenSequence,\n            random: random\n        };\n    }\n\n    function screenTypeByIndex(screenTypes, typeIndex) {\n        var direct = screenTypes[typeIndex - 1];\n        var index;\n        if (direct && Number(direct.type_index) === Number(typeIndex)) {\n            return direct;\n        }\n        for (index = 0; index < screenTypes.length; index += 1) {\n            if (Number(screenTypes[index].type_index) === Number(typeIndex)) {\n                return screenTypes[index];\n            }\n        }\n        return screenTypes[0] || { type_index: typeIndex, side_values: [] };\n    }\n\n    function buildCards(screenType, colorOrder, mainColorIndex, cardDeck, screenNumber) {\n        var cards = [];\n        var sideValues = screenType.side_values || [];\n        var sideIndex = 0;\n        var orderIndex;\n        var colorIndex;\n        var deckCard;\n        var isMain;\n        var values;\n        var card;\n        for (orderIndex = 0; orderIndex < colorOrder.length; orderIndex += 1) {\n            colorIndex = Number(colorOrder[orderIndex]);\n            deckCard = cardDeck[colorIndex] || {};\n            isMain = colorIndex === Number(mainColorIndex);\n            card = {\n                color_id: deckCard.color_id || \"color_\" + colorIndex,\n                label: deckCard.label || \"Card\",\n                color: deckCard.color || \"#334155\",\n                position: orderIndex + 1,\n                screen_number: screenNumber,\n                screen_type_index: Number(screenType.type_index),\n                is_main: isMain,\n                id: isMain ? \"main\" : \"side_\" + (sideIndex + 1),\n                x: null,\n                y: null,\n                z: null\n            };\n            if (!isMain) {\n                values = sideValues[sideIndex] || {};\n                sideIndex += 1;\n                card.x = numberValue(values.x, 0);\n                card.y = numberValue(values.y, 0);\n                card.z = numberValue(values.z, 0);\n            }\n            cards.push(card);\n        }\n        return cards;\n    }\n\n    function calculateChoiceOutcome(card, state, config, randomValue, screenNumber) {\n        var mainCardsCollected = state.mainCardsCollected;\n        var mainBonusTriggered = state.mainBonusTriggered;\n        var cardPointsAdded = 0;\n        var multiplierApplied = false;\n        var bonusThisRound = false;\n        var bonusPointsAdded = 0;\n        if (card.is_main) {\n            mainCardsCollected += 1;\n            bonusThisRound = !mainBonusTriggered &&\n                config.bonusThresholdMainCards > 0 &&\n                mainCardsCollected >= config.bonusThresholdMainCards;\n            if (bonusThisRound) {\n                mainBonusTriggered = true;\n                bonusPointsAdded = config.mainBonusPoints;\n            }\n        } else {\n            multiplierApplied = randomValue < card.y / 100;\n            cardPointsAdded = multiplierApplied ? card.x * card.z : card.x;\n        }\n        return {\n            pointsBefore: state.pointsAccumulated,\n            cardPointsAdded: cardPointsAdded,\n            multiplierApplied: multiplierApplied,\n            mainCardsCollected: mainCardsCollected,\n            mainBonusTriggered: mainBonusTriggered,\n            mainBonusTriggeredThisRound: bonusThisRound,\n            mainBonusPointsAdded: bonusPointsAdded,\n            mainBonusTriggerScreen: bonusThisRound ? screenNumber : state.mainBonusTriggerScreen,\n            pointsAfter: state.pointsAccumulated + cardPointsAdded + bonusPointsAdded\n        };\n    }\n\n    function utf8ByteLength(value) {\n        var text = String(value);\n        var bytes = 0;\n        var index;\n        var code;\n        for (index = 0; index < text.length; index += 1) {\n            code = text.charCodeAt(index);\n            if (code < 0x80) {\n                bytes += 1;\n            } else if (code < 0x800) {\n                bytes += 2;\n            } else if (code >= 0xD800 && code <= 0xDBFF &&\n                    index + 1 < text.length &&\n                    text.charCodeAt(index + 1) >= 0xDC00 &&\n                    text.charCodeAt(index + 1) <= 0xDFFF) {\n                bytes += 4;\n                index += 1;\n            } else {\n                bytes += 3;\n            }\n        }\n        return bytes;\n    }\n\n    function csvValue(value) {\n        var text;\n        if (value === null || typeof value === \"undefined\") {\n            return \"\";\n        }\n        if (typeof value === \"boolean\") {\n            return value ? \"true\" : \"false\";\n        }\n        text = String(value);\n        if (/[\",\\r\\n]/.test(text)) {\n            return \"\\\"\" + text.replace(/\"/g, \"\\\"\\\"\") + \"\\\"\";\n        }\n        return text;\n    }\n\n    function decisionToCsvRow(decision, columns) {\n        var activeColumns = columns || DECISION_COLUMNS;\n        var values = [];\n        var index;\n        for (index = 0; index < activeColumns.length; index += 1) {\n            values.push(csvValue(decision[activeColumns[index]]));\n        }\n        return values.join(\",\") + \"\\r\\n\";\n    }\n\n    function packDecisionRows(decisions, maximumChunks, maximumBytes) {\n        var chunks = [];\n        var current = \"\";\n        var currentBytes = 0;\n        var overflowRows = 0;\n        var index;\n        var row;\n        var rowBytes;\n        var remaining;\n\n        for (index = 0; index < decisions.length; index += 1) {\n            row = decisionToCsvRow(decisions[index], DECISION_COLUMNS);\n            rowBytes = utf8ByteLength(row);\n            if (rowBytes > maximumBytes) {\n                overflowRows += 1;\n                continue;\n            }\n            if (current && currentBytes + rowBytes > maximumBytes) {\n                if (chunks.length >= maximumChunks) {\n                    remaining = decisions.length - index;\n                    overflowRows += remaining;\n                    current = \"\";\n                    currentBytes = 0;\n                    break;\n                }\n                chunks.push(current);\n                current = \"\";\n                currentBytes = 0;\n            }\n            if (chunks.length >= maximumChunks) {\n                remaining = decisions.length - index;\n                overflowRows += remaining;\n                break;\n            }\n            current += row;\n            currentBytes += rowBytes;\n        }\n\n        if (current) {\n            if (chunks.length < maximumChunks) {\n                chunks.push(current);\n            } else {\n                overflowRows += 1;\n            }\n        }\n\n        return {\n            columns: DECISION_COLUMNS.slice(0),\n            chunks: chunks,\n            overflow: overflowRows > 0,\n            overflowRows: overflowRows\n        };\n    }\n\n    function parseCsvBody(body) {\n        var rows = [];\n        var row = [];\n        var field = \"\";\n        var inQuotes = false;\n        var index;\n        var character;\n        var next;\n        if (!body) {\n            return rows;\n        }\n        for (index = 0; index < body.length; index += 1) {\n            character = body.charAt(index);\n            next = index + 1 < body.length ? body.charAt(index + 1) : \"\";\n            if (inQuotes) {\n                if (character === \"\\\"\" && next === \"\\\"\") {\n                    field += \"\\\"\";\n                    index += 1;\n                } else if (character === \"\\\"\") {\n                    inQuotes = false;\n                } else {\n                    field += character;\n                }\n            } else if (character === \"\\\"\") {\n                inQuotes = true;\n            } else if (character === \",\") {\n                row.push(field);\n                field = \"\";\n            } else if (character === \"\\n\") {\n                row.push(field);\n                rows.push(row);\n                row = [];\n                field = \"\";\n            } else if (character !== \"\\r\") {\n                field += character;\n            }\n        }\n        if (field !== \"\" || row.length) {\n            row.push(field);\n            rows.push(row);\n        }\n        return rows;\n    }\n\n    function rowsToDecisionObjects(rows, columns) {\n        var decisions = [];\n        var rowIndex;\n        var columnIndex;\n        var decision;\n        for (rowIndex = 0; rowIndex < rows.length; rowIndex += 1) {\n            decision = {};\n            for (columnIndex = 0; columnIndex < columns.length; columnIndex += 1) {\n                decision[columns[columnIndex]] = typeof rows[rowIndex][columnIndex] === \"undefined\" ?\n                    \"\" : rows[rowIndex][columnIndex];\n            }\n            decisions.push(decision);\n        }\n        return decisions;\n    }\n\n    function persistRandomization(randomization, cardDeck) {\n        var labels = [];\n        var index;\n        for (index = 0; index < randomization.colorOrder.length; index += 1) {\n            labels.push((cardDeck[randomization.colorOrder[index]] || {}).label || \"Card\");\n        }\n        setEmbeddedData(\"cs_seed\", randomization.seed);\n        setEmbeddedData(\"cs_color_order\", JSON.stringify(labels));\n        setEmbeddedData(\"cs_color_order_indices\", JSON.stringify(randomization.colorOrder));\n        setEmbeddedData(\"cs_main_color\", (cardDeck[randomization.mainColorIndex] || {}).label || \"Card\");\n        setEmbeddedData(\"cs_main_color_index\", randomization.mainColorIndex);\n        setEmbeddedData(\"cs_screen_sequence\", JSON.stringify(randomization.screenSequence));\n    }\n\n    function persistFinalData(state, status, bootstrap) {\n        var packed = packDecisionRows(\n            state.decisions,\n            bootstrap.chunkCount,\n            bootstrap.chunkMaxBytes\n        );\n        var elapsed = Math.max(0, Date.now() - state.startedAtWall);\n        var index;\n        var fieldName;\n\n        setEmbeddedData(\"cs_task_status\", status);\n        setEmbeddedData(\"cs_decision_count\", state.decisions.length);\n        setEmbeddedData(\"cs_task_elapsed_ms\", elapsed);\n        setEmbeddedData(\"cs_final_points\", state.pointsAccumulated);\n        setEmbeddedData(\"cs_main_cards_collected\", state.mainCardsCollected);\n        setEmbeddedData(\"cs_main_bonus_triggered\", state.mainBonusTriggered ? \"1\" : \"0\");\n        setEmbeddedData(\n            \"cs_main_bonus_trigger_screen\",\n            state.mainBonusTriggerScreen === null ? \"\" : state.mainBonusTriggerScreen\n        );\n        setEmbeddedData(\"cs_activity_event_count\", state.activityEventCount || 0);\n        setEmbeddedData(\"cs_last_activity_source\", state.lastActivitySource || \"\");\n        setEmbeddedData(\n            \"cs_inactivity_elapsed_ms_at_end\",\n            state.inactivityElapsedMsAtEnd || 0\n        );\n        setEmbeddedData(\n            \"cs_activity_listener_targets\",\n            state.activityListenerTargetCount || 0\n        );\n        setEmbeddedData(\n            \"cs_event_counts_supported\",\n            state.eventCountsSupported ? \"1\" : \"0\"\n        );\n        setEmbeddedData(\"cs_game_root_count\", state.gameRootCount || 0);\n        setEmbeddedData(\"cs_game_instance_token\", state.instanceToken || \"\");\n        setEmbeddedData(\"cs_authoritative_instance\", state.isAuthoritative ? \"1\" : \"0\");\n        setEmbeddedData(\"cs_suppressed_by_peer\", state.suppressedByPeer ? \"1\" : \"0\");\n        setEmbeddedData(\"cs_authority_channel\", state.authorityChannel || \"\");\n        setEmbeddedData(\"cs_owner_claim_source\", state.ownerClaimSource || \"\");\n        setEmbeddedData(\"cs_log_columns\", DECISION_COLUMNS.join(\",\"));\n        setEmbeddedData(\"cs_log_chunk_count\", packed.chunks.length);\n        setEmbeddedData(\"cs_log_format_version\", \"csv-v1\");\n        setEmbeddedData(\"cs_log_overflow\", packed.overflow ? \"1\" : \"0\");\n        setEmbeddedData(\"cs_log_overflow_rows\", packed.overflowRows);\n\n        for (index = 0; index < bootstrap.chunkCount; index += 1) {\n            fieldName = \"cs_log_chunk_\" + (\"00\" + (index + 1)).slice(-3);\n            setEmbeddedData(fieldName, index < packed.chunks.length ? packed.chunks[index] : \"\");\n        }\n\n        lastResult = {\n            status: status,\n            elapsedMs: elapsed,\n            decisions: state.decisions.slice(0),\n            packed: packed\n        };\n        global.CSQ_LAST_RESULT = lastResult;\n        return packed;\n    }\n\n    function initGame(question) {\n        var root = getRoot(\"csq-game-root\", question);\n        var bootstrap = readBootstrap();\n        var bootstrapError = validateBootstrap(bootstrap);\n        var config;\n        var storedSeed;\n        var seed;\n        var randomization;\n        var controller;\n        var task;\n        var statusRow;\n        var statusLeft;\n        var statusRight;\n        var timeLeftDisplay;\n        var inactivityDisplay;\n        var pointsDisplay;\n        var mainCardDisplay;\n        var cueDisplay;\n        var cardRow;\n        var state;\n        var eventNames = [\n            \"pointermove\",\n            \"pointerdown\",\n            \"mousemove\",\n            \"mousedown\",\n            \"keydown\",\n            \"touchstart\",\n            \"wheel\",\n            \"scroll\",\n            \"click\"\n        ];\n        var eventCountNames = [\n            \"click\",\n            \"pointerdown\",\n            \"pointerup\",\n            \"mousedown\",\n            \"mouseup\",\n            \"keydown\",\n            \"touchstart\"\n        ];\n        var eventCountSnapshot = {};\n        var activityTargets = [];\n        var intervalId = null;\n        var timeoutIds = [];\n        var index;\n\n        if (!root) {\n            return null;\n        }\n        if (root.__csqController) {\n            return root.__csqController;\n        }\n\n        function addActivityTarget(target) {\n            if (target && typeof target.addEventListener === \"function\" &&\n                    activityTargets.indexOf(target) === -1) {\n                activityTargets.push(target);\n            }\n        }\n\n        addActivityTarget(root);\n        addActivityTarget(root.ownerDocument);\n        addActivityTarget(root.ownerDocument && root.ownerDocument.defaultView);\n        addActivityTarget(global.document);\n        addActivityTarget(global);\n\n        hideNextButton(question);\n        clearElement(root);\n        config = readConfig(bootstrap);\n        storedSeed = getEmbeddedData(\"cs_seed\");\n        seed = storedSeed === \"\" || !isFiniteNumber(Number(storedSeed)) ? randomSeed() : Number(storedSeed) >>> 0;\n        randomization = bootstrapError ? null : generateRandomization(\n            seed,\n            bootstrap.cardDeck.length,\n            config.numScreenTypes,\n            bootstrap.maxDecisions\n        );\n\n        task = element(\"div\", \"cs-task\");\n        task.style.setProperty(\"--cs-screen-motion-ms\", config.screenMotionMs + \"ms\");\n        root.appendChild(task);\n        statusRow = element(\"div\", \"cs-status\");\n        statusLeft = element(\"div\", \"cs-status-left\");\n        statusRight = element(\"div\", \"cs-status-right\");\n        statusRow.appendChild(statusLeft);\n        statusRow.appendChild(statusRight);\n        task.appendChild(statusRow);\n\n        if (config.showTimeLeft) {\n            timeLeftDisplay = element(\"span\", \"\", \"Time left: \" + formatClock(config.durationMinutes * 60000));\n            timeLeftDisplay.id = \"cs-time-left-display\";\n            statusLeft.appendChild(timeLeftDisplay);\n        }\n        inactivityDisplay = element(\"span\", \"\", \"Inactivity limit: \" + config.inactivitySeconds + \"s\");\n        inactivityDisplay.id = \"cs-inactivity-display\";\n        statusLeft.appendChild(inactivityDisplay);\n        if (config.showTotalPoints) {\n            pointsDisplay = element(\"span\", \"\", \"Total Points: 0\");\n            pointsDisplay.id = \"cs-points-display\";\n            statusRight.appendChild(pointsDisplay);\n        }\n        if (config.showMainCards) {\n            mainCardDisplay = element(\"span\", \"\", \"Main cards collected: 0\");\n            mainCardDisplay.id = \"cs-main-card-display\";\n            statusRight.appendChild(mainCardDisplay);\n        }\n        cueDisplay = element(\"div\", \"cs-cue\");\n        cueDisplay.id = \"cs-cue\";\n        cueDisplay.setAttribute(\"aria-live\", \"polite\");\n        task.appendChild(cueDisplay);\n        cardRow = element(\"div\", \"cs-card-row cs-card-row-new\");\n        cardRow.id = \"cs-card-row\";\n        cardRow.setAttribute(\"aria-label\", \"Card choices\");\n        task.appendChild(cardRow);\n\n        state = {\n            instanceToken: Date.now().toString(36) + \"-\" + randomSeed().toString(36),\n            isAuthoritative: false,\n            suppressedByPeer: false,\n            authorityChannel: \"\",\n            ownerClaimSource: \"\",\n            startedAtWall: Date.now(),\n            currentScreenStartedAt: nowMonotonic(),\n            currentScreenNumber: 1,\n            pointsAccumulated: 0,\n            mainCardsCollected: 0,\n            mainBonusTriggered: false,\n            mainBonusTriggerScreen: null,\n            lastActivityAt: nowMonotonic(),\n            lastActivitySource: \"game_start\",\n            activityEventCount: 0,\n            inactivityElapsedMsAtEnd: 0,\n            activityListenerTargetCount: activityTargets.length,\n            eventCountsSupported: Boolean(\n                global.performance &&\n                global.performance.eventCounts &&\n                typeof global.performance.eventCounts.get === \"function\"\n            ),\n            gameRootCount: root.ownerDocument &&\n                typeof root.ownerDocument.querySelectorAll === \"function\" ?\n                root.ownerDocument.querySelectorAll(\"#csq-game-root\").length : 1,\n            lastChoiceAcceptedAt: -Infinity,\n            decisions: [],\n            waiting: false,\n            finished: false,\n            random: randomization ? randomization.random : Math.random\n        };\n\n        function schedule(callback, delay) {\n            var timeoutId = global.setTimeout(callback, Math.max(0, delay));\n            timeoutIds.push(timeoutId);\n            return timeoutId;\n        }\n\n        function taskElapsedMs() {\n            return Math.max(0, Date.now() - state.startedAtWall);\n        }\n\n        function durationMs() {\n            return Math.max(0, Math.round(config.durationMinutes * 60000));\n        }\n\n        function durationExpired() {\n            return durationMs() > 0 && taskElapsedMs() >= durationMs();\n        }\n\n        function inactivityElapsedMs() {\n            return Math.max(0, nowMonotonic() - state.lastActivityAt);\n        }\n\n        function foreignOwner() {\n            var owner = readOwnerRecord();\n            return owner && owner.token !== state.instanceToken ? owner : null;\n        }\n\n        function claimAuthority(source, requireVisible) {\n            var owner;\n            var written;\n            if (state.isAuthoritative) {\n                return true;\n            }\n            owner = readOwnerRecord();\n            if (owner && owner.token !== state.instanceToken) {\n                state.suppressedByPeer = true;\n                return false;\n            }\n            if (requireVisible && !isLikelyVisible(root)) {\n                state.suppressedByPeer = true;\n                return false;\n            }\n            written = writeOwnerRecord(state.instanceToken, source);\n            owner = readOwnerRecord();\n            if (owner && owner.token !== state.instanceToken) {\n                state.suppressedByPeer = true;\n                return false;\n            }\n            state.isAuthoritative = true;\n            state.authorityChannel = written.channel;\n            state.ownerClaimSource = source || \"activity\";\n            return true;\n        }\n\n        function suppressForPeer() {\n            if (state.finished) {\n                return;\n            }\n            state.suppressedByPeer = true;\n            state.finished = true;\n            controller.cleanup();\n            if (activeController === controller) {\n                activeController = null;\n            }\n        }\n\n        function markActivity(source) {\n            if (state.finished) {\n                return false;\n            }\n            if (!claimAuthority(source || \"activity\", false)) {\n                suppressForPeer();\n                return false;\n            }\n            state.lastActivityAt = nowMonotonic();\n            state.lastActivitySource = source || \"activity\";\n            state.activityEventCount += 1;\n            return true;\n        }\n\n        function initializeEventCounts() {\n            var eventIndex;\n            var current;\n            if (!state.eventCountsSupported) {\n                return;\n            }\n            for (eventIndex = 0; eventIndex < eventCountNames.length; eventIndex += 1) {\n                current = global.performance.eventCounts.get(eventCountNames[eventIndex]);\n                eventCountSnapshot[eventCountNames[eventIndex]] = Number(current) || 0;\n            }\n        }\n\n        function pollEventCounts() {\n            var eventIndex;\n            var eventName;\n            var previous;\n            var current;\n            if (!state.eventCountsSupported) {\n                return;\n            }\n            for (eventIndex = 0; eventIndex < eventCountNames.length; eventIndex += 1) {\n                eventName = eventCountNames[eventIndex];\n                previous = eventCountSnapshot[eventName] || 0;\n                current = Number(global.performance.eventCounts.get(eventName)) || 0;\n                if (current > previous) {\n                    markActivity(\"performance_event:\" + eventName);\n                }\n                eventCountSnapshot[eventName] = current;\n            }\n        }\n\n        function updateCounters() {\n            if (pointsDisplay) {\n                pointsDisplay.textContent = \"Total Points: \" + formatNumber(state.pointsAccumulated);\n            }\n            if (mainCardDisplay) {\n                mainCardDisplay.textContent = \"Main cards collected: \" + state.mainCardsCollected;\n            }\n        }\n\n        function cueBox(message, className) {\n            return element(\"span\", \"cs-cue-box \" + (className || \"\"), message);\n        }\n\n        function showCue(message, className, sideMessage, sideClassName) {\n            if (!config.showClickFeedback || !message) {\n                return;\n            }\n            clearElement(cueDisplay);\n            cueDisplay.appendChild(cueBox(message, className));\n            if (sideMessage) {\n                cueDisplay.appendChild(cueBox(sideMessage, sideClassName));\n            }\n            cueDisplay.className = \"cs-cue cs-cue-visible\";\n            if (config.feedbackMessageMs > 0) {\n                schedule(function () {\n                    cueDisplay.className = \"cs-cue\";\n                    schedule(function () {\n                        clearElement(cueDisplay);\n                    }, 90);\n                }, config.feedbackMessageMs);\n            }\n        }\n\n        function cardsForCurrentScreen() {\n            var sequenceIndex = Math.max(0, state.currentScreenNumber - 1);\n            var typeIndex = randomization.screenSequence[sequenceIndex];\n            var screenType = screenTypeByIndex(bootstrap.screenTypes, typeIndex);\n            return buildCards(\n                screenType,\n                randomization.colorOrder,\n                randomization.mainColorIndex,\n                bootstrap.cardDeck,\n                state.currentScreenNumber\n            );\n        }\n\n        function disableCards(selectedButton) {\n            var buttons = cardRow.querySelectorAll(\".cs-card\");\n            var buttonIndex;\n            for (buttonIndex = 0; buttonIndex < buttons.length; buttonIndex += 1) {\n                buttons[buttonIndex].disabled = true;\n                if (buttons[buttonIndex] === selectedButton) {\n                    buttons[buttonIndex].className += \" cs-card-selected\";\n                }\n            }\n        }\n\n        function finish(status) {\n            if (state.finished) {\n                return;\n            }\n            if (foreignOwner()) {\n                suppressForPeer();\n                return;\n            }\n            if (!claimAuthority(\"task_end:\" + status, true)) {\n                suppressForPeer();\n                return;\n            }\n            state.inactivityElapsedMsAtEnd = Math.round(inactivityElapsedMs());\n            state.finished = true;\n            persistRandomization(randomization, bootstrap.cardDeck);\n            persistFinalData(state, status, bootstrap);\n            controller.cleanup();\n            activeController = null;\n            global.setTimeout(function () {\n                clickNextButton(question);\n            }, 0);\n        }\n\n        function advanceScreen() {\n            if (state.finished) {\n                return;\n            }\n            if (durationExpired()) {\n                finish(\"duration\");\n                return;\n            }\n            if (state.decisions.length >= bootstrap.maxDecisions) {\n                finish(\"max_decisions\");\n                return;\n            }\n            state.currentScreenNumber += 1;\n            state.waiting = false;\n            renderCards();\n        }\n\n        function submitChoice(card, button) {\n            var responseTime;\n            var elapsed;\n            var outcome;\n            var decision;\n            var delay;\n            var acceptedAt;\n            if (state.finished || state.waiting) {\n                return;\n            }\n            if (durationExpired()) {\n                finish(\"duration\");\n                return;\n            }\n            acceptedAt = nowMonotonic();\n            if (acceptedAt - state.lastChoiceAcceptedAt < 250) {\n                return;\n            }\n            state.lastChoiceAcceptedAt = acceptedAt;\n            if (!markActivity(\"card_choice\")) {\n                return;\n            }\n            state.waiting = true;\n            responseTime = Math.max(0, Math.round(nowMonotonic() - state.currentScreenStartedAt));\n            elapsed = taskElapsedMs();\n            outcome = calculateChoiceOutcome(\n                card,\n                state,\n                config,\n                card.is_main ? 1 : state.random(),\n                state.currentScreenNumber\n            );\n            state.pointsAccumulated = outcome.pointsAfter;\n            state.mainCardsCollected = outcome.mainCardsCollected;\n            state.mainBonusTriggered = outcome.mainBonusTriggered;\n            state.mainBonusTriggerScreen = outcome.mainBonusTriggerScreen;\n            decision = {\n                screen_number: state.currentScreenNumber,\n                screen_type_index: card.screen_type_index,\n                chosen_card_id: card.id,\n                chosen_card_label: card.label,\n                chosen_card_position: card.position,\n                chosen_is_main: card.is_main,\n                chosen_x: card.is_main ? null : card.x,\n                chosen_y: card.is_main ? null : card.y,\n                chosen_z: card.is_main ? null : card.z,\n                response_time_ms: responseTime,\n                task_elapsed_ms: elapsed,\n                main_cards_collected: outcome.mainCardsCollected,\n                points_before: outcome.pointsBefore,\n                card_points_added: outcome.cardPointsAdded,\n                multiplier_applied: outcome.multiplierApplied,\n                multiplier_y: card.is_main ? null : card.y,\n                multiplier_z: card.is_main ? null : card.z,\n                main_bonus_triggered_this_round: outcome.mainBonusTriggeredThisRound,\n                main_bonus_points_added: outcome.mainBonusPointsAdded,\n                points_after: outcome.pointsAfter\n            };\n            state.decisions.push(decision);\n            updateCounters();\n            disableCards(button);\n\n            if (outcome.mainBonusTriggeredThisRound) {\n                showCue(\n                    \"+\" + formatNumber(outcome.mainBonusPointsAdded) +\n                        \" points -- collected \" + config.bonusThresholdMainCards + \" main cards\",\n                    \"cs-cue-main-bonus\"\n                );\n            } else if (outcome.multiplierApplied) {\n                showCue(\n                    \"+\" + formatNumber(outcome.cardPointsAdded) + \" points\",\n                    \"cs-cue-points\",\n                    formatNumber(card.z) + \"x\",\n                    \"cs-cue-multiplier-badge\"\n                );\n            } else if (!card.is_main) {\n                showCue(\"+\" + formatNumber(outcome.cardPointsAdded) + \" points\", \"cs-cue-points\");\n            } else {\n                showCue(\"+1 \" + card.label, \"cs-cue-points\");\n            }\n\n            if (state.decisions.length >= bootstrap.maxDecisions) {\n                finish(\"max_decisions\");\n                return;\n            }\n            if (config.usePostClickDelay) {\n                delay = outcome.mainBonusTriggeredThisRound ?\n                    config.mainBonusDelayMs : config.postClickDelayMs;\n                schedule(advanceScreen, delay);\n            } else {\n                advanceScreen();\n            }\n        }\n\n        function renderCards() {\n            var cards;\n            var cardIndex;\n            var card;\n            var button;\n            var label;\n            var points;\n            var multiplier;\n            if (state.finished) {\n                return;\n            }\n            state.currentScreenStartedAt = nowMonotonic();\n            cardRow.className = \"cs-card-row\";\n            cardRow.offsetWidth;\n            clearElement(cardRow);\n            cards = cardsForCurrentScreen();\n            for (cardIndex = 0; cardIndex < cards.length; cardIndex += 1) {\n                card = cards[cardIndex];\n                button = element(\"button\", \"cs-card\");\n                button.type = \"button\";\n                button.style.setProperty(\"--card-color\", card.color);\n                button.setAttribute(\"data-card-id\", card.id);\n                button.setAttribute(\"data-card-label\", card.label);\n                button.setAttribute(\"data-position\", String(card.position));\n                button.setAttribute(\"data-is-main\", card.is_main ? \"true\" : \"false\");\n                label = element(\"span\", \"cs-card-label\", card.label);\n                button.appendChild(label);\n                if (!card.is_main) {\n                    points = element(\"span\", \"cs-points\", \"Points: \" + formatNumber(card.x));\n                    multiplier = element(\n                        \"span\",\n                        \"cs-multiplier\",\n                        formatNumber(card.y) + \"% of \" + formatNumber(card.z) + \"x\"\n                    );\n                    button.appendChild(points);\n                    button.appendChild(multiplier);\n                }\n                (function (selectedCard, selectedButton) {\n                    function choose(event) {\n                        if (event && event.type === \"keydown\" &&\n                                event.key !== \"Enter\" && event.key !== \" \") {\n                            return;\n                        }\n                        submitChoice(selectedCard, selectedButton);\n                    }\n                    selectedButton.addEventListener(\"pointerup\", choose, false);\n                    selectedButton.addEventListener(\"click\", choose, false);\n                    selectedButton.addEventListener(\"keydown\", choose, false);\n                }(card, button));\n                cardRow.appendChild(button);\n            }\n            cardRow.className = \"cs-card-row cs-card-row-new\";\n        }\n\n        function resetActivity(event) {\n            markActivity(event && event.type ? event.type : \"activity_event\");\n        }\n\n        function updateClocks() {\n            var elapsedSeconds;\n            var remaining;\n            if (state.finished) {\n                return;\n            }\n            if (foreignOwner()) {\n                suppressForPeer();\n                return;\n            }\n            if (timeLeftDisplay) {\n                timeLeftDisplay.textContent = \"Time left: \" +\n                    formatClock(Math.max(0, durationMs() - taskElapsedMs()));\n            }\n            if (durationExpired()) {\n                finish(\"duration\");\n                return;\n            }\n            pollEventCounts();\n            elapsedSeconds = Math.floor(inactivityElapsedMs() / 1000);\n            remaining = Math.max(0, config.inactivitySeconds - elapsedSeconds);\n            inactivityDisplay.textContent = \"Inactivity limit: \" + remaining + \"s\";\n            if (elapsedSeconds >= config.inactivitySeconds) {\n                finish(\"inactive\");\n            }\n        }\n\n        controller = {\n            state: state,\n            finish: finish,\n            cleanup: function () {\n                var timeoutIndex;\n                var targetIndex;\n                if (intervalId !== null) {\n                    global.clearInterval(intervalId);\n                    intervalId = null;\n                }\n                for (timeoutIndex = 0; timeoutIndex < timeoutIds.length; timeoutIndex += 1) {\n                    global.clearTimeout(timeoutIds[timeoutIndex]);\n                }\n                timeoutIds = [];\n                for (targetIndex = 0; targetIndex < activityTargets.length; targetIndex += 1) {\n                    for (timeoutIndex = 0; timeoutIndex < eventNames.length; timeoutIndex += 1) {\n                        activityTargets[targetIndex].removeEventListener(\n                            eventNames[timeoutIndex],\n                            resetActivity,\n                            true\n                        );\n                    }\n                }\n                root.__csqController = null;\n            }\n        };\n        root.__csqController = controller;\n        activateController(question, controller);\n\n        if (bootstrapError) {\n            clearElement(task);\n            task.appendChild(element(\"div\", \"cs-debug-notice\", bootstrapError));\n            finish(\"error\");\n            return controller;\n        }\n\n        persistRandomization(randomization, bootstrap.cardDeck);\n        initializeEventCounts();\n        for (var targetIndex = 0; targetIndex < activityTargets.length; targetIndex += 1) {\n            for (index = 0; index < eventNames.length; index += 1) {\n                activityTargets[targetIndex].addEventListener(eventNames[index], resetActivity, true);\n            }\n        }\n        updateCounters();\n        renderCards();\n        updateClocks();\n        intervalId = global.setInterval(updateClocks, 250);\n        return controller;\n    }\n\n    function addDefinition(list, term, value) {\n        list.appendChild(element(\"dt\", \"\", term));\n        list.appendChild(element(\"dd\", \"\", value === \"\" ? \"\" : String(value)));\n    }\n\n    function yesNo(value) {\n        return parseBoolean(value, false) ? \"Yes\" : \"No\";\n    }\n\n    function packedDecisionsFromEmbeddedData(bootstrap) {\n        var rawColumns = String(getEmbeddedData(\"cs_log_columns\") || DECISION_COLUMNS.join(\",\"));\n        var columns = rawColumns.split(\",\");\n        var chunkCount = clamp(\n            Math.floor(numberValue(getEmbeddedData(\"cs_log_chunk_count\"), 0)),\n            0,\n            bootstrap.chunkCount\n        );\n        var body = \"\";\n        var index;\n        var name;\n        for (index = 0; index < chunkCount; index += 1) {\n            name = \"cs_log_chunk_\" + (\"00\" + (index + 1)).slice(-3);\n            body += String(getEmbeddedData(name) || \"\");\n        }\n        return rowsToDecisionObjects(parseCsvBody(body), columns);\n    }\n\n    function renderDecisionTable(parent, decisions) {\n        var wrapper = element(\"div\", \"csq-debug-table-wrap\");\n        var table = element(\"table\", \"cs-debug-table\");\n        var head = element(\"thead\");\n        var headRow = element(\"tr\");\n        var body = element(\"tbody\");\n        var fragment = global.document.createDocumentFragment();\n        var columnIndex;\n        var rowIndex;\n        var row;\n        var value;\n        for (columnIndex = 0; columnIndex < DECISION_COLUMNS.length; columnIndex += 1) {\n            headRow.appendChild(element(\"th\", \"\", DECISION_COLUMNS[columnIndex]));\n        }\n        head.appendChild(headRow);\n        table.appendChild(head);\n        for (rowIndex = 0; rowIndex < decisions.length; rowIndex += 1) {\n            row = element(\"tr\");\n            for (columnIndex = 0; columnIndex < DECISION_COLUMNS.length; columnIndex += 1) {\n                value = decisions[rowIndex][DECISION_COLUMNS[columnIndex]];\n                if ((DECISION_COLUMNS[columnIndex] === \"chosen_x\" ||\n                        DECISION_COLUMNS[columnIndex] === \"chosen_y\" ||\n                        DECISION_COLUMNS[columnIndex] === \"chosen_z\") &&\n                        parseBoolean(decisions[rowIndex].chosen_is_main, false)) {\n                    value = \"N/A\";\n                } else if (DECISION_COLUMNS[columnIndex] === \"chosen_is_main\" ||\n                        DECISION_COLUMNS[columnIndex] === \"multiplier_applied\" ||\n                        DECISION_COLUMNS[columnIndex] === \"main_bonus_triggered_this_round\") {\n                    value = yesNo(value);\n                }\n                row.appendChild(element(\"td\", \"\", value));\n            }\n            fragment.appendChild(row);\n        }\n        body.appendChild(fragment);\n        table.appendChild(body);\n        wrapper.appendChild(table);\n        parent.appendChild(wrapper);\n    }\n\n    function renderNormalOutcome(root, bootstrap, status) {\n        var decisions = lastResult && lastResult.status === status ?\n            lastResult.decisions : packedDecisionsFromEmbeddedData(bootstrap);\n        var panel;\n        var list;\n        var details;\n        var pre;\n        var warning;\n\n        appendText(root, \"h2\", \"Development debug summary\");\n        root.appendChild(element(\n            \"div\",\n            \"cs-debug-notice\",\n            \"This page is only for debugging during development. Do not show this page in the production experiment.\"\n        ));\n        panel = element(\"div\", \"cs-debug-panel\");\n        appendText(panel, \"h3\", \"Development-only configuration and outcome\");\n        list = element(\"dl\");\n        addDefinition(list, \"Task status\", status);\n        addDefinition(list, \"Task duration\", getEmbeddedData(\"cs_duration_minutes\") + \" minutes\");\n        addDefinition(list, \"Possible screen types\", getEmbeddedData(\"cs_num_screen_types\"));\n        addDefinition(list, \"Time-left counter shown\", yesNo(getEmbeddedData(\"cs_show_time_left\")));\n        addDefinition(list, \"Main-card counter shown\", yesNo(getEmbeddedData(\"cs_show_main_cards\")));\n        addDefinition(list, \"Total-points counter shown\", yesNo(getEmbeddedData(\"cs_show_total_points\")));\n        addDefinition(list, \"Per-click point feedback shown\", yesNo(getEmbeddedData(\"cs_show_click_feedback\")));\n        addDefinition(list, \"Feedback message duration\", getEmbeddedData(\"cs_feedback_message_ms\") + \" ms\");\n        addDefinition(list, \"Wait before next screen used\", yesNo(getEmbeddedData(\"cs_use_post_click_delay\")));\n        addDefinition(list, \"Wait before next screen\", getEmbeddedData(\"cs_post_click_delay_ms\") + \" ms\");\n        addDefinition(list, \"L-th main-card wait before next screen\", getEmbeddedData(\"cs_main_bonus_delay_ms\") + \" ms\");\n        addDefinition(list, \"Screen motion duration\", getEmbeddedData(\"cs_screen_motion_ms\") + \" ms\");\n        addDefinition(list, \"Main-card bonus threshold (L)\", getEmbeddedData(\"cs_bonus_threshold_main_cards\"));\n        addDefinition(list, \"Main-card bonus points (Q)\", getEmbeddedData(\"cs_main_bonus_points\"));\n        addDefinition(list, \"Answered decision screens\", getEmbeddedData(\"cs_decision_count\"));\n        addDefinition(list, \"Main cards collected\", getEmbeddedData(\"cs_main_cards_collected\"));\n        addDefinition(list, \"Total Points\", getEmbeddedData(\"cs_final_points\"));\n        addDefinition(list, \"Main-card bonus triggered\", yesNo(getEmbeddedData(\"cs_main_bonus_triggered\")));\n        addDefinition(list, \"Main-card bonus trigger screen\", getEmbeddedData(\"cs_main_bonus_trigger_screen\"));\n        addDefinition(list, \"Participant color order\", getEmbeddedData(\"cs_color_order\"));\n        addDefinition(list, \"Main-card color\", getEmbeddedData(\"cs_main_color\"));\n        addDefinition(list, \"Randomization seed\", getEmbeddedData(\"cs_seed\"));\n        addDefinition(list, \"Inactivity cutoff\", getEmbeddedData(\"cs_inactivity_seconds\") + \" seconds\");\n        addDefinition(list, \"Captured activity events\", getEmbeddedData(\"cs_activity_event_count\"));\n        addDefinition(list, \"Last captured activity\", getEmbeddedData(\"cs_last_activity_source\"));\n        addDefinition(\n            list,\n            \"Activity listener targets\",\n            getEmbeddedData(\"cs_activity_listener_targets\")\n        );\n        addDefinition(\n            list,\n            \"Performance event counter supported\",\n            yesNo(getEmbeddedData(\"cs_event_counts_supported\"))\n        );\n        addDefinition(list, \"Game roots found\", getEmbeddedData(\"cs_game_root_count\"));\n        addDefinition(\n            list,\n            \"Authoritative game instance\",\n            yesNo(getEmbeddedData(\"cs_authoritative_instance\"))\n        );\n        addDefinition(list, \"Authority claim source\", getEmbeddedData(\"cs_owner_claim_source\"));\n        addDefinition(list, \"Authority channel\", getEmbeddedData(\"cs_authority_channel\"));\n        addDefinition(\n            list,\n            \"Suppressed by another preview instance\",\n            yesNo(getEmbeddedData(\"cs_suppressed_by_peer\"))\n        );\n        addDefinition(\n            list,\n            \"Inactivity elapsed at task end\",\n            formatNumber(numberValue(getEmbeddedData(\"cs_inactivity_elapsed_ms_at_end\"), 0) / 1000) +\n                \" seconds\"\n        );\n        addDefinition(\n            list,\n            \"Total task elapsed time\",\n            formatNumber(numberValue(getEmbeddedData(\"cs_task_elapsed_ms\"), 0) / 1000) + \" seconds\"\n        );\n        panel.appendChild(list);\n        root.appendChild(panel);\n\n        if (parseBoolean(getEmbeddedData(\"cs_log_overflow\"), false)) {\n            warning = element(\n                \"div\",\n                \"cs-debug-notice\",\n                \"Decision-log storage overflowed. \" + getEmbeddedData(\"cs_log_overflow_rows\") +\n                    \" decision rows were not stored.\"\n            );\n            root.appendChild(warning);\n        }\n        if (decisions.length) {\n            renderDecisionTable(root, decisions);\n        } else {\n            appendText(root, \"p\", \"No decision rows were recorded.\");\n        }\n\n        details = element(\"details\", \"cs-debug-details\");\n        appendText(details, \"summary\", \"Generated possible screen types\");\n        pre = element(\"pre\", \"\", JSON.stringify(bootstrap.screenTypes, null, 2));\n        details.appendChild(pre);\n        root.appendChild(details);\n        details = element(\"details\", \"cs-debug-details\");\n        appendText(details, \"summary\", \"Sampled screen sequence\");\n        pre = element(\"pre\", \"\", getEmbeddedData(\"cs_screen_sequence\"));\n        details.appendChild(pre);\n        root.appendChild(details);\n        appendText(\n            root,\n            \"p\",\n            \"End of development run. This terminal debug page will be removed or replaced before the production experiment.\",\n            \"cs-debug-end\"\n        );\n    }\n\n    function initOutcome(question) {\n        var root = getRoot(\"csq-outcome-root\", question);\n        var bootstrap = readBootstrap();\n        var status = String(getEmbeddedData(\"cs_task_status\") || \"unknown\");\n        var controller;\n        var labelTimeouts = [];\n        if (!root) {\n            return null;\n        }\n        if (root.__csqController) {\n            return root.__csqController;\n        }\n        clearElement(root);\n        root.className = (root.className + \" cs-debug\").replace(/^\\s+|\\s+$/g, \"\");\n        if (status === \"inactive\") {\n            appendText(root, \"h2\", \"Task ended\");\n            appendText(\n                root,\n                \"p\",\n                \"The task ended because there were \" + getEmbeddedData(\"cs_inactivity_seconds\") +\n                    \" consecutive seconds of inactivity.\"\n            );\n            appendText(root, \"p\", \"You have lost the opportunity to earn a bonus from this task.\");\n        }\n        renderNormalOutcome(root, bootstrap, status);\n        showNextButton(question);\n        setFinishButtonLabel(question);\n        labelTimeouts.push(global.setTimeout(function () {\n            setFinishButtonLabel(question);\n        }, 0));\n        labelTimeouts.push(global.setTimeout(function () {\n            setFinishButtonLabel(question);\n        }, 100));\n        controller = {\n            status: status,\n            cleanup: function () {\n                var index;\n                for (index = 0; index < labelTimeouts.length; index += 1) {\n                    global.clearTimeout(labelTimeouts[index]);\n                }\n                labelTimeouts = [];\n                root.__csqController = null;\n            }\n        };\n        root.__csqController = controller;\n        activateController(question, controller);\n        return controller;\n    }\n\n    global.CSQ = {\n        initSetup: initSetup,\n        initGame: initGame,\n        initOutcome: initOutcome,\n        cleanup: cleanup,\n        __test: {\n            defaults: DEFAULTS,\n            limits: LIMITS,\n            decisionColumns: DECISION_COLUMNS.slice(0),\n            parseBoolean: parseBoolean,\n            validateConfig: validateConfig,\n            createPrng: createPrng,\n            generateRandomization: generateRandomization,\n            buildCards: buildCards,\n            calculateChoiceOutcome: calculateChoiceOutcome,\n            utf8ByteLength: utf8ByteLength,\n            csvValue: csvValue,\n            decisionToCsvRow: decisionToCsvRow,\n            packDecisionRows: packDecisionRows,\n            parseCsvBody: parseCsvBody,\n            rowsToDecisionObjects: rowsToDecisionObjects,\n            readBootstrap: readBootstrap,\n            getEmbeddedData: getEmbeddedData,\n            setEmbeddedData: setEmbeddedData,\n            packedDecisionsFromEmbeddedData: packedDecisionsFromEmbeddedData\n        }\n    };\n}(window));\n\n</script>",
+        "Footer": "",
+        "ProgressBarDisplay": "None",
+        "PartialData": "+1 week",
+        "ValidationMessage": null,
+        "PreviousButton": "",
+        "NextButton": "",
+        "SurveyTitle": "Mismanaging Minutes - Card Stacking Game (Qualtrics)",
+        "SkinLibrary": "stanforduniversity",
+        "SkinType": "templated",
+        "Skin": {
+          "brandingId": "5236136929",
+          "templateId": "*base",
+          "overrides": null
+        },
+        "NewScoring": 1,
+        "SurveyMetaDescription": "The most powerful, simple and trusted way to gather experience data. Start your journey to experience management and try a free account today.",
+        "SurveyName": "Mismanaging Minutes - Card Stacking Game (Qualtrics)",
+        "EOSMessage": null,
+        "ShowExportTags": "false",
+        "CollectGeoLocation": "false",
+        "PasswordProtection": "No",
+        "AnonymizeResponse": "No",
+        "RefererCheck": "No",
+        "BallotBoxStuffingPreventionBehavior": null,
+        "BallotBoxStuffingPreventionMessage": null,
+        "BallotBoxStuffingPreventionMessageLibrary": null,
+        "BallotBoxStuffingPreventionURL": null,
+        "RecaptchaV3": "false",
+        "ConfirmStart": false,
+        "AutoConfirmStart": false,
+        "RelevantID": "false",
+        "RelevantIDLockoutPeriod": "+30 days",
+        "UseCustomSurveyLinkCompletedMessage": null,
+        "SurveyLinkCompletedMessage": null,
+        "SurveyLinkCompletedMessageLibrary": null,
+        "ResponseSummary": "No",
+        "EOSMessageLibrary": null,
+        "EOSRedirectURL": null,
+        "EmailThankYou": "false",
+        "ThankYouEmailMessageLibrary": null,
+        "ThankYouEmailMessage": null,
+        "ValidateMessage": "false",
+        "ValidationMessageLibrary": null,
+        "InactiveSurvey": null,
+        "PartialDeletion": null,
+        "PartialDataCloseAfter": "LastActivity",
+        "InactiveMessageLibrary": null,
+        "InactiveMessage": null,
+        "AvailableLanguages": {
+          "EN": []
+        },
+        "ProtectSelectionIds": true
+      }
+    },
+    {
+      "SurveyID": "SV_07McTW65bCwKmGi",
+      "Element": "SQ",
+      "PrimaryAttribute": "QID1",
+      "SecondaryAttribute": "Development-only Card Stacking configuration",
+      "TertiaryAttribute": null,
+      "Payload": {
+        "QuestionText": "<div id=\"csq-setup-root\" class=\"cs-setup\"></div><noscript>This task requires JavaScript.</noscript>",
+        "DataExportTag": "cs_development_setup",
+        "QuestionID": "QID1",
+        "QuestionType": "DB",
+        "Selector": "TB",
+        "QuestionDescription": "Development-only Card Stacking configuration",
+        "Validation": {
+          "Settings": {
+            "Type": "None"
+          }
+        },
+        "Language": [],
+        "DataVisibility": {
+          "Private": false,
+          "Hidden": false
+        },
+        "Configuration": {
+          "QuestionDescriptionOption": "UseText"
+        },
+        "ChoiceOrder": [],
+        "NextChoiceId": 1,
+        "NextAnswerId": 1,
+        "QuestionJS": "Qualtrics.SurveyEngine.addOnReady(function () {\n    if (!window.CSQ) { throw new Error('Card Stacking engine did not load.'); }\n    window.CSQ.initSetup(this);\n});"
+      }
+    },
+    {
+      "SurveyID": "SV_07McTW65bCwKmGi",
+      "Element": "SQ",
+      "PrimaryAttribute": "QID2",
+      "SecondaryAttribute": "Card Stacking Game instructions",
+      "TertiaryAttribute": null,
+      "Payload": {
+        "QuestionText": "<div class=\"cs-shell\">\n<h2>Card Stacking Game</h2>\n<p>You will see a sequence of screens. On each screen, choose one card. Some cards show points, a percentage, and a multiplier. One card does not show numbers.</p>\n<p>Please stay active during the task. If there are too many consecutive seconds of inactivity, the task will end and you will lose the opportunity to earn a bonus.</p>\n</div>",
+        "DataExportTag": "cs_instructions",
+        "QuestionID": "QID2",
+        "QuestionType": "DB",
+        "Selector": "TB",
+        "QuestionDescription": "Card Stacking Game instructions",
+        "Validation": {
+          "Settings": {
+            "Type": "None"
+          }
+        },
+        "Language": [],
+        "DataVisibility": {
+          "Private": false,
+          "Hidden": false
+        },
+        "Configuration": {
+          "QuestionDescriptionOption": "UseText"
+        },
+        "ChoiceOrder": [],
+        "NextChoiceId": 1,
+        "NextAnswerId": 1
+      }
+    },
+    {
+      "SurveyID": "SV_07McTW65bCwKmGi",
+      "Element": "SQ",
+      "PrimaryAttribute": "QID3",
+      "SecondaryAttribute": "Timed Card Stacking Game",
+      "TertiaryAttribute": null,
+      "Payload": {
+        "QuestionText": "<div id=\"csq-game-root\"></div><noscript>This task requires JavaScript.</noscript>",
+        "DataExportTag": "cs_game",
+        "QuestionID": "QID3",
+        "QuestionType": "DB",
+        "Selector": "TB",
+        "QuestionDescription": "Timed Card Stacking Game",
+        "Validation": {
+          "Settings": {
+            "Type": "None"
+          }
+        },
+        "Language": [],
+        "DataVisibility": {
+          "Private": false,
+          "Hidden": false
+        },
+        "Configuration": {
+          "QuestionDescriptionOption": "UseText"
+        },
+        "ChoiceOrder": [],
+        "NextChoiceId": 1,
+        "NextAnswerId": 1,
+        "QuestionJS": "Qualtrics.SurveyEngine.addOnReady(function () {\n    if (!window.CSQ) { throw new Error('Card Stacking engine did not load.'); }\n    window.CSQ.initGame(this);\n});\nQualtrics.SurveyEngine.addOnUnload(function () {\n    if (window.CSQ && window.CSQ.cleanup) { window.CSQ.cleanup(); }\n});"
+      }
+    },
+    {
+      "SurveyID": "SV_07McTW65bCwKmGi",
+      "Element": "SQ",
+      "PrimaryAttribute": "QID4",
+      "SecondaryAttribute": "Card Stacking task outcome and development summary",
+      "TertiaryAttribute": null,
+      "Payload": {
+        "QuestionText": "<div id=\"csq-outcome-root\"></div>",
+        "DataExportTag": "cs_outcome",
+        "QuestionID": "QID4",
+        "QuestionType": "DB",
+        "Selector": "TB",
+        "QuestionDescription": "Card Stacking task outcome and development summary",
+        "Validation": {
+          "Settings": {
+            "Type": "None"
+          }
+        },
+        "Language": [],
+        "DataVisibility": {
+          "Private": false,
+          "Hidden": false
+        },
+        "Configuration": {
+          "QuestionDescriptionOption": "UseText"
+        },
+        "ChoiceOrder": [],
+        "NextChoiceId": 1,
+        "NextAnswerId": 1,
+        "QuestionJS": "Qualtrics.SurveyEngine.addOnReady(function () {\n    if (!window.CSQ) { throw new Error('Card Stacking engine did not load.'); }\n    window.CSQ.initOutcome(this);\n});"
+      }
+    },
+    {
+      "SurveyID": "SV_07McTW65bCwKmGi",
+      "Element": "STAT",
+      "PrimaryAttribute": "Survey Statistics",
+      "SecondaryAttribute": null,
+      "TertiaryAttribute": null,
+      "Payload": {
+        "MobileCompatible": true,
+        "ID": "Survey Statistics"
+      }
+    }
+  ]
+}
