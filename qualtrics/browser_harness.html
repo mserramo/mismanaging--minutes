@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Card Stacking Qualtrics browser harness</title>
+    <link rel="stylesheet" href="../_static/global/card_stacking.css">
+    <style>
+        body { margin: 0; background: #eef2f7; color: #111827; font: 16px/1.45 system-ui, sans-serif; }
+        .harness-shell { box-sizing: border-box; width: calc(100vw - 24px); margin: 8px 12px; }
+        .harness-toolbar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+        .harness-toolbar button, #NextButton, .csq-continue-button {
+            min-height: 42px; padding: 9px 17px; border: 0; border-radius: 6px;
+            background: #0f4c81; color: #fff; cursor: pointer; font: inherit; font-weight: 700;
+        }
+        .harness-page { padding: 24px; border: 1px solid #cbd5e1; border-radius: 8px; background: #fff; }
+        .harness-status { margin: 12px 0 0; color: #475569; font-size: 14px; }
+        #csq-game-root { max-width: 100%; overflow-x: auto; padding: 2px 2px 10px; }
+        .csq-game-layout { display: flex; align-items: flex-start; justify-content: flex-start; gap: 18px; width: max-content; min-width: 100%; }
+        .cs-task { box-sizing: border-box; flex: 0 0 auto; width: max-content; max-width: none; margin: 0; }
+        .csq-field { display: grid; grid-template-columns: minmax(240px, 1fr) minmax(150px, 220px); gap: 8px 20px; align-items: center; margin: 10px 0; }
+        .csq-checkbox-field { display: block; }
+        .csq-checkbox-label { position: relative; display: flex; align-items: center; gap: 8px; width: fit-content; cursor: pointer; }
+        .csq-checkbox { position: absolute !important; width: 1px !important; height: 1px !important; margin: 0 !important; padding: 0 !important; border: 0 !important; opacity: 0 !important; overflow: hidden !important; pointer-events: none !important; }
+        .csq-checkbox-box { box-sizing: border-box; display: inline-flex !important; flex: 0 0 20px; align-items: center; justify-content: center; width: 20px; height: 20px; border: 2px solid #64748b; border-radius: 4px; background: #fff; color: #fff; }
+        .csq-checkbox:checked + .csq-checkbox-box { border-color: #0f4c81; background: #0f4c81; }
+        .csq-checkbox:checked + .csq-checkbox-box::after { content: ""; width: 5px; height: 10px; margin-top: -2px; border: solid currentColor; border-width: 0 2px 2px 0; transform: rotate(45deg); }
+        .csq-checkbox:focus + .csq-checkbox-box, .csq-checkbox:focus-visible + .csq-checkbox-box { outline: 3px solid rgba(15, 76, 129, 0.28); outline-offset: 2px; }
+        .csq-label { font-weight: 650; }
+        .csq-input { box-sizing: border-box; width: 100%; min-height: 40px; padding: 7px 9px; }
+        .csq-input:disabled { background: #f1f5f9; color: #64748b; }
+        .csq-validation-errors { color: #991b1b; font-weight: 700; margin-top: 12px; }
+        .csq-debug-table-wrap { overflow-x: auto; }
+        .cs-card .cs-points { font-size: 15px; line-height: 1.3; overflow-wrap: anywhere; }
+        .cs-card-row { display: flex !important; flex-flow: row nowrap; align-items: stretch; gap: 12px; width: max-content; }
+        .cs-card { box-sizing: border-box; flex: 0 0 128px; width: 128px; min-width: 128px; min-height: 218px; padding: 13px 10px; }
+        .cs-card-heading { position: relative; display: flex; min-height: 25px; align-items: flex-start; justify-content: center; width: 100%; }
+        .cs-card-color-label { color: var(--card-color); font-weight: 800; }
+        .cs-card-type-key { position: absolute; top: 0; right: 0; padding: 1px 5px; border-radius: 999px; background: #eef1f5; color: #6b7280; font-size: 11px; font-weight: 800; letter-spacing: .02em; }
+        .cs-inactivity-clock { color: #475569; font-variant-numeric: tabular-nums; white-space: nowrap; }
+        .cs-inactivity-warning { color: #b91c1c; }
+        .csq-rules-panel { box-sizing: border-box; flex: 0 0 420px; width: 420px; padding: 13px 14px; border: 1px solid #cbd5e1; border-radius: 8px; background: #f8fafc; color: #334155; }
+        .csq-rules-panel h3 { margin: 0 0 8px; color: #1f2937; font-size: 15px; }
+        .csq-rule-row { padding: 7px 0; border-top: 1px solid #e2e8f0; }
+        .csq-rule-heading { display: flex; align-items: baseline; gap: 7px; }
+        .csq-rule-code { min-width: 25px; color: #6b7280; font-size: 11px; font-weight: 800; letter-spacing: .03em; }
+        .csq-rule-label { color: #1f2937; font-size: 13px; font-weight: 750; }
+        .csq-rule-payoff { margin: 3px 0 0; font-size: 11.5px; line-height: 1.25; }
+        .csq-rule-appearance { margin: 5px 0 0; color: #64748b; font-size: 11.5px; line-height: 1.25; }
+        @media (max-width: 680px) { .csq-field { grid-template-columns: 1fr; } .cs-card { flex-basis: 118px; width: 118px; min-width: 118px; } }
+    </style>
+</head>
+<body>
+<main class="harness-shell">
+    <div class="harness-toolbar" aria-label="Harness navigation">
+        <button type="button" id="show-setup">Setup</button>
+        <button type="button" id="show-intro">Intro</button>
+        <button type="button" id="show-game">Game</button>
+        <button type="button" id="show-outcome">Outcome</button>
+    </div>
+    <section class="harness-page">
+        <div id="csq-setup-root" class="cs-setup"></div>
+        <div id="csq-intro-root" class="cs-shell" hidden>
+            <h2>Certified card-choice task</h2>
+            <p>Make 100 choices. Every round has the main card and four side-task cards. The final 20 rounds add a movie card.</p>
+            <p>Complete 60 main choices and all 20 movie choices to earn both threshold bonuses.</p>
+            <p>Simple cards are relatively common; Trio and Cumulative cards are moderately common; Fives and Infinite-scroll cards are less common.</p>
+            <p>The visible inactivity clock resets with activity and defaults to two minutes.</p>
+        </div>
+        <div id="csq-game-root" hidden></div>
+        <div id="csq-outcome-root" hidden></div>
+        <button type="button" id="NextButton">Next</button>
+        <p id="harness-status" class="harness-status" aria-live="polite"></p>
+    </section>
+</main>
+<script>
+(function () {
+    "use strict";
+
+    var query = new URLSearchParams(window.location.search);
+    var defaults = {
+        cs_show_round: "1",
+        cs_show_main_cards: "0",
+        cs_show_movie_cards: "0",
+        cs_show_total_points: "1",
+        cs_show_click_feedback: "1",
+        cs_feedback_message_ms: "600",
+        cs_use_post_click_delay: "0",
+        cs_post_click_delay_ms: "0",
+        cs_screen_motion_ms: "600",
+        cs_inactivity_seconds: "120"
+    };
+    var embeddedData = Object.assign({}, defaults);
+    var activePage = "setup";
+    var unloadCallbacks = [];
+    var nextButton = document.getElementById("NextButton");
+    var status = document.getElementById("harness-status");
+    var roots = {
+        setup: document.getElementById("csq-setup-root"),
+        intro: document.getElementById("csq-intro-root"),
+        game: document.getElementById("csq-game-root"),
+        outcome: document.getElementById("csq-outcome-root")
+    };
+    var duplicateGameRoot = null;
+    if (query.get("duplicateGameRoot") === "1") {
+        duplicateGameRoot = document.createElement("div");
+        duplicateGameRoot.id = "csq-game-root";
+        duplicateGameRoot.hidden = true;
+        duplicateGameRoot.setAttribute("data-stale-qualtrics-root", "true");
+        document.body.insertBefore(duplicateGameRoot, document.body.firstChild);
+    }
+
+    window.Qualtrics = {
+        SurveyEngine: {
+            getEmbeddedData: function (name) { return embeddedData[name] || ""; },
+            setEmbeddedData: function (name, value) { embeddedData[name] = String(value == null ? "" : value); },
+            addOnUnload: function (callback) { unloadCallbacks.push(callback); }
+        }
+    };
+
+    function questionFor(page) {
+        return {
+            hideNextButton: function () { nextButton.style.display = "none"; },
+            showNextButton: function () { nextButton.style.display = ""; },
+            clickNextButton: function () {
+                if (page === "setup") { showPage("intro"); }
+                if (page === "game") { showPage("outcome"); }
+            },
+            setNextButtonText: function (text) { nextButton.textContent = text; },
+            getQuestionContainer: function () { return roots[page].parentElement; },
+            addOnUnload: function (callback) { unloadCallbacks.push(callback); }
+        };
+    }
+
+    function hideAll() {
+        Object.keys(roots).forEach(function (key) { roots[key].hidden = true; });
+    }
+
+    function runUnloadCallbacks() {
+        var callbacks = unloadCallbacks.slice(0);
+        unloadCallbacks = [];
+        callbacks.forEach(function (callback) {
+            try { callback(); } catch (error) { status.textContent = error.message; }
+        });
+    }
+
+    function showPage(page) {
+        if (!window.CSQ) { return; }
+        window.CSQ.cleanup();
+        runUnloadCallbacks();
+        activePage = page;
+        hideAll();
+        roots[page].hidden = false;
+        nextButton.textContent = "Next";
+        nextButton.setAttribute("aria-label", "Next");
+        nextButton.style.display = page === "intro" ? "" : "none";
+        status.textContent = "Harness page: " + page;
+        if (page === "setup") { window.CSQ.initSetup(questionFor(page)); }
+        if (page === "game") { window.CSQ.initGame(questionFor(page)); }
+        if (page === "outcome") { window.CSQ.initOutcome(questionFor(page)); }
+    }
+
+    function loadEngine() {
+        return fetch("certified_environment_bank.json", {cache: "no-store"})
+            .then(function (response) {
+                if (!response.ok) { throw new Error("Could not load the certified environment bank."); }
+                return response.text();
+            })
+            .then(function (bankText) {
+                var bank = JSON.parse(bankText);
+                var bankMetadata = {};
+                var compactBank = JSON.stringify(bank);
+                var chunkCount = Math.ceil(compactBank.length / 18000);
+                var index;
+                Object.keys(bank).forEach(function (key) {
+                    if (key !== "sequences") { bankMetadata[key] = bank[key]; }
+                });
+                embeddedData.cs_bank_format_version = "json-v1";
+                embeddedData.cs_bank_chunk_count = String(chunkCount);
+                for (index = 0; index < chunkCount; index += 1) {
+                    embeddedData["cs_bank_chunk_" + String(index + 1).padStart(3, "0")] = compactBank.slice(index * 18000, (index + 1) * 18000);
+                }
+                window.CSQ_BOOTSTRAP = {
+                    bankMetadata: bankMetadata,
+                    chunkCount: 64,
+                    chunkMaxBytes: 18000
+                };
+                return new Promise(function (resolve, reject) {
+                    var script = document.createElement("script");
+                    script.src = "card_stacking_qualtrics.js?profile=" + encodeURIComponent(bank.profile.profile_version);
+                    script.onload = resolve;
+                    script.onerror = function () { reject(new Error("Could not load the game engine.")); };
+                    document.head.appendChild(script);
+                });
+            })
+            .then(function () {
+                if (query.get("autoGame") === "1") {
+                    if (query.get("inactivitySeconds")) {
+                        embeddedData.cs_inactivity_seconds = query.get("inactivitySeconds");
+                    }
+                    showPage("game");
+                } else {
+                    showPage("setup");
+                }
+                return window.harness;
+            });
+    }
+
+    nextButton.addEventListener("click", function () {
+        if (activePage === "intro") { showPage("game"); }
+        if (activePage === "outcome") {
+            status.textContent = "Finished: the Qualtrics response would now be recorded as complete.";
+            nextButton.style.display = "none";
+        }
+    });
+    document.getElementById("show-setup").addEventListener("click", function () { showPage("setup"); });
+    document.getElementById("show-intro").addEventListener("click", function () { showPage("intro"); });
+    document.getElementById("show-game").addEventListener("click", function () { showPage("game"); });
+    document.getElementById("show-outcome").addEventListener("click", function () { showPage("outcome"); });
+
+    window.harness = {
+        ready: null,
+        values: embeddedData,
+        get: function (name) { return embeddedData[name] || ""; },
+        set: function (name, value) {
+            embeddedData[name] = String(value == null ? "" : value);
+            if (window.CSQ) { window.CSQ.__test.setEmbeddedData(name, embeddedData[name]); }
+        },
+        setMany: function (values) {
+            var self = this;
+            Object.keys(values).forEach(function (name) { self.set(name, values[name]); });
+        },
+        showSetup: function () { showPage("setup"); },
+        showIntro: function () { showPage("intro"); },
+        showGame: function (values) { if (values) { this.setMany(values); } showPage("game"); },
+        showOutcome: function () { showPage("outcome"); },
+        activePage: function () { return activePage; }
+    };
+    window.harness.ready = loadEngine().catch(function (error) {
+        status.textContent = error.message;
+        throw error;
+    });
+}());
+</script>
+</body>
+</html>

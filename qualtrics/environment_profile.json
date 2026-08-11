@@ -1,0 +1,46 @@
+{
+  "profile_version": "certified-baseline-v3",
+  "generator_version": "predrawn-cp-sat-v3",
+  "bank_size": 2048,
+  "base_seed": 2026081001,
+  "rounds": 100,
+  "movie_share": 0.2,
+  "main_target_share": 0.6,
+  "main_bonus": 3000,
+  "movie_bonus": 3000,
+  "completion_margin": 10,
+  "inactivity_seconds": 120,
+  "ordinary_cumulative_appearance_cap": 16,
+  "side_cards_per_round": 4,
+  "side_tasks": [
+    {"id": "trio_a", "label": "Trio A", "type": "group", "weight": 0.12, "group_size": 3, "group_bonus": 30},
+    {"id": "trio_b", "label": "Trio B", "type": "group", "weight": 0.10, "group_size": 3, "group_bonus": 36},
+    {"id": "fives", "label": "Fives", "type": "group", "weight": 0.07, "group_size": 5, "group_bonus": 60},
+    {"id": "cumulative_a", "label": "Cumulative A", "type": "cumulative", "weight": 0.10, "marginal_base": 2, "marginal_increment": 2},
+    {"id": "cumulative_b", "label": "Cumulative B", "type": "cumulative", "weight": 0.10, "marginal_base": 1, "marginal_increment": 3},
+    {"id": "infinite_scroll", "label": "Infinite scroll", "type": "run", "weight": 0.08, "marginal_base": 2, "marginal_increment": 4, "run_length_min": 4, "run_length_max": 7},
+    {"id": "simple_a", "label": "Simple A", "type": "simple", "weight": 0.22, "outcomes": [{"points": 4, "probability": 0.30}, {"points": 8, "probability": 0.50}, {"points": 12, "probability": 0.20}]},
+    {"id": "simple_b", "label": "Simple B", "type": "simple", "weight": 0.21, "outcomes": [{"points": 2, "probability": 0.45}, {"points": 10, "probability": 0.40}, {"points": 16, "probability": 0.15}]}
+  ],
+  "diagnostics": {
+    "appearance_share_tolerance": 0.045,
+    "maximum_task_contribution_share": 0.95,
+    "minimum_contributing_task_types": 4,
+    "narrow_temptation_lower_ratio": 0.70,
+    "narrow_temptation_upper_ratio": 1.10,
+    "narrow_temptation_frequency_min": 0.001,
+    "narrow_temptation_frequency_max": 0.20
+  },
+  "colors": [
+    {"id": "blue", "label": "Blue", "hex": "#2563eb"},
+    {"id": "green", "label": "Green", "hex": "#16a34a"},
+    {"id": "amber", "label": "Amber", "hex": "#d97706"},
+    {"id": "rose", "label": "Rose", "hex": "#e11d48"},
+    {"id": "violet", "label": "Violet", "hex": "#7c3aed"},
+    {"id": "cyan", "label": "Cyan", "hex": "#0891b2"},
+    {"id": "lime", "label": "Lime", "hex": "#65a30d"},
+    {"id": "orange", "label": "Orange", "hex": "#ea580c"},
+    {"id": "pink", "label": "Pink", "hex": "#db2777"},
+    {"id": "slate", "label": "Slate", "hex": "#475569"}
+  ]
+}

@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Card Stacking parallel-frame regression harness</title>
+    <style>
+        body { margin: 0; background: #e2e8f0; font: 16px/1.4 system-ui, sans-serif; }
+        main { width: min(1220px, 98vw); margin: 16px auto; }
+        iframe { box-sizing: border-box; width: 100%; height: 760px; border: 2px solid #0f4c81; background: white; }
+        #hidden-preview { display: none; }
+    </style>
+    <script>
+        sessionStorage.removeItem("csq-predrawn-active-instance-v2");
+        window.__CSQ_PREDRAWN_ACTIVE_INSTANCE_V2__ = null;
+    </script>
+</head>
+<body>
+<main>
+    <h1>Parallel-frame regression harness</h1>
+    <p>The visible frame receives participant input; the hidden frame models Qualtrics Preview's second renderer.</p>
+    <button type="button" id="reveal-hidden">Reveal hidden preview</button>
+    <iframe id="visible-preview" title="Visible game" src="browser_harness.html?autoGame=1&amp;inactivitySeconds=5"></iframe>
+    <iframe id="hidden-preview" title="Hidden duplicate game" src="browser_harness.html?autoGame=1&amp;inactivitySeconds=5"></iframe>
+</main>
+<script>
+    document.getElementById("reveal-hidden").addEventListener("click", function () {
+        document.getElementById("hidden-preview").style.display = "block";
+    });
+</script>
+</body>
+</html>

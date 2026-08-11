@@ -1,0 +1,2 @@
+# Offline calibration only. Do not add this to the oTree deployment requirements.
+ortools==9.14.6206
