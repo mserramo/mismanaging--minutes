@@ -1,99 +1,100 @@
-# Mismanaging Minutes: Qualtrics migration
+# Mismanaging Minutes: certified Qualtrics baseline
 
-This directory contains a standalone Qualtrics implementation of the current
-oTree Card Stacking development flow. The generated survey has four sequential
-blocks: Development Setup, Intro, Game, and Outcome.
+This directory contains the standalone, fixed-round Qualtrics baseline. It
+does not change the oTree implementation or add treatment behavior.
 
-## Files
+## Delivered artifacts
 
-- `Mismanaging_Minutes_Card_Stacking.qsf`: finished Qualtrics import file.
-- `build_qsf.py`: deterministic builder. It reads the Stanford QSF scaffold,
-  `card_stacking/screen_types.txt`, the existing card CSS, and the
-  Qualtrics-specific JavaScript.
-- `card_stacking_qualtrics.js`: setup, timed game, logging, and outcome engine.
-- `reconstruct_decisions.py`: converts a Qualtrics CSV export into one row per
-  decision.
-- `browser_harness.html`: local runtime harness used to exercise the same game
-  engine outside Qualtrics.
+- `Mismanaging_Minutes_Card_Stacking.qsf`: importable standalone survey.
+- `environment_profile.json`: versioned economic profile. The initial fixed
+  calibration uses R0=100, RM=20, q=.60, Q=60, S=20, B=3,000, M=3,000,
+  delta=10, and exactly four side cards on every round. Change the versioned
+  `side_cards_per_round` profile value to use any fixed count from one through
+  four in a future calibration. Side cards occupy fixed left-hand slots, Main
+  follows them, and Movie is appended at the right edge in the final 20
+  rounds. The two convex Cumulative tasks are each capped at 16 pre-movie
+  appearances so neither can fill the entire 20-choice optimal side bundle.
+- `generate_environment.py`: deterministic draw and exact OR-Tools CP-SAT
+  certification pipeline.
+- `certified_environment_bank.json`: compact 2,048-sequence runtime bank.
+- `validated_sequences.csv`: one row per sequence, round, and displayed card.
+- `validated_sequence_summary.csv`: one certified summary row per sequence.
+- `build_qsf.py`: deterministic builder based on the known-good Stanford QSF
+  scaffold.
+- `card_stacking_qualtrics.js`: setup, fixed-round game, inactivity handling,
+  `csv-v2` logging, and outcome engine.
+- `reconstruct_decisions.py`: backward-compatible `csv-v1`/`csv-v2` export
+  decoder.
+- `browser_harness.html`: local runtime harness.
 
-## Build and validate
+## Calibration and rebuild
 
-Run these commands from the repository root:
+The calibration dependency is deliberately separate from the oTree deployment
+requirements:
 
 ```sh
+python3 -m pip install -r qualtrics/requirements-calibration.txt
+python3 qualtrics/generate_environment.py --workers 8 --executor processes
+python3 qualtrics/generate_environment.py --verify-files
+python3 qualtrics/audit_environment_outputs.py
 python3 qualtrics/build_qsf.py
 python3 qualtrics/build_qsf.py --check
+```
+
+Each sequence is rejected unless all four completion regimes are proven
+optimal, the complete-both allocation uses all S pre-movie side opportunities,
+the reserve policy completes both threshold tasks, the configured B/M margins
+pass, and the bank diagnostics pass. The detailed and summary CSV SHA-256
+hashes are embedded in the bank and QSF.
+
+The participant UI keeps all cards in one left-anchored row and uses horizontal
+overflow on narrow screens rather than moving existing slots. A compact payoff
+key remains to the right of the game box and is reusable by later treatments;
+its Movie row appears only when the final 20-round movie phase begins.
+The Main and Movie counters are optional and default off; the round and awarded-
+total-points counters default on. The total includes side-task pay plus the Main
+and Movie bonuses once their thresholds are met. The inactivity countdown is
+always visible and defaults to two minutes.
+
+## Verification
+
+```sh
+python3 qualtrics/test_environment.py
 node --check qualtrics/card_stacking_qualtrics.js
 node qualtrics/test_engine.js
 python3 qualtrics/reconstruct_decisions.py --self-test
+node qualtrics/test_engine.js /tmp/csq-v2-export.csv
+python3 qualtrics/reconstruct_decisions.py /tmp/csq-v2-export.csv -o /tmp/csq-v2-decisions.csv
+python3 /tmp/qsf-validate.py qualtrics/Mismanaging_Minutes_Card_Stacking.qsf
+git diff --check
 ```
 
-For an end-to-end 4,800-decision round trip through the JavaScript packer and
-Python decoder:
+The engine stores 100 complete decision records in
+`cs_log_chunk_001`–`cs_log_chunk_064`. Each record contains the full displayed
+choice set and task states before/after the choice. It separately stores the
+reconstructed selected environment in
+`cs_environment_chunk_001`–`cs_environment_chunk_064`. No embedded-data value
+may exceed 18,000 UTF-8 bytes, and overflow is explicit.
 
-```sh
-node qualtrics/test_engine.js /tmp/csq-synthetic-export.csv
-python3 qualtrics/reconstruct_decisions.py /tmp/csq-synthetic-export.csv -o /tmp/csq-decisions.csv
-```
-
-The builder clones the brand, skin, response-set, and boilerplate metadata from
-`qualtrics-examples/Misperceived_Discrimination_Pilot_1.qsf`. It deliberately
-keeps the Stanford export's `Standard` block/flow vocabulary and canonical
-survey-element order.
+The QSF transports the certified bank in ordered
+`cs_bank_chunk_001`–`cs_bank_chunk_097` Embedded Data values, also capped at
+18,000 bytes. Those values are distributed across small Survey Flow nodes so
+the 1.7 MB bank is never placed in one Survey Header value. QID3 reconstructs
+the bank synchronously before round 1 and clears the transport chunks when the
+task ends, so they are not retained in the completed-response export.
 
 ## Import into Qualtrics
 
-1. Open Qualtrics and create a new project from a survey file (or use the
-   survey menu's **Import Survey** action).
+1. In Qualtrics, create a project from a survey file or choose **Import
+   Survey**.
 2. Select `Mismanaging_Minutes_Card_Stacking.qsf`.
-3. Keep the survey inactive while previewing the entire flow: setup, intro,
-   game termination, outcome, and the final **Finish** control.
-4. Inspect Survey Flow if you want to change any default `cs_*` configuration
-   value. The visible Development Setup page also writes these values for each
-   run.
-5. Activate only after a preview response exports with the expected embedded
-   data and the decoder successfully reconstructs it.
+3. Keep it inactive and preview the entire Setup → Instructions → Game →
+   Outcome → Finish flow.
+4. Confirm that Setup shows the certificate and economic values as read-only.
+5. Complete a response, export it with embedded data, and round-trip the export
+   through `reconstruct_decisions.py` before activation.
 
-Static validation cannot guarantee import behavior for a particular Qualtrics
-brand/account. No survey is created, imported, or activated by this package.
-
-## Decision-log format
-
-Each completed decision is encoded as one RFC 4180 CSV record. Complete records
-are packed on row boundaries into `cs_log_chunk_001` through
-`cs_log_chunk_064`; each stored value is capped at 18,000 UTF-8 bytes. The
-column list is in `cs_log_columns`, the populated count is in
-`cs_log_chunk_count`, and `cs_log_format_version` is `csv-v1`. If all 64 fields
-are exhausted, `cs_log_overflow=1` and `cs_log_overflow_rows` records how many
-decision rows could not be stored.
-
-Decode an exported CSV with:
-
-```sh
-python3 qualtrics/reconstruct_decisions.py qualtrics-export.csv -o decisions.csv
-```
-
-The output repeats response-level export fields alongside the 20 decision-level
-columns. Responses with zero decisions produce no decision rows and are counted
-in the decoder's terminal summary. The decoder stops with a response-specific
-error if chunks are missing, non-contiguous, malformed, unsupported, or marked
-as overflowed, so incomplete logs are never treated as complete data.
-
-## Local browser harness
-
-Serve the repository root, then open the harness URL:
-
-```sh
-python3 -m http.server 8765
-```
-
-Open `http://127.0.0.1:8765/qualtrics/browser_harness.html`. The toolbar can
-mount each survey page, and `window.harness` exposes configuration and embedded
-data for automated checks. It is a runtime test harness, not a substitute for a
-full Qualtrics Preview run after import.
-
-`parallel_frame_harness.html` runs a visible game and a hidden duplicate game
-at the same time. It reproduces the multiple-renderer behavior seen in
-Qualtrics Preview and verifies that only the instance receiving participant
-activity may save results or advance the survey. The outcome diagnostics report
-the authoritative instance, authority claim source, and coordination channel.
+The visible Development Setup and debug Outcome pages are intentionally kept in
+this development build. Static and local-browser checks cannot guarantee
+account-specific import behavior, and this package does not create or activate
+a survey in the user's Qualtrics account.

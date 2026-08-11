@@ -2,9 +2,10 @@
 """Reconstruct one-row-per-decision data from a Qualtrics CSV export.
 
 The card-stacking survey stores complete RFC 4180 decision rows in embedded-
-data fields named ``cs_log_chunk_001`` through ``cs_log_chunk_064``.  This
-utility repeats the response-level columns for each decoded decision and
-appends the decision columns declared in ``cs_log_columns``.
+data fields named ``cs_log_chunk_001`` through ``cs_log_chunk_064``. This
+utility supports both legacy ``csv-v1`` and certified-environment ``csv-v2``
+rows. It repeats response-level columns and appends the decision columns
+declared in ``cs_log_columns`` without duplicating environment chunk payloads.
 """
 
 from __future__ import annotations
@@ -26,10 +27,15 @@ COLUMNS_COLUMN = "cs_log_columns"
 FORMAT_COLUMN = "cs_log_format_version"
 OVERFLOW_COLUMN = "cs_log_overflow"
 OVERFLOW_ROWS_COLUMN = "cs_log_overflow_rows"
-SUPPORTED_FORMAT = "csv-v1"
+SUPPORTED_FORMATS = frozenset({"csv-v1", "csv-v2"})
+DEFAULT_TEST_FORMAT = "csv-v1"
 MAX_CHUNKS = 64
 CHUNK_COLUMNS = tuple(
     f"cs_log_chunk_{chunk_number:03d}"
+    for chunk_number in range(1, MAX_CHUNKS + 1)
+)
+ENVIRONMENT_CHUNK_COLUMNS = tuple(
+    f"cs_environment_chunk_{chunk_number:03d}"
     for chunk_number in range(1, MAX_CHUNKS + 1)
 )
 _NONNEGATIVE_INTEGER = re.compile(r"[0-9]+")
@@ -217,10 +223,10 @@ def _validate_packing_metadata(
         )
 
     format_version = response.get(FORMAT_COLUMN, "").strip()
-    if format_version and format_version != SUPPORTED_FORMAT:
+    if format_version and format_version not in SUPPORTED_FORMATS:
         raise DecodeError(
             f"{context}: unsupported {FORMAT_COLUMN}={format_version!r}; "
-            f"expected {SUPPORTED_FORMAT!r}"
+            f"expected one of {', '.join(sorted(SUPPORTED_FORMATS))}"
         )
 
     nonempty_chunks = [
@@ -280,7 +286,9 @@ def decode_records(
     response_fields = [
         name
         for name in header
-        if name != COLUMNS_COLUMN and name not in CHUNK_COLUMNS
+        if name != COLUMNS_COLUMN
+        and name not in CHUNK_COLUMNS
+        and name not in ENVIRONMENT_CHUNK_COLUMNS
     ]
     data_start = _data_start_index(records, header_index)
 
@@ -405,6 +413,7 @@ class _SelfTests(unittest.TestCase):
         count: int | None = None,
         overflow: str = "0",
         overflow_rows: str = "0",
+        format_version: str = DEFAULT_TEST_FORMAT,
     ) -> list[str]:
         encoded_columns = _csv_record(decision_columns).removesuffix("\r\n")
         chunk_values = list(chunks) + [""] * (MAX_CHUNKS - len(chunks))
@@ -413,7 +422,7 @@ class _SelfTests(unittest.TestCase):
             status,
             str(len(chunks) if count is None else count),
             encoded_columns,
-            SUPPORTED_FORMAT,
+            format_version,
             overflow,
             overflow_rows,
             *chunk_values,
@@ -470,6 +479,33 @@ class _SelfTests(unittest.TestCase):
                 r"ResponseId=R_bad.*cs_log_chunk_001 row 1 has 2 fields",
             ):
                 decode_file(input_path, Path(temporary_directory) / "out.csv")
+
+    def test_csv_v2_round_trip_with_nested_choice_sets(self) -> None:
+        columns = [
+            "round", "chosen_task_id", "displayed_choice_set_json",
+            "task_state_before_json", "task_state_after_json",
+        ]
+        decision = [
+            "100", "movie",
+            '[{"position":1,"task_id":"main"},{"position":2,"task_id":"movie"}]',
+            '{"main":60,"movie":19}', '{"main":60,"movie":20}',
+        ]
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            input_path = Path(temporary_directory) / "csv-v2.csv"
+            output_path = Path(temporary_directory) / "decoded.csv"
+            self._write_export(
+                input_path,
+                [self._response(
+                    "R_v2", "completed", columns, [_csv_record(decision)],
+                    format_version="csv-v2",
+                )],
+            )
+            decoded = decode_file(input_path, output_path)
+            self.assertEqual(len(decoded.output_rows), 1)
+            with output_path.open("r", encoding="utf-8", newline="") as stream:
+                row = next(csv.DictReader(stream))
+            self.assertEqual(row["chosen_task_id"], "movie")
+            self.assertIn('"task_id":"movie"', row["displayed_choice_set_json"])
 
     def test_chunk_count_mismatch_and_overflow_fail(self) -> None:
         columns = ["screen_number"]

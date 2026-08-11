@@ -7,15 +7,17 @@
     <link rel="stylesheet" href="../_static/global/card_stacking.css">
     <style>
         body { margin: 0; background: #eef2f7; color: #111827; font: 16px/1.45 system-ui, sans-serif; }
-        .harness-shell { width: min(1180px, 96vw); margin: 24px auto; }
-        .harness-toolbar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+        .harness-shell { box-sizing: border-box; width: calc(100vw - 24px); margin: 8px 12px; }
+        .harness-toolbar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
         .harness-toolbar button, #NextButton, .csq-continue-button {
             min-height: 42px; padding: 9px 17px; border: 0; border-radius: 6px;
             background: #0f4c81; color: #fff; cursor: pointer; font: inherit; font-weight: 700;
         }
         .harness-page { padding: 24px; border: 1px solid #cbd5e1; border-radius: 8px; background: #fff; }
         .harness-status { margin: 12px 0 0; color: #475569; font-size: 14px; }
-        .cs-task { box-sizing: border-box; }
+        #csq-game-root { max-width: 100%; overflow-x: auto; padding: 2px 2px 10px; }
+        .csq-game-layout { display: flex; align-items: flex-start; justify-content: flex-start; gap: 18px; width: max-content; min-width: 100%; }
+        .cs-task { box-sizing: border-box; flex: 0 0 auto; width: max-content; max-width: none; margin: 0; }
         .csq-field { display: grid; grid-template-columns: minmax(240px, 1fr) minmax(150px, 220px); gap: 8px 20px; align-items: center; margin: 10px 0; }
         .csq-checkbox-field { display: block; }
         .csq-checkbox-label { position: relative; display: flex; align-items: center; gap: 8px; width: fit-content; cursor: pointer; }
@@ -29,7 +31,23 @@
         .csq-input:disabled { background: #f1f5f9; color: #64748b; }
         .csq-validation-errors { color: #991b1b; font-weight: 700; margin-top: 12px; }
         .csq-debug-table-wrap { overflow-x: auto; }
-        @media (max-width: 680px) { .csq-field { grid-template-columns: 1fr; } }
+        .cs-card .cs-points { font-size: 15px; line-height: 1.3; overflow-wrap: anywhere; }
+        .cs-card-row { display: flex !important; flex-flow: row nowrap; align-items: stretch; gap: 12px; width: max-content; }
+        .cs-card { box-sizing: border-box; flex: 0 0 128px; width: 128px; min-width: 128px; min-height: 218px; padding: 13px 10px; }
+        .cs-card-heading { position: relative; display: flex; min-height: 25px; align-items: flex-start; justify-content: center; width: 100%; }
+        .cs-card-color-label { color: var(--card-color); font-weight: 800; }
+        .cs-card-type-key { position: absolute; top: 0; right: 0; padding: 1px 5px; border-radius: 999px; background: #eef1f5; color: #6b7280; font-size: 11px; font-weight: 800; letter-spacing: .02em; }
+        .cs-inactivity-clock { color: #475569; font-variant-numeric: tabular-nums; white-space: nowrap; }
+        .cs-inactivity-warning { color: #b91c1c; }
+        .csq-rules-panel { box-sizing: border-box; flex: 0 0 420px; width: 420px; padding: 13px 14px; border: 1px solid #cbd5e1; border-radius: 8px; background: #f8fafc; color: #334155; }
+        .csq-rules-panel h3 { margin: 0 0 8px; color: #1f2937; font-size: 15px; }
+        .csq-rule-row { padding: 7px 0; border-top: 1px solid #e2e8f0; }
+        .csq-rule-heading { display: flex; align-items: baseline; gap: 7px; }
+        .csq-rule-code { min-width: 25px; color: #6b7280; font-size: 11px; font-weight: 800; letter-spacing: .03em; }
+        .csq-rule-label { color: #1f2937; font-size: 13px; font-weight: 750; }
+        .csq-rule-payoff { margin: 3px 0 0; font-size: 11.5px; line-height: 1.25; }
+        .csq-rule-appearance { margin: 5px 0 0; color: #64748b; font-size: 11.5px; line-height: 1.25; }
+        @media (max-width: 680px) { .csq-field { grid-template-columns: 1fr; } .cs-card { flex-basis: 118px; width: 118px; min-width: 118px; } }
     </style>
 </head>
 <body>
@@ -43,9 +61,11 @@
     <section class="harness-page">
         <div id="csq-setup-root" class="cs-setup"></div>
         <div id="csq-intro-root" class="cs-shell" hidden>
-            <h2>Card Stacking Game</h2>
-            <p>You will see a sequence of screens. On each screen, choose one card. Some cards show points, a percentage, and a multiplier. One card does not show numbers.</p>
-            <p>Please stay active during the task. If there are too many consecutive seconds of inactivity, the task will end and you will lose the opportunity to earn a bonus.</p>
+            <h2>Certified card-choice task</h2>
+            <p>Make 100 choices. Every round has the main card and four side-task cards. The final 20 rounds add a movie card.</p>
+            <p>Complete 60 main choices and all 20 movie choices to earn both threshold bonuses.</p>
+            <p>Simple cards are relatively common; Trio and Cumulative cards are moderately common; Fives and Infinite-scroll cards are less common.</p>
+            <p>The visible inactivity clock resets with activity and defaults to two minutes.</p>
         </div>
         <div id="csq-game-root" hidden></div>
         <div id="csq-outcome-root" hidden></div>
@@ -59,20 +79,16 @@
 
     var query = new URLSearchParams(window.location.search);
     var defaults = {
-        cs_duration_minutes: "1",
-        cs_num_screen_types: "50",
-        cs_show_time_left: "1",
-        cs_show_main_cards: "1",
+        cs_show_round: "1",
+        cs_show_main_cards: "0",
+        cs_show_movie_cards: "0",
         cs_show_total_points: "1",
         cs_show_click_feedback: "1",
         cs_feedback_message_ms: "600",
         cs_use_post_click_delay: "0",
         cs_post_click_delay_ms: "0",
-        cs_main_bonus_delay_ms: "0",
         cs_screen_motion_ms: "600",
-        cs_bonus_threshold_main_cards: "55",
-        cs_main_bonus_points: "1650",
-        cs_inactivity_seconds: "30"
+        cs_inactivity_seconds: "120"
     };
     var embeddedData = Object.assign({}, defaults);
     var activePage = "setup";
@@ -144,44 +160,34 @@
         if (page === "outcome") { window.CSQ.initOutcome(questionFor(page)); }
     }
 
-    function parseScreenTypes(source) {
-        return source.split(/\r?\n/).map(function (line) { return line.trim(); })
-            .filter(function (line) { return line && line.charAt(0) !== "#"; })
-            .map(function (line) {
-                var fields = line.split("|").map(function (value) { return value.trim(); });
-                return {
-                    type_index: Number(fields[0]),
-                    side_values: fields.slice(1).map(function (card) {
-                        var values = card.split(",").map(Number);
-                        return { x: values[0], y: values[1], z: values[2] };
-                    })
-                };
-            });
-    }
-
     function loadEngine() {
-        return fetch("../card_stacking/screen_types.txt")
+        return fetch("certified_environment_bank.json", {cache: "no-store"})
             .then(function (response) {
-                if (!response.ok) { throw new Error("Could not load screen types."); }
+                if (!response.ok) { throw new Error("Could not load the certified environment bank."); }
                 return response.text();
             })
-            .then(function (source) {
+            .then(function (bankText) {
+                var bank = JSON.parse(bankText);
+                var bankMetadata = {};
+                var compactBank = JSON.stringify(bank);
+                var chunkCount = Math.ceil(compactBank.length / 18000);
+                var index;
+                Object.keys(bank).forEach(function (key) {
+                    if (key !== "sequences") { bankMetadata[key] = bank[key]; }
+                });
+                embeddedData.cs_bank_format_version = "json-v1";
+                embeddedData.cs_bank_chunk_count = String(chunkCount);
+                for (index = 0; index < chunkCount; index += 1) {
+                    embeddedData["cs_bank_chunk_" + String(index + 1).padStart(3, "0")] = compactBank.slice(index * 18000, (index + 1) * 18000);
+                }
                 window.CSQ_BOOTSTRAP = {
-                    screenTypes: parseScreenTypes(source),
-                    cardDeck: [
-                        { color_id: "blue", label: "Blue card", color: "#2563eb" },
-                        { color_id: "green", label: "Green card", color: "#16a34a" },
-                        { color_id: "amber", label: "Yellow card", color: "#f59e0b" },
-                        { color_id: "rose", label: "Red card", color: "#e11d48" },
-                        { color_id: "violet", label: "Violet card", color: "#7c3aed" }
-                    ],
-                    maxDecisions: 4800,
+                    bankMetadata: bankMetadata,
                     chunkCount: 64,
                     chunkMaxBytes: 18000
                 };
                 return new Promise(function (resolve, reject) {
                     var script = document.createElement("script");
-                    script.src = "card_stacking_qualtrics.js";
+                    script.src = "card_stacking_qualtrics.js?profile=" + encodeURIComponent(bank.profile.profile_version);
                     script.onload = resolve;
                     script.onerror = function () { reject(new Error("Could not load the game engine.")); };
                     document.head.appendChild(script);
@@ -191,9 +197,6 @@
                 if (query.get("autoGame") === "1") {
                     if (query.get("inactivitySeconds")) {
                         embeddedData.cs_inactivity_seconds = query.get("inactivitySeconds");
-                    }
-                    if (query.get("durationMinutes")) {
-                        embeddedData.cs_duration_minutes = query.get("durationMinutes");
                     }
                     showPage("game");
                 } else {

@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
-"""Build the standalone Qualtrics version of the Card Stacking Game.
+"""Build the standalone certified, pre-drawn Qualtrics card-choice task.
 
 The generated QSF is deliberately based on a known-good export from the same
-Stanford Qualtrics brand.  Only the survey name, blocks, flow, questions, and
-the few survey options needed by the timed task are changed.
+Stanford Qualtrics brand. Only the survey name, blocks, flow, questions, and
+the survey options needed by the fixed-round task are changed.
 """
 
 from __future__ import annotations
 
 import argparse
 import copy
+import hashlib
 import json
 from pathlib import Path
 from typing import Any
@@ -20,67 +21,62 @@ QUALTRICS_DIR = ROOT / "qualtrics"
 TEMPLATE_PATH = (
     ROOT / "qualtrics-examples" / "Misperceived_Discrimination_Pilot_1.qsf"
 )
-SCREEN_TYPES_PATH = ROOT / "card_stacking" / "screen_types.txt"
 CSS_PATH = ROOT / "_static" / "global" / "card_stacking.css"
 JAVASCRIPT_PATH = QUALTRICS_DIR / "card_stacking_qualtrics.js"
+ENVIRONMENT_BANK_PATH = QUALTRICS_DIR / "certified_environment_bank.json"
+VALIDATED_SEQUENCES_PATH = QUALTRICS_DIR / "validated_sequences.csv"
+VALIDATED_SUMMARY_PATH = QUALTRICS_DIR / "validated_sequence_summary.csv"
 DEFAULT_OUTPUT = QUALTRICS_DIR / "Mismanaging_Minutes_Card_Stacking.qsf"
 
-SURVEY_NAME = "Mismanaging Minutes - Card Stacking Game (Qualtrics)"
-NUM_SCREEN_TYPES = 50
-MAX_DURATION_MINUTES = 40
-FASTEST_DECISION_SECONDS = 0.5
-MAX_DECISIONS = int(MAX_DURATION_MINUTES * 60 / FASTEST_DECISION_SECONDS)
+SURVEY_NAME = "Mismanaging Minutes - Certified Pre-Drawn Environment"
 LOG_CHUNK_COUNT = 64
 LOG_CHUNK_MAX_BYTES = 18_000
-
-CARD_DECK = [
-    {"color_id": "blue", "label": "Blue card", "color": "#2563eb"},
-    {"color_id": "green", "label": "Green card", "color": "#16a34a"},
-    {"color_id": "amber", "label": "Yellow card", "color": "#f59e0b"},
-    {"color_id": "rose", "label": "Red card", "color": "#e11d48"},
-    {"color_id": "violet", "label": "Violet card", "color": "#7c3aed"},
-]
+BANK_CHUNK_MAX_BYTES = 18_000
+BANK_CHUNKS_PER_FLOW_NODE = 10
+BANK_FORMAT_VERSION = "json-v1"
 
 LOG_COLUMNS = [
-    "screen_number",
-    "screen_type_index",
-    "chosen_card_id",
-    "chosen_card_label",
-    "chosen_card_position",
+    "round",
+    "phase",
+    "sequence_id",
+    "seed",
+    "chosen_task_id",
+    "chosen_task_label",
+    "chosen_position",
     "chosen_is_main",
-    "chosen_x",
-    "chosen_y",
-    "chosen_z",
+    "chosen_is_movie",
+    "chosen_is_side",
+    "displayed_choice_set_json",
+    "task_state_before_json",
+    "task_state_after_json",
+    "side_points_added",
+    "side_points_total",
+    "main_count",
+    "movie_count",
+    "main_complete",
+    "movie_complete",
+    "main_bonus_awarded",
+    "movie_bonus_awarded",
+    "total_points",
     "response_time_ms",
     "task_elapsed_ms",
-    "main_cards_collected",
-    "points_before",
-    "card_points_added",
-    "multiplier_applied",
-    "multiplier_y",
-    "multiplier_z",
-    "main_bonus_triggered_this_round",
-    "main_bonus_points_added",
-    "points_after",
+    "infinite_run_id",
+    "infinite_rounds_remaining",
 ]
 
 # Configuration fields are editable in Survey Flow after import.  The visible
 # development setup page writes the same fields before the task begins.
 CONFIG_FIELDS = {
-    "cs_duration_minutes": "1",
-    "cs_num_screen_types": str(NUM_SCREEN_TYPES),
-    "cs_show_time_left": "1",
-    "cs_show_main_cards": "1",
+    "cs_show_round": "1",
+    "cs_show_main_cards": "0",
+    "cs_show_movie_cards": "0",
     "cs_show_total_points": "1",
     "cs_show_click_feedback": "1",
     "cs_feedback_message_ms": "600",
     "cs_use_post_click_delay": "0",
     "cs_post_click_delay_ms": "0",
-    "cs_main_bonus_delay_ms": "0",
     "cs_screen_motion_ms": "600",
-    "cs_bonus_threshold_main_cards": "55",
-    "cs_main_bonus_points": "1650",
-    "cs_inactivity_seconds": "30",
+    "cs_inactivity_seconds": "120",
 }
 
 OUTPUT_FIELDS: dict[str, str | None] = {
@@ -88,78 +84,45 @@ OUTPUT_FIELDS: dict[str, str | None] = {
     "cs_decision_count": None,
     "cs_task_elapsed_ms": None,
     "cs_final_points": None,
+    "cs_side_points": None,
     "cs_main_cards_collected": None,
-    "cs_main_bonus_triggered": None,
-    "cs_main_bonus_trigger_screen": None,
+    "cs_movie_cards_collected": None,
+    "cs_main_complete": None,
+    "cs_movie_complete": None,
+    "cs_main_bonus_awarded": None,
+    "cs_movie_bonus_awarded": None,
+    "cs_side_task_breakdown": None,
+    "cs_side_task_counts": None,
+    "cs_completed_structured_bonuses": None,
     "cs_activity_event_count": None,
     "cs_last_activity_source": None,
     "cs_inactivity_elapsed_ms_at_end": None,
-    "cs_activity_listener_targets": None,
-    "cs_event_counts_supported": None,
-    "cs_game_root_count": None,
     "cs_game_owner_token": None,
     "cs_game_owner_claim_source": None,
-    "cs_game_owner_claimed_at": None,
-    "cs_game_instance_token": None,
-    "cs_authoritative_instance": None,
-    "cs_suppressed_by_peer": None,
-    "cs_authority_channel": None,
-    "cs_owner_claim_source": None,
+    "cs_sequence_id": None,
     "cs_seed": None,
-    "cs_color_order": None,
-    "cs_color_order_indices": None,
-    "cs_main_color": None,
-    "cs_main_color_index": None,
-    "cs_screen_sequence": None,
+    "cs_task_color_map": None,
+    "cs_profile_version": None,
+    "cs_bank_hash": None,
+    "cs_validated_sequences_hash": None,
+    "cs_validated_summary_hash": None,
+    "cs_benchmark_optimal_payoff": None,
+    "cs_benchmark_V00": None,
+    "cs_benchmark_V01": None,
+    "cs_benchmark_V10": None,
+    "cs_benchmark_V11": None,
     "cs_log_columns": ",".join(LOG_COLUMNS),
     "cs_log_chunk_count": None,
-    "cs_log_format_version": "csv-v1",
+    "cs_log_format_version": "csv-v2",
     "cs_log_overflow": None,
     "cs_log_overflow_rows": None,
+    "cs_environment_columns": "round,phase,displayed_choice_set_json,infinite_run_id,infinite_run_start,infinite_run_end",
+    "cs_environment_chunk_count": None,
+    "cs_environment_format_version": "csv-v1",
+    "cs_environment_overflow": None,
+    "cs_environment_overflow_rows": None,
+    "cs_bank_chunks_cleared": None,
 }
-
-
-def _number(value: str) -> int | float:
-    parsed = float(value)
-    return int(parsed) if parsed.is_integer() else parsed
-
-
-def load_screen_types(path: Path = SCREEN_TYPES_PATH) -> list[dict[str, Any]]:
-    """Parse and strictly validate the oTree screen-types source file."""
-
-    screen_types: list[dict[str, Any]] = []
-    for line_number, raw_line in enumerate(path.read_text().splitlines(), start=1):
-        line = raw_line.strip()
-        if not line or line.startswith("#"):
-            continue
-        parts = [part.strip() for part in line.split("|")]
-        if len(parts) != 5:
-            raise ValueError(
-                f"{path}:{line_number}: expected one type id and four cards"
-            )
-        try:
-            type_index = int(parts[0])
-            side_values = []
-            for card_part in parts[1:]:
-                values = [part.strip() for part in card_part.split(",")]
-                if len(values) != 3:
-                    raise ValueError("each card must contain x,y,z")
-                x, y, z = (_number(value) for value in values)
-                side_values.append({"x": x, "y": y, "z": z})
-        except ValueError as exc:
-            raise ValueError(f"{path}:{line_number}: {exc}") from exc
-        screen_types.append(
-            {"type_index": type_index, "side_values": side_values}
-        )
-
-    expected_ids = list(range(1, NUM_SCREEN_TYPES + 1))
-    actual_ids = [screen_type["type_index"] for screen_type in screen_types]
-    if actual_ids != expected_ids:
-        raise ValueError(
-            f"{path}: screen type ids must be consecutive 1..{NUM_SCREEN_TYPES}; "
-            f"found {actual_ids}"
-        )
-    return screen_types
 
 
 def embedded_data_field(name: str, value: str | None = None) -> dict[str, Any]:
@@ -238,7 +201,38 @@ def db_question(
     }
 
 
-def build_header(screen_types: list[dict[str, Any]]) -> str:
+def load_environment_bank(path: Path = ENVIRONMENT_BANK_PATH) -> dict[str, Any]:
+    bank = json.loads(path.read_text())
+    if bank.get("format_version") != "certified-bank-v1":
+        raise ValueError(f"{path}: unsupported certified bank format")
+    if bank.get("certificate", {}).get("validation_status") != "certified":
+        raise ValueError(f"{path}: bank certificate did not pass")
+    if len(bank.get("sequences", [])) != int(bank["profile"]["bank_size"]):
+        raise ValueError(f"{path}: sequence count does not match the profile")
+    core = {key: value for key, value in bank.items() if key != "certificate"}
+    core_hash = hashlib.sha256(
+        json.dumps(
+            core, ensure_ascii=False, separators=(",", ":"), sort_keys=True
+        ).encode("utf-8")
+    ).hexdigest()
+    certificate = bank["certificate"]
+    if core_hash != certificate["bank_hash"]:
+        raise ValueError(f"{path}: bank hash does not match its certificate")
+    for csv_path, field in (
+        (VALIDATED_SEQUENCES_PATH, "validated_sequences_sha256"),
+        (VALIDATED_SUMMARY_PATH, "validated_sequence_summary_sha256"),
+    ):
+        digest = hashlib.sha256()
+        with csv_path.open("rb") as stream:
+            for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+                digest.update(chunk)
+        actual = digest.hexdigest()
+        if actual != certificate[field]:
+            raise ValueError(f"{csv_path}: hash does not match the bank certificate")
+    return bank
+
+
+def build_header(bank: dict[str, Any]) -> str:
     css = CSS_PATH.read_text()
     javascript = JAVASCRIPT_PATH.read_text()
     if "</script" in javascript.lower():
@@ -246,14 +240,13 @@ def build_header(screen_types: list[dict[str, Any]]) -> str:
             f"{JAVASCRIPT_PATH} contains a closing script tag and cannot be "
             "embedded safely"
         )
+    # Keeping the 1.7 MB sequence bank in SurveyOptions.Header makes the QSF
+    # structurally valid but causes some Qualtrics brands to reject the import.
+    # The header only needs certificate/profile metadata; sequence bytes live in
+    # ordered, sub-20 KB Embedded Data fields and are reconstructed on QID3.
+    bank_metadata = {key: value for key, value in bank.items() if key != "sequences"}
     bootstrap = {
-        "screenTypes": screen_types,
-        "cardDeck": CARD_DECK,
-        "maxDecisions": MAX_DECISIONS,
-        "maxDurationMinutes": MAX_DURATION_MINUTES,
-        "maxAnimationMs": 5_000,
-        "thresholdPerMinute": 55,
-        "pointsPerMainCard": 30,
+        "bankMetadata": bank_metadata,
         "chunkCount": LOG_CHUNK_COUNT,
         "chunkMaxBytes": LOG_CHUNK_MAX_BYTES,
         "logColumns": LOG_COLUMNS,
@@ -263,9 +256,49 @@ def build_header(screen_types: list[dict[str, Any]]) -> str:
     )
     qualtrics_css = """
 /* Qualtrics host-page adjustments, scoped to the Card Stacking survey. */
-.Skin .SkinInner { width: min(1180px, 96vw); max-width: none; }
-.Skin .QuestionOuter { max-width: none; }
-.cs-task { box-sizing: border-box; }
+.Skin .SkinInner {
+  box-sizing: border-box;
+  width: calc(100vw - 24px);
+  max-width: none;
+  margin-left: 12px !important;
+  margin-right: 12px !important;
+}
+.csq-game-active .SkinInner { padding-top: 4px !important; }
+.csq-game-active #SkinContent {
+  padding-top: 0 !important;
+}
+.Skin #Questions,
+.Skin .QuestionOuter,
+.Skin .QuestionBody {
+  box-sizing: border-box;
+  width: 100% !important;
+  max-width: none !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+}
+.csq-game-active #Questions { padding-top: 0 !important; margin-top: 0 !important; }
+.csq-game-active #QID3,
+.csq-game-active #QID3 .QuestionBody,
+.csq-game-active #QID3 .QuestionText {
+  padding-top: 0 !important;
+  margin-top: 0 !important;
+}
+#csq-game-root { max-width: 100%; overflow-x: auto; padding: 2px 2px 10px; }
+.csq-game-layout {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+  gap: 18px;
+  width: max-content;
+  min-width: 100%;
+}
+.cs-task {
+  box-sizing: border-box;
+  flex: 0 0 auto;
+  width: max-content;
+  max-width: none;
+  margin: 0;
+}
 .csq-field {
   display: grid;
   grid-template-columns: minmax(240px, 1fr) minmax(150px, 220px);
@@ -356,8 +389,94 @@ def build_header(screen_types: list[dict[str, Any]]) -> str:
 .csq-continue-button:hover, .csq-continue-button:focus { background: #0b365b; }
 .csq-validation-errors { color: #991b1b; font-weight: 700; margin-top: 12px; }
 .csq-debug-table-wrap { overflow-x: auto; }
+.cs-card .cs-points { font-size: 15px; line-height: 1.3; overflow-wrap: anywhere; }
+.cs-card-row {
+  display: flex !important;
+  flex-flow: row nowrap;
+  align-items: stretch;
+  gap: 12px;
+  width: max-content;
+}
+.cs-card {
+  box-sizing: border-box;
+  flex: 0 0 128px;
+  width: 128px;
+  min-width: 128px;
+  min-height: 218px;
+  padding: 13px 10px;
+}
+.cs-card-heading {
+  position: relative;
+  display: flex;
+  min-height: 25px;
+  align-items: flex-start;
+  justify-content: center;
+  width: 100%;
+}
+.cs-card-color-label {
+  color: var(--card-color);
+  font-weight: 800;
+}
+.cs-card-type-key {
+  position: absolute;
+  top: 0;
+  right: 0;
+  padding: 1px 5px;
+  border-radius: 999px;
+  background: #eef1f5;
+  color: #6b7280;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+.cs-inactivity-clock {
+  color: #475569;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.cs-inactivity-warning { color: #b91c1c; }
+.csq-rules-panel {
+  box-sizing: border-box;
+  flex: 0 0 420px;
+  width: 420px;
+  padding: 13px 14px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #334155;
+}
+.csq-rules-panel h3 {
+  margin: 0 0 8px;
+  color: #1f2937;
+  font-size: 15px;
+}
+.csq-rule-row {
+  padding: 7px 0;
+  border-top: 1px solid #e2e8f0;
+}
+.csq-rule-heading { display: flex; align-items: baseline; gap: 7px; }
+.csq-rule-code {
+  min-width: 25px;
+  color: #6b7280;
+  font-size: 11px;
+  font-weight: 850;
+  letter-spacing: 0.03em;
+}
+.csq-rule-label { color: #1f2937; font-size: 13px; font-weight: 750; }
+.csq-rule-payoff {
+  margin: 3px 0 0;
+  font-size: 11.5px;
+  line-height: 1.25;
+}
+.csq-rule-appearance {
+  margin: 5px 0 0;
+  color: #64748b;
+  font-size: 11.5px;
+  line-height: 1.25;
+}
 @media (max-width: 680px) {
   .csq-field { grid-template-columns: 1fr; gap: 5px; }
+  .cs-card { flex-basis: 118px; width: 118px; min-width: 118px; }
 }
 """.strip()
     return (
@@ -394,7 +513,13 @@ OUTCOME_JS = """Qualtrics.SurveyEngine.addOnReady(function () {
 
 def build_qsf() -> dict[str, Any]:
     template = json.loads(TEMPLATE_PATH.read_text())
-    screen_types = load_screen_types()
+    bank = load_environment_bank()
+    if CONFIG_FIELDS["cs_inactivity_seconds"] != str(
+        bank["profile"]["inactivity_seconds"]
+    ):
+        raise ValueError(
+            "Survey Flow inactivity default must match the certified profile"
+        )
     entry = copy.deepcopy(template["SurveyEntry"])
     entry["SurveyName"] = SURVEY_NAME
     entry["SurveyStatus"] = "Inactive"
@@ -446,13 +571,60 @@ def build_qsf() -> dict[str, Any]:
         embedded_data_field(f"cs_log_chunk_{index:03d}")
         for index in range(1, LOG_CHUNK_COUNT + 1)
     )
-    flow_nodes: list[dict[str, Any]] = [
-        {"Type": "EmbeddedData", "FlowID": "FL_2", "EmbeddedData": fields},
-        {"Type": "Standard", "FlowID": "FL_3", "ID": "BL_cs_setup", "Autofill": []},
-        {"Type": "Standard", "FlowID": "FL_4", "ID": "BL_cs_intro", "Autofill": []},
-        {"Type": "Standard", "FlowID": "FL_5", "ID": "BL_cs_game", "Autofill": []},
-        {"Type": "Standard", "FlowID": "FL_6", "ID": "BL_cs_outcome", "Autofill": []},
+    fields.extend(
+        embedded_data_field(f"cs_environment_chunk_{index:03d}")
+        for index in range(1, LOG_CHUNK_COUNT + 1)
+    )
+
+    # ensure_ascii makes byte-safe slicing exact: every character is one UTF-8
+    # byte. No bank value can exceed Qualtrics' 20 KB per-value ceiling.
+    bank_json = json.dumps(
+        bank, ensure_ascii=True, separators=(",", ":"), sort_keys=True
+    )
+    bank_chunks = [
+        bank_json[offset : offset + BANK_CHUNK_MAX_BYTES]
+        for offset in range(0, len(bank_json), BANK_CHUNK_MAX_BYTES)
     ]
+    bank_fields = [
+        embedded_data_field("cs_bank_format_version", BANK_FORMAT_VERSION),
+        embedded_data_field("cs_bank_chunk_count", str(len(bank_chunks))),
+    ]
+    bank_fields.extend(
+        embedded_data_field(f"cs_bank_chunk_{index:03d}", chunk)
+        for index, chunk in enumerate(bank_chunks, start=1)
+    )
+
+    flow_nodes: list[dict[str, Any]] = []
+    next_flow_id = 2
+    flow_nodes.append(
+        {
+            "Type": "EmbeddedData",
+            "FlowID": f"FL_{next_flow_id}",
+            "EmbeddedData": fields,
+        }
+    )
+    next_flow_id += 1
+    for offset in range(0, len(bank_fields), BANK_CHUNKS_PER_FLOW_NODE):
+        flow_nodes.append(
+            {
+                "Type": "EmbeddedData",
+                "FlowID": f"FL_{next_flow_id}",
+                "EmbeddedData": bank_fields[
+                    offset : offset + BANK_CHUNKS_PER_FLOW_NODE
+                ],
+            }
+        )
+        next_flow_id += 1
+    for block_id in ("BL_cs_setup", "BL_cs_intro", "BL_cs_game", "BL_cs_outcome"):
+        flow_nodes.append(
+            {
+                "Type": "Standard",
+                "FlowID": f"FL_{next_flow_id}",
+                "ID": block_id,
+                "Autofill": [],
+            }
+        )
+        next_flow_id += 1
     fl = {
         "SurveyID": survey_id,
         "Element": "FL",
@@ -463,7 +635,7 @@ def build_qsf() -> dict[str, Any]:
             "Type": "Root",
             "FlowID": "FL_1",
             "Flow": flow_nodes,
-            "Properties": {"Count": 6},
+            "Properties": {"Count": len(flow_nodes) + 1},
         },
     }
 
@@ -482,17 +654,31 @@ def build_qsf() -> dict[str, Any]:
             "QID2",
             "cs_instructions",
             "Card Stacking Game instructions",
-            """<div class="cs-shell">
-<h2>Card Stacking Game</h2>
-<p>You will see a sequence of screens. On each screen, choose one card. Some cards show points, a percentage, and a multiplier. One card does not show numbers.</p>
-<p>Please stay active during the task. If there are too many consecutive seconds of inactivity, the task will end and you will lose the opportunity to earn a bonus.</p>
+            f"""<div class="cs-shell">
+<h2>Card-choice task</h2>
+<p>You will make exactly {bank['profile']['rounds']} choices. Every round contains the main card and exactly {bank['profile']['side_cards_per_round']} side-task cards. The final {bank['profile']['movie_rounds']} rounds also contain an additional movie card.</p>
+<p>Choosing the main card at least {bank['profile']['main_target']} times earns {bank['profile']['main_bonus']} points. Choosing all {bank['profile']['movie_rounds']} movie cards earns {bank['profile']['movie_bonus']} points. You receive each bonus only if its requirement is met.</p>
+<h3>Side-task rules</h3>
+<ul>
+<li><strong>Trio A:</strong> 30 points for every completed group of 3 choices.</li>
+<li><strong>Trio B:</strong> 36 points for every completed group of 3 choices.</li>
+<li><strong>Fives:</strong> 60 points for every completed group of 5 choices.</li>
+<li><strong>Cumulative A:</strong> successive choices pay 2, 4, 6, 8, … points.</li>
+<li><strong>Cumulative B:</strong> successive choices pay 1, 4, 7, 10, … points.</li>
+<li><strong>Infinite scroll:</strong> within each availability run, successive choices pay 2, 6, 10, 14, … points. When a run begins, its exact 4–7-round length is shown.</li>
+<li><strong>Simple A:</strong> the displayed card pays 4, 8, or 12 points, with probabilities 30%, 50%, and 20%.</li>
+<li><strong>Simple B:</strong> the displayed card pays 2, 10, or 16 points, with probabilities 45%, 40%, and 15%.</li>
+</ul>
+<p>Side-task progress is shown only when that task's card appears.</p>
+<p>The color assigned to each task is fixed for you, while the available side tasks vary across rounds. Simple cards are relatively common; Trio and Cumulative cards are moderately common; Fives and Infinite-scroll cards are less common. The realized order and counts are not disclosed.</p>
+<p>Please stay active. The visible inactivity clock resets when activity is captured; at zero, the task ends.</p>
 </div>""",
         ),
         db_question(
             survey_id,
             "QID3",
             "cs_game",
-            "Timed Card Stacking Game",
+            "Fixed-round Card Stacking Game",
             '<div id="csq-game-root"></div>'
             "<noscript>This task requires JavaScript.</noscript>",
             GAME_JS,
@@ -516,7 +702,7 @@ def build_qsf() -> dict[str, Any]:
             "SaveAndContinue": "false",
             "SurveyTermination": "DefaultMessage",
             "EOSRedirectURL": None,
-            "Header": build_header(screen_types),
+            "Header": build_header(bank),
             "SurveyName": SURVEY_NAME,
             "SurveyTitle": SURVEY_NAME,
             "ProgressBarDisplay": "None",
@@ -570,16 +756,71 @@ def validate_generated_qsf(qsf: dict[str, Any]) -> None:
             )
 
     fl = next(element for element in elements if element["Element"] == "FL")
-    embedded = fl["Payload"]["Flow"][0]["EmbeddedData"]
+    flow = fl["Payload"]["Flow"]
+    embedded_nodes = [node for node in flow if node["Type"] == "EmbeddedData"]
+    embedded = [
+        field for node in embedded_nodes for field in node["EmbeddedData"]
+    ]
     names = [field["Field"] for field in embedded]
     if len(names) != len(set(names)):
         raise ValueError("Embedded-data field names must be unique")
+    values = {field["Field"]: field.get("Value") for field in embedded}
+    expected_defaults = {
+        "cs_show_main_cards": "0",
+        "cs_show_movie_cards": "0",
+        "cs_show_total_points": "1",
+        "cs_inactivity_seconds": "120",
+    }
+    for name, expected_value in expected_defaults.items():
+        if values.get(name) != expected_value:
+            raise ValueError(
+                f"Embedded-data default {name} must be {expected_value!r}"
+            )
+    if "cs_show_side_points" in names:
+        raise ValueError("The removed side-only points counter field is still present")
     expected_chunks = [
         f"cs_log_chunk_{index:03d}" for index in range(1, LOG_CHUNK_COUNT + 1)
     ]
     actual_chunks = [name for name in names if name in expected_chunks]
     if actual_chunks != expected_chunks:
         raise ValueError("Expected exactly 64 ordered log chunk fields")
+    expected_environment_chunks = [
+        f"cs_environment_chunk_{index:03d}"
+        for index in range(1, LOG_CHUNK_COUNT + 1)
+    ]
+    actual_environment_chunks = [
+        name for name in names if name in expected_environment_chunks
+    ]
+    if actual_environment_chunks != expected_environment_chunks:
+        raise ValueError("Expected exactly 64 ordered environment chunk fields")
+    bank_count_field = next(
+        field for field in embedded if field["Field"] == "cs_bank_chunk_count"
+    )
+    bank_count = int(bank_count_field["Value"])
+    expected_bank_chunks = [
+        f"cs_bank_chunk_{index:03d}" for index in range(1, bank_count + 1)
+    ]
+    actual_bank_chunks = [name for name in names if name in expected_bank_chunks]
+    if actual_bank_chunks != expected_bank_chunks:
+        raise ValueError("Certified bank chunk fields are missing or out of order")
+    bank_values = {
+        field["Field"]: field.get("Value", "") for field in embedded
+    }
+    if any(
+        len(bank_values[name].encode("utf-8")) > BANK_CHUNK_MAX_BYTES
+        for name in expected_bank_chunks
+    ):
+        raise ValueError("A certified bank chunk exceeds 18,000 UTF-8 bytes")
+    rebuilt_bank = "".join(bank_values[name] for name in expected_bank_chunks)
+    if json.loads(rebuilt_bank) != load_environment_bank():
+        raise ValueError("Certified bank chunks do not round-trip exactly")
+    if fl["Payload"]["Properties"]["Count"] != len(flow) + 1:
+        raise ValueError("Survey Flow Properties.Count is inconsistent")
+    if any(
+        len(node.get("EmbeddedData", [])) > BANK_CHUNKS_PER_FLOW_NODE
+        for node in embedded_nodes[1:]
+    ):
+        raise ValueError("A bank Embedded Data flow node is too large")
     if "ChoiceTextEntry" in json.dumps(qsf):
         raise ValueError("ChoiceTextEntry is a known QSF import hazard")
 
