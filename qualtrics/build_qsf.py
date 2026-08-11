@@ -449,14 +449,21 @@ def build_header(bank: dict[str, Any]) -> str:
   right: 4px;
   bottom: 10px;
   left: 4px;
+  display: flex;
+  min-height: 25px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
   overflow: hidden;
   color: #64748b;
-  font-size: 10px;
+  font-size: 11.5px;
   font-weight: 650;
-  line-height: 1.1;
-  letter-spacing: -0.01em;
+  line-height: 1.05;
   text-align: center;
-  text-overflow: clip;
+}
+.cs-card-footer-line {
+  display: block;
+  max-width: 100%;
   white-space: nowrap;
 }
 .cs-inactivity-clock {

@@ -59,8 +59,8 @@ display their color, with a fixed centered payoff slot and a single-line gray
 footer. Simple cards always show their realized `+X pts.` payoff. Main and
 Movie payoff text default off, while non-Simple side-card payoff text defaults
 on; the three display modes remain independently configurable. Trio and Fives
-footers show only `X more for +Y pts. bonus`, and Infinite Scrolling shows only
-the rounds remaining in the current run. No card reports prior selections or
+footers use two lines—`X cards left` / `for +Y pts.`—and Infinite Scrolling
+uses `X cards left` / `in this run`. No card reports prior selections or
 previews a later marginal payoff. On the Game page only, Qualtrics wrapper
 spacing is removed and any remaining oversized Stanford-header gap is measured
 and compactly corrected at runtime.

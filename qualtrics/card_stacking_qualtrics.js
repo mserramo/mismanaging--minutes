@@ -681,28 +681,37 @@
         return visible ? "+" + formatInteger(currentCardPayoff(bankProfile, state, round, card)) + " pts." : "";
     }
 
-    function cardFooterText(bankProfile, state, round, card) {
+    function cardsLeftLabel(remaining) {
+        return remaining + (remaining === 1 ? " card left" : " cards left");
+    }
+
+    function cardFooterLines(bankProfile, state, round, card) {
         var taskId = card.taskId;
         var task = taskLookup(bankProfile)[taskId];
         var count;
         var remaining;
-        if (!task) { return ""; }
+        if (!task) { return []; }
         if (task.type === "group") {
             count = state.counts[taskId];
             remaining = task.group_size - (count % task.group_size);
-            return remaining + " more for +" + formatInteger(task.group_bonus) + " pts. bonus";
+            return [cardsLeftLabel(remaining), "for +" + formatInteger(task.group_bonus) + " pts."];
         }
         if (task.type === "run") {
             remaining = integerValue(round.infiniteRoundsRemaining, 0);
-            return remaining > 0 ? remaining + (remaining === 1 ? " round" : " rounds") + " left in this run" : "";
+            return remaining > 0 ? [cardsLeftLabel(remaining), "in this run"] : [];
         }
-        return "";
+        return [];
+    }
+
+    function cardFooterText(bankProfile, state, round, card) {
+        return cardFooterLines(bankProfile, state, round, card).join(" ");
     }
 
     function cardDisplayText(bankProfile, state, round, card, config) {
         var payoff = cardPayoffText(bankProfile, state, round, card, config);
-        var footer = cardFooterText(bankProfile, state, round, card);
-        return { payoff: payoff, footer: footer, combined: [payoff, footer].filter(Boolean).join(" · ") };
+        var footerLines = cardFooterLines(bankProfile, state, round, card);
+        var footer = footerLines.join(" ");
+        return { payoff: payoff, footer: footer, footerLines: footerLines, combined: [payoff, footer].filter(Boolean).join(" · ") };
     }
 
     function taskProgressText(bankProfile, state, round, card, config) {
@@ -964,6 +973,7 @@
                     simple_payoff: card.simplePayoff,
                     marginal_points: currentCardPayoff(bank.profile, state.task, round, card),
                     payoff_text: display.payoff, footer_text: display.footer,
+                    footer_lines: display.footerLines,
                     progress: display.combined,
                     color_id: bank.profile.colors[environment.colorMap[card.taskId]].id
                 };
@@ -1036,6 +1046,7 @@
             round.cards.forEach(function (card) {
                 var color = bank.profile.colors[environment.colorMap[card.taskId]];
                 var display = cardDisplayText(bank.profile, state.task, round, card, config);
+                var footer;
                 var heading;
                 var payoffSlot;
                 var button = element("button", "cs-card"); button.type = "button";
@@ -1050,7 +1061,9 @@
                 payoffSlot = element("span", "cs-card-payoff-slot");
                 appendText(payoffSlot, "span", display.payoff, "cs-card-payoff");
                 button.appendChild(payoffSlot);
-                appendText(button, "span", display.footer, "cs-card-footer");
+                footer = element("span", "cs-card-footer");
+                display.footerLines.forEach(function (line) { appendText(footer, "span", line, "cs-card-footer-line"); });
+                button.appendChild(footer);
                 button.addEventListener("pointerdown", function () { markActivity("card_pointerdown"); });
                 button.addEventListener("click", function () { choose(round, card, button); });
                 cards.appendChild(button);
@@ -1170,7 +1183,8 @@
             decodeEnvironment: decodeEnvironment, selectEnvironment: selectEnvironment,
             initialTaskState: initialTaskState, applyChoice: applyChoice,
             currentCardPayoff: currentCardPayoff, cardPayoffText: cardPayoffText,
-            cardFooterText: cardFooterText, cardDisplayText: cardDisplayText,
+            cardFooterLines: cardFooterLines, cardFooterText: cardFooterText,
+            cardDisplayText: cardDisplayText,
             taskProgressText: taskProgressText,
             awardedTotalPoints: awardedTotalPoints,
             sharedAccumulationNote: SHARED_ACCUMULATION_NOTE,
