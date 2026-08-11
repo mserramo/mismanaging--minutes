@@ -7,7 +7,10 @@
     <link rel="stylesheet" href="../_static/global/card_stacking.css">
     <style>
         body { margin: 0; background: #eef2f7; color: #111827; font: 16px/1.45 system-ui, sans-serif; }
+        .harness-stanford-header { box-sizing: border-box; height: 72px; margin: 16px 16px 0; padding: 10px 28px; background: #b1040e; color: #fff; font: 42px/52px Georgia, serif; }
         .harness-shell { box-sizing: border-box; width: calc(100vw - 24px); margin: 8px 12px; }
+        .simulate-stanford .harness-toolbar { display: none; }
+        .simulate-stanford .harness-shell { margin-top: 72px; }
         .harness-toolbar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
         .harness-toolbar button, #NextButton, .csq-continue-button {
             min-height: 42px; padding: 9px 17px; border: 0; border-radius: 6px;
@@ -16,7 +19,7 @@
         .harness-page { padding: 24px; border: 1px solid #cbd5e1; border-radius: 8px; background: #fff; }
         .harness-status { margin: 12px 0 0; color: #475569; font-size: 14px; }
         #csq-game-root { max-width: 100%; overflow-x: auto; padding: 2px 2px 10px; }
-        .csq-game-layout { display: flex; align-items: flex-start; justify-content: flex-start; gap: 18px; width: max-content; min-width: 100%; }
+        .csq-game-layout { display: flex; align-items: flex-start; justify-content: flex-start; gap: 16px; width: max-content; min-width: 100%; }
         .cs-task { box-sizing: border-box; flex: 0 0 auto; width: max-content; max-width: none; margin: 0; }
         .csq-field { display: grid; grid-template-columns: minmax(240px, 1fr) minmax(150px, 220px); gap: 8px 20px; align-items: center; margin: 10px 0; }
         .csq-checkbox-field { display: block; }
@@ -31,27 +34,31 @@
         .csq-input:disabled { background: #f1f5f9; color: #64748b; }
         .csq-validation-errors { color: #991b1b; font-weight: 700; margin-top: 12px; }
         .csq-debug-table-wrap { overflow-x: auto; }
-        .cs-card .cs-points { font-size: 15px; line-height: 1.3; overflow-wrap: anywhere; }
         .cs-card-row { display: flex !important; flex-flow: row nowrap; align-items: stretch; gap: 12px; width: max-content; }
-        .cs-card { box-sizing: border-box; flex: 0 0 128px; width: 128px; min-width: 128px; min-height: 218px; padding: 13px 10px; }
-        .cs-card-heading { position: relative; display: flex; min-height: 25px; align-items: flex-start; justify-content: center; width: 100%; }
+        .cs-card { box-sizing: border-box; position: relative; display: block; flex: 0 0 140px; width: 140px; min-width: 140px; min-height: 218px; padding: 13px 8px; }
+        .cs-card-heading { position: absolute; top: 13px; left: 8px; right: 8px; display: flex; min-height: 25px; align-items: flex-start; justify-content: center; }
         .cs-card-color-label { color: var(--card-color); font-weight: 800; }
-        .cs-card-type-key { position: absolute; top: 0; right: 0; padding: 1px 5px; border-radius: 999px; background: #eef1f5; color: #6b7280; font-size: 11px; font-weight: 800; letter-spacing: .02em; }
+        .cs-card-payoff-slot { position: absolute; top: 50%; left: 8px; right: 8px; display: flex; min-height: 24px; align-items: center; justify-content: center; transform: translateY(-50%); text-align: center; }
+        .cs-card-payoff { font-size: 15px; font-weight: 800; line-height: 1.2; white-space: nowrap; }
+        .cs-card-footer { position: absolute; right: 4px; bottom: 10px; left: 4px; overflow: hidden; color: #64748b; font-size: 10px; font-weight: 650; line-height: 1.1; letter-spacing: -0.01em; text-align: center; text-overflow: clip; white-space: nowrap; }
         .cs-inactivity-clock { color: #475569; font-variant-numeric: tabular-nums; white-space: nowrap; }
         .cs-inactivity-warning { color: #b91c1c; }
-        .csq-rules-panel { box-sizing: border-box; flex: 0 0 420px; width: 420px; padding: 13px 14px; border: 1px solid #cbd5e1; border-radius: 8px; background: #f8fafc; color: #334155; }
-        .csq-rules-panel h3 { margin: 0 0 8px; color: #1f2937; font-size: 15px; }
-        .csq-rule-row { padding: 7px 0; border-top: 1px solid #e2e8f0; }
-        .csq-rule-heading { display: flex; align-items: baseline; gap: 7px; }
-        .csq-rule-code { min-width: 25px; color: #6b7280; font-size: 11px; font-weight: 800; letter-spacing: .03em; }
-        .csq-rule-label { color: #1f2937; font-size: 13px; font-weight: 750; }
-        .csq-rule-payoff { margin: 3px 0 0; font-size: 11.5px; line-height: 1.25; }
-        .csq-rule-appearance { margin: 5px 0 0; color: #64748b; font-size: 11.5px; line-height: 1.25; }
-        @media (max-width: 680px) { .csq-field { grid-template-columns: 1fr; } .cs-card { flex-basis: 118px; width: 118px; min-width: 118px; } }
+        .csq-rules-panel { box-sizing: border-box; flex: 0 0 540px; width: 540px; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; background: #f8fafc; color: #1f2937; overflow: visible; }
+        .csq-rules-panel h3 { margin: 0 0 3px; color: #111827; font-size: 16px; line-height: 1.25; }
+        .csq-rule-note { margin: 0 0 4px; color: #334155; font-size: 12.5px; line-height: 1.3; }
+        .csq-rule-row { padding: 4px 0 5px; border-top: 1px solid #d8e0ea; }
+        .csq-rule-heading { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; }
+        .csq-rule-mapping { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+        .csq-rule-separator { color: #64748b; font-weight: 750; }
+        .csq-rule-color { color: var(--rule-color); font-size: 14.5px; font-weight: 850; }
+        .csq-rule-task-badge { padding: 1px 6px; border-radius: 999px; background: #e5e7eb; color: #374151; font-size: 11.5px; font-weight: 800; line-height: 1.25; }
+        .csq-rule-payoff { margin: 3px 0 0; color: #1f2937; font-size: 13.25px; line-height: 1.3; }
+        @media (max-width: 680px) { .csq-field { grid-template-columns: 1fr; } }
     </style>
 </head>
 <body>
-<main class="harness-shell">
+<header id="HeaderContainer" class="harness-stanford-header" hidden>Stanford</header>
+<main id="SkinContent" class="harness-shell">
     <div class="harness-toolbar" aria-label="Harness navigation">
         <button type="button" id="show-setup">Setup</button>
         <button type="button" id="show-intro">Intro</button>
@@ -78,11 +85,18 @@
     "use strict";
 
     var query = new URLSearchParams(window.location.search);
+    if (query.get("stanford") === "1") {
+        document.body.classList.add("simulate-stanford");
+        document.getElementById("HeaderContainer").hidden = false;
+    }
     var defaults = {
         cs_show_round: "1",
         cs_show_main_cards: "0",
         cs_show_movie_cards: "0",
         cs_show_total_points: "1",
+        cs_show_main_card_payoff: "0",
+        cs_show_movie_card_payoff: "0",
+        cs_show_side_card_payoff: "1",
         cs_show_click_feedback: "1",
         cs_feedback_message_ms: "600",
         cs_use_post_click_delay: "0",
@@ -90,6 +104,10 @@
         cs_screen_motion_ms: "600",
         cs_inactivity_seconds: "120"
     };
+    if (query.get("fast") === "1") {
+        defaults.cs_feedback_message_ms = "0";
+        defaults.cs_screen_motion_ms = "0";
+    }
     var embeddedData = Object.assign({}, defaults);
     var activePage = "setup";
     var unloadCallbacks = [];

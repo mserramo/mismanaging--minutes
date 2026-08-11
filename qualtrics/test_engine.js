@@ -35,27 +35,154 @@ const sideIds = new Set(profile.side_tasks.map((task) => task.id));
 assert.equal(engine.defaults.showMain, false);
 assert.equal(engine.defaults.showMovie, false);
 assert.equal(engine.defaults.showPoints, true);
+assert.equal(engine.defaults.showMainCardPayoff, false);
+assert.equal(engine.defaults.showMovieCardPayoff, false);
+assert.equal(engine.defaults.showSideCardPayoff, true);
 assert.equal(engine.defaults.inactivitySeconds, 120);
 assert.equal(Object.hasOwn(engine.defaults, "showSidePoints"), false);
+const firstRuleEnvironment = engine.decodeEnvironment(bank, bank.sequences[0]);
+const preMovieRuleGroups = engine.ruleGroupsForEnvironment(profile, firstRuleEnvironment, false);
+const movieRuleGroups = engine.ruleGroupsForEnvironment(profile, firstRuleEnvironment, true);
+const allRuleTaskIds = [
+    "main", "trio_a", "trio_b", "fives", "cumulative_a",
+    "cumulative_b", "infinite_scroll", "simple_a", "simple_b", "movie"
+];
+const allRuleGroupIds = ["main", "trio", "fives", "cumulative", "infinite_scroll", "simple", "movie"];
+const preMovieMembers = preMovieRuleGroups.flatMap((group) => group.members);
+const movieMembers = movieRuleGroups.flatMap((group) => group.members);
+
+assert.equal(preMovieRuleGroups.length, 6);
+assert.equal(movieRuleGroups.length, 7);
 assert.deepEqual(
-    ["main", "trio_a", "fives", "cumulative_a", "infinite_scroll", "simple_a"].map(engine.taskTypeKey),
-    ["M", "T", "F", "C", "IS", "S"]
+    new Set(preMovieRuleGroups.map((group) => group.groupId)),
+    new Set(allRuleGroupIds.filter((groupId) => groupId !== "movie"))
 );
-assert.equal(engine.taskTypeKey("movie"), "MV");
-const payoffRules = engine.rulesForProfile(profile, false);
-const moviePayoffRules = engine.rulesForProfile(profile, true);
-assert.deepEqual(payoffRules.map((rule) => rule.key), ["M", "T", "F", "C", "IS", "S"]);
-assert.deepEqual(moviePayoffRules.map((rule) => rule.key), ["M", "T", "F", "C", "IS", "S", "MV"]);
-assert.equal(payoffRules.find((rule) => rule.key === "M").payoff, "3,000 points for collecting at least 60 cards.");
-assert.equal(payoffRules.find((rule) => rule.key === "M").appearance, "Appears every round.");
-assert.equal(payoffRules.find((rule) => rule.key === "T").payoff, "A: 30 points for every 3 collected cards; B: 36 points for every 3 collected cards.");
-assert.equal(payoffRules.find((rule) => rule.key === "F").payoff, "60 points for every 5 collected cards.");
-assert.equal(payoffRules.find((rule) => rule.key === "S").payoff, "A: 4, 8 or 12 points; B: 2, 10 or 16 points. Current payoff shown on card.");
-assert.equal(payoffRules.find((rule) => rule.key === "IS").appearance, "Appears in consecutive runs of 4–7 rounds.");
-assert.equal(moviePayoffRules.find((rule) => rule.key === "MV").payoff, "3,000 points for collecting all 20 cards.");
-assert.ok(payoffRules.filter((rule) => ["T", "F", "C", "S"].includes(rule.key)).every(
-    (rule) => rule.appearance === "Not necessarily consecutive."
-));
+assert.deepEqual(new Set(movieRuleGroups.map((group) => group.groupId)), new Set(allRuleGroupIds));
+assert.equal(preMovieMembers.length, 9);
+assert.equal(new Set(preMovieMembers.map((member) => member.taskId)).size, 9);
+assert.equal(movieMembers.length, 10);
+assert.equal(new Set(movieMembers.map((member) => member.taskId)).size, 10);
+assert.deepEqual(
+    new Set(preMovieMembers.map((member) => member.taskId)),
+    new Set(allRuleTaskIds.filter((taskId) => taskId !== "movie"))
+);
+assert.deepEqual(new Set(movieMembers.map((member) => member.taskId)), new Set(allRuleTaskIds));
+allRuleTaskIds.forEach((taskId) => {
+    assert.equal(movieMembers.filter((member) => member.taskId === taskId).length, 1);
+});
+assert.deepEqual(
+    preMovieRuleGroups.find((group) => group.groupId === "trio").members.map((member) => member.taskId),
+    ["trio_a", "trio_b"]
+);
+assert.deepEqual(
+    preMovieRuleGroups.find((group) => group.groupId === "cumulative").members.map((member) => member.taskId),
+    ["cumulative_a", "cumulative_b"]
+);
+assert.deepEqual(
+    preMovieRuleGroups.find((group) => group.groupId === "simple").members.map((member) => member.taskId),
+    ["simple_a", "simple_b"]
+);
+movieMembers.forEach((member) => {
+    assert.equal(member.color, profile.colors[firstRuleEnvironment.colorMap[member.taskId]]);
+});
+assert.deepEqual(
+    preMovieRuleGroups.map((group) => group.groupId),
+    movieRuleGroups.filter((group) => group.groupId !== "movie").map((group) => group.groupId)
+);
+assert.deepEqual(
+    engine.ruleGroupsForEnvironment(profile, firstRuleEnvironment, false).map((group) => group.groupId),
+    preMovieRuleGroups.map((group) => group.groupId)
+);
+assert.deepEqual(
+    engine.ruleGroupsForEnvironment(profile, firstRuleEnvironment, true).map((group) => group.groupId),
+    movieRuleGroups.map((group) => group.groupId)
+);
+assert.ok(new Set(bank.sequences.slice(0, 32).map((sequence) => {
+    const environment = engine.decodeEnvironment(bank, sequence);
+    return engine.ruleGroupsForEnvironment(profile, environment, false).map((group) => group.groupId).join(",");
+})).size > 1);
+assert.equal(
+    engine.sharedAccumulationNote,
+    "Each color accumulates separately—cards of different colors are never combined. Unless stated otherwise, accumulation may be nonconsecutive."
+);
+assert.match(preMovieRuleGroups.find((group) => group.groupId === "trio").description, /every 3 cards of the same color/i);
+assert.match(preMovieRuleGroups.find((group) => group.groupId === "fives").description, /every 5 cards of the same color/i);
+assert.match(preMovieRuleGroups.find((group) => group.groupId === "infinite_scroll").description, /consecutive/i);
+assert.match(preMovieRuleGroups.find((group) => group.groupId === "infinite_scroll").description, /resets/i);
+movieRuleGroups.forEach((group) => {
+    assert.doesNotMatch(group.description, /\bpoints?\b/i);
+    assert.match(group.description, /pts\./i);
+});
+assert.equal(preMovieRuleGroups.filter((group) => group.groupId === "movie").length, 0);
+assert.equal(movieRuleGroups.filter((group) => group.groupId === "movie").length, 1);
+
+function mockStyle() {
+    const values = new Map();
+    return {
+        getPropertyPriority: (name) => values.get(name)?.priority || "",
+        getPropertyValue: (name) => values.get(name)?.value || "",
+        removeProperty: (name) => {
+            const previous = values.get(name)?.value || "";
+            values.delete(name);
+            return previous;
+        },
+        setProperty: (name, value, priority = "") => {
+            values.set(name, { value: String(value), priority: String(priority) });
+        }
+    };
+}
+
+function mockGapRoot(baseTop) {
+    const style = mockStyle();
+    return {
+        style,
+        getBoundingClientRect: () => ({
+            top: baseTop + Number.parseFloat(style.getPropertyValue("margin-top") || "0")
+        })
+    };
+}
+
+function mockHeader(bottom, width = 200, height = 40) {
+    return { getBoundingClientRect: () => ({ bottom, width, height }) };
+}
+
+const hadOwnDocument = Object.hasOwn(global, "document");
+const originalDocument = global.document;
+try {
+    const excessiveRoot = mockGapRoot(200);
+    global.document = { querySelector: () => mockHeader(100) };
+    assert.deepEqual(engine.compactGameTopGap(excessiveRoot), { headerFound: true, gap: 100, offset: 82 });
+    assert.equal(excessiveRoot.style.getPropertyValue("margin-top"), "-82px");
+    assert.equal(excessiveRoot.style.getPropertyPriority("margin-top"), "important");
+
+    const smallGapRoot = mockGapRoot(124);
+    assert.deepEqual(engine.compactGameTopGap(smallGapRoot), { headerFound: true, gap: 24, offset: 0 });
+    assert.equal(smallGapRoot.style.getPropertyValue("margin-top"), "");
+
+    const cappedRoot = mockGapRoot(300);
+    assert.deepEqual(engine.compactGameTopGap(cappedRoot), { headerFound: true, gap: 200, offset: 120 });
+    assert.equal(cappedRoot.style.getPropertyValue("margin-top"), "-120px");
+
+    const missingHeaderRoot = mockGapRoot(200);
+    global.document = { querySelector: () => null };
+    assert.deepEqual(engine.compactGameTopGap(missingHeaderRoot), { headerFound: false, gap: 0, offset: 0 });
+    assert.equal(missingHeaderRoot.style.getPropertyValue("margin-top"), "");
+
+    const hiddenHeaderRoot = mockGapRoot(200);
+    global.document = { querySelector: () => mockHeader(100, 0, 40) };
+    assert.deepEqual(engine.compactGameTopGap(hiddenHeaderRoot), { headerFound: false, gap: 0, offset: 0 });
+    assert.equal(hiddenHeaderRoot.style.getPropertyValue("margin-top"), "");
+
+    const repeatRoot = mockGapRoot(200);
+    global.document = { querySelector: () => mockHeader(100) };
+    const firstGapResult = engine.compactGameTopGap(repeatRoot);
+    const secondGapResult = engine.compactGameTopGap(repeatRoot);
+    assert.deepEqual(secondGapResult, firstGapResult);
+    assert.equal(repeatRoot.style.getPropertyValue("margin-top"), "-82px");
+} finally {
+    if (hadOwnDocument) { global.document = originalDocument; }
+    else { delete global.document; }
+}
 assert.equal(engine.validateBootstrap(engine.readBootstrap()), "");
 assert.equal(engine.validateBootstrap(engine.readBootstrap(false), false), "");
 assert.equal(engine.readBootstrap().bank.sequences.length, bank.sequences.length);
@@ -139,13 +266,46 @@ assert.deepEqual(chooseRepeated("simple_b", 1, 16).gains, [16]);
 assert.equal(definitions.trio_a.group_bonus, 30);
 
 const progressState = engine.initialTaskState();
+const defaultCardTextConfig = {
+    showMainCardPayoff: false,
+    showMovieCardPayoff: false,
+    showSideCardPayoff: true
+};
+const allCardPayoffsConfig = {
+    showMainCardPayoff: true,
+    showMovieCardPayoff: true,
+    showSideCardPayoff: true
+};
+const hiddenNonSimplePayoffsConfig = {
+    showMainCardPayoff: false,
+    showMovieCardPayoff: false,
+    showSideCardPayoff: false
+};
 assert.equal(engine.taskProgressText(profile, progressState, round("main"), round("main").cards[0]), "");
-assert.equal(engine.taskProgressText(profile, progressState, round("simple_a", 12), round("simple_a", 12).cards[0]), "+ 12 points");
-assert.equal(engine.taskProgressText(profile, progressState, round("cumulative_a"), round("cumulative_a").cards[0]), "+ 2 points");
+assert.equal(engine.taskProgressText(profile, progressState, round("simple_a", 12), round("simple_a", 12).cards[0]), "+12 pts.");
+assert.equal(engine.taskProgressText(profile, progressState, round("cumulative_a"), round("cumulative_a").cards[0]), "+2 pts.");
 progressState.counts.cumulative_a = 2;
-assert.equal(engine.taskProgressText(profile, progressState, round("cumulative_a"), round("cumulative_a").cards[0]), "+ 6 points");
+assert.equal(engine.taskProgressText(profile, progressState, round("cumulative_a"), round("cumulative_a").cards[0]), "+6 pts.");
 progressState.runCounts["7"] = 2;
-assert.equal(engine.taskProgressText(profile, progressState, round("infinite_scroll", null, 7), round("infinite_scroll", null, 7).cards[0]), "+ 10 points");
+assert.equal(engine.taskProgressText(profile, progressState, round("infinite_scroll", null, 7), round("infinite_scroll", null, 7).cards[0]), "+10 pts. · 4 rounds left in this run");
+assert.equal(engine.cardPayoffText(profile, progressState, round("simple_a", 12), round("simple_a", 12).cards[0], hiddenNonSimplePayoffsConfig), "+12 pts.");
+assert.equal(engine.cardPayoffText(profile, progressState, round("cumulative_a"), round("cumulative_a").cards[0], hiddenNonSimplePayoffsConfig), "");
+assert.equal(engine.cardFooterText(profile, progressState, round("trio_a"), round("trio_a").cards[0]), "3 more for +30 pts. bonus");
+progressState.counts.trio_a = 2;
+assert.equal(engine.cardDisplayText(profile, progressState, round("trio_a"), round("trio_a").cards[0], defaultCardTextConfig).payoff, "+30 pts.");
+assert.equal(engine.cardDisplayText(profile, progressState, round("trio_a"), round("trio_a").cards[0], defaultCardTextConfig).footer, "1 more for +30 pts. bonus");
+assert.equal(engine.cardDisplayText(profile, progressState, round("trio_a"), round("trio_a").cards[0], hiddenNonSimplePayoffsConfig).payoff, "");
+assert.equal(engine.cardDisplayText(profile, progressState, round("trio_a"), round("trio_a").cards[0], hiddenNonSimplePayoffsConfig).footer, "1 more for +30 pts. bonus");
+assert.doesNotMatch(engine.taskProgressText(profile, progressState, round("trio_a"), round("trio_a").cards[0]), /chosen|selected|next/i);
+const thresholdState = engine.initialTaskState();
+assert.equal(engine.cardPayoffText(profile, thresholdState, round("main"), round("main").cards[0], allCardPayoffsConfig), "+0 pts.");
+thresholdState.main = profile.main_target - 1;
+assert.equal(engine.cardPayoffText(profile, thresholdState, round("main"), round("main").cards[0], defaultCardTextConfig), "");
+assert.equal(engine.cardPayoffText(profile, thresholdState, round("main"), round("main").cards[0], allCardPayoffsConfig), "+3,000 pts.");
+thresholdState.movie = profile.movie_rounds - 1;
+assert.equal(engine.cardPayoffText(profile, thresholdState, round("movie"), round("movie").cards[0], allCardPayoffsConfig), "+3,000 pts.");
+assert.equal(engine.cardFooterText(profile, thresholdState, round("main"), round("main").cards[0]), "");
+assert.equal(engine.cardFooterText(profile, thresholdState, round("movie"), round("movie").cards[0]), "");
 const totalState = engine.initialTaskState();
 totalState.sidePay = 100;
 assert.equal(engine.awardedTotalPoints(engine.profileValues(profile), totalState), 100);

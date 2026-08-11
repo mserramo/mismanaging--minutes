@@ -71,6 +71,9 @@ CONFIG_FIELDS = {
     "cs_show_main_cards": "0",
     "cs_show_movie_cards": "0",
     "cs_show_total_points": "1",
+    "cs_show_main_card_payoff": "0",
+    "cs_show_movie_card_payoff": "0",
+    "cs_show_side_card_payoff": "1",
     "cs_show_click_feedback": "1",
     "cs_feedback_message_ms": "600",
     "cs_use_post_click_delay": "0",
@@ -263,9 +266,11 @@ def build_header(bank: dict[str, Any]) -> str:
   margin-left: 12px !important;
   margin-right: 12px !important;
 }
-.csq-game-active .SkinInner { padding-top: 4px !important; }
+.csq-game-active #HeaderContainer { margin-bottom: 0 !important; padding-bottom: 0 !important; }
+.csq-game-active .SkinInner { padding-top: 0 !important; margin-top: 0 !important; }
 .csq-game-active #SkinContent {
   padding-top: 0 !important;
+  margin-top: 0 !important;
 }
 .Skin #Questions,
 .Skin .QuestionOuter,
@@ -278,6 +283,7 @@ def build_header(bank: dict[str, Any]) -> str:
 }
 .csq-game-active #Questions { padding-top: 0 !important; margin-top: 0 !important; }
 .csq-game-active #QID3,
+.csq-game-active #QID3.QuestionOuter,
 .csq-game-active #QID3 .QuestionBody,
 .csq-game-active #QID3 .QuestionText {
   padding-top: 0 !important;
@@ -288,7 +294,7 @@ def build_header(bank: dict[str, Any]) -> str:
   display: flex;
   align-items: flex-start;
   justify-content: flex-start;
-  gap: 18px;
+  gap: 16px;
   width: max-content;
   min-width: 100%;
 }
@@ -389,7 +395,6 @@ def build_header(bank: dict[str, Any]) -> str:
 .csq-continue-button:hover, .csq-continue-button:focus { background: #0b365b; }
 .csq-validation-errors { color: #991b1b; font-weight: 700; margin-top: 12px; }
 .csq-debug-table-wrap { overflow-x: auto; }
-.cs-card .cs-points { font-size: 15px; line-height: 1.3; overflow-wrap: anywhere; }
 .cs-card-row {
   display: flex !important;
   flex-flow: row nowrap;
@@ -399,35 +404,60 @@ def build_header(bank: dict[str, Any]) -> str:
 }
 .cs-card {
   box-sizing: border-box;
-  flex: 0 0 128px;
-  width: 128px;
-  min-width: 128px;
+  position: relative;
+  display: block;
+  flex: 0 0 140px;
+  width: 140px;
+  min-width: 140px;
   min-height: 218px;
-  padding: 13px 10px;
+  padding: 13px 8px;
 }
 .cs-card-heading {
-  position: relative;
+  position: absolute;
+  top: 13px;
+  left: 8px;
+  right: 8px;
   display: flex;
   min-height: 25px;
   align-items: flex-start;
   justify-content: center;
-  width: 100%;
 }
 .cs-card-color-label {
   color: var(--card-color);
   font-weight: 800;
 }
-.cs-card-type-key {
+.cs-card-payoff-slot {
   position: absolute;
-  top: 0;
-  right: 0;
-  padding: 1px 5px;
-  border-radius: 999px;
-  background: #eef1f5;
-  color: #6b7280;
-  font-size: 11px;
+  top: 50%;
+  left: 8px;
+  right: 8px;
+  display: flex;
+  min-height: 24px;
+  align-items: center;
+  justify-content: center;
+  transform: translateY(-50%);
+  text-align: center;
+}
+.cs-card-payoff {
+  font-size: 15px;
   font-weight: 800;
-  letter-spacing: 0.02em;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+.cs-card-footer {
+  position: absolute;
+  right: 4px;
+  bottom: 10px;
+  left: 4px;
+  overflow: hidden;
+  color: #64748b;
+  font-size: 10px;
+  font-weight: 650;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  text-align: center;
+  text-overflow: clip;
+  white-space: nowrap;
 }
 .cs-inactivity-clock {
   color: #475569;
@@ -437,46 +467,66 @@ def build_header(bank: dict[str, Any]) -> str:
 .cs-inactivity-warning { color: #b91c1c; }
 .csq-rules-panel {
   box-sizing: border-box;
-  flex: 0 0 420px;
-  width: 420px;
-  padding: 13px 14px;
+  flex: 0 0 540px;
+  width: 540px;
+  padding: 10px 12px;
   border: 1px solid #cbd5e1;
   border-radius: 8px;
   background: #f8fafc;
-  color: #334155;
+  color: #1f2937;
+  overflow: visible;
 }
 .csq-rules-panel h3 {
-  margin: 0 0 8px;
-  color: #1f2937;
-  font-size: 15px;
+  margin: 0 0 3px;
+  color: #111827;
+  font-size: 16px;
+  line-height: 1.25;
+}
+.csq-rule-note {
+  margin: 0 0 4px;
+  color: #334155;
+  font-size: 12.5px;
+  line-height: 1.3;
 }
 .csq-rule-row {
-  padding: 7px 0;
-  border-top: 1px solid #e2e8f0;
+  padding: 4px 0 5px;
+  border-top: 1px solid #d8e0ea;
 }
-.csq-rule-heading { display: flex; align-items: baseline; gap: 7px; }
-.csq-rule-code {
-  min-width: 25px;
-  color: #6b7280;
-  font-size: 11px;
+.csq-rule-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 6px;
+}
+.csq-rule-mapping {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+.csq-rule-separator { color: #64748b; font-weight: 750; }
+.csq-rule-color {
+  color: var(--rule-color);
+  font-size: 14.5px;
   font-weight: 850;
-  letter-spacing: 0.03em;
 }
-.csq-rule-label { color: #1f2937; font-size: 13px; font-weight: 750; }
+.csq-rule-task-badge {
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: #e5e7eb;
+  color: #374151;
+  font-size: 11.5px;
+  font-weight: 800;
+  line-height: 1.25;
+}
 .csq-rule-payoff {
   margin: 3px 0 0;
-  font-size: 11.5px;
-  line-height: 1.25;
-}
-.csq-rule-appearance {
-  margin: 5px 0 0;
-  color: #64748b;
-  font-size: 11.5px;
-  line-height: 1.25;
+  color: #1f2937;
+  font-size: 13.25px;
+  line-height: 1.3;
 }
 @media (max-width: 680px) {
   .csq-field { grid-template-columns: 1fr; gap: 5px; }
-  .cs-card { flex-basis: 118px; width: 118px; min-width: 118px; }
 }
 """.strip()
     return (
@@ -769,6 +819,9 @@ def validate_generated_qsf(qsf: dict[str, Any]) -> None:
         "cs_show_main_cards": "0",
         "cs_show_movie_cards": "0",
         "cs_show_total_points": "1",
+        "cs_show_main_card_payoff": "0",
+        "cs_show_movie_card_payoff": "0",
+        "cs_show_side_card_payoff": "1",
         "cs_inactivity_seconds": "120",
     }
     for name, expected_value in expected_defaults.items():

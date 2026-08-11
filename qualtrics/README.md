@@ -50,7 +50,20 @@ hashes are embedded in the bank and QSF.
 The participant UI keeps all cards in one left-anchored row and uses horizontal
 overflow on narrow screens rather than moving existing slots. A compact payoff
 key remains to the right of the game box and is reusable by later treatments;
-its Movie row appears only when the final 20-round movie phase begins.
+it groups related participant-specific mappings into six rows before the Movie
+phase and seven rows from round 81 onward. Trio, Cumulative, and Simple variants
+share rows while retaining separate color badges and payoffs. The group order
+is deterministic for the selected game seed, paired variants remain A then B,
+and the Movie mapping is hidden until its card first appears. Cards themselves
+display their color, with a fixed centered payoff slot and a single-line gray
+footer. Simple cards always show their realized `+X pts.` payoff. Main and
+Movie payoff text default off, while non-Simple side-card payoff text defaults
+on; the three display modes remain independently configurable. Trio and Fives
+footers show only `X more for +Y pts. bonus`, and Infinite Scrolling shows only
+the rounds remaining in the current run. No card reports prior selections or
+previews a later marginal payoff. On the Game page only, Qualtrics wrapper
+spacing is removed and any remaining oversized Stanford-header gap is measured
+and compactly corrected at runtime.
 The Main and Movie counters are optional and default off; the round and awarded-
 total-points counters default on. The total includes side-task pay plus the Main
 and Movie bonuses once their thresholds are met. The inactivity countdown is

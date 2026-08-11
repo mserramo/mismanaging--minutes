@@ -6,6 +6,9 @@
         showMain: false,
         showMovie: false,
         showPoints: true,
+        showMainCardPayoff: false,
+        showMovieCardPayoff: false,
+        showSideCardPayoff: true,
         showClickFeedback: true,
         feedbackMessageMs: 600,
         usePostClickDelay: false,
@@ -26,18 +29,15 @@
     var TASK_LABELS = {
         main: "Main task", movie: "Movie task", trio_a: "Trio A",
         trio_b: "Trio B", fives: "Fives", cumulative_a: "Cumulative A",
-        cumulative_b: "Cumulative B", infinite_scroll: "Infinite scroll",
+        cumulative_b: "Cumulative B", infinite_scroll: "Infinite scrolling",
         simple_a: "Simple A", simple_b: "Simple B"
-    };
-    var TASK_TYPE_KEYS = {
-        main: "M", movie: "MV", trio_a: "T", trio_b: "T", fives: "F",
-        cumulative_a: "C", cumulative_b: "C", infinite_scroll: "IS",
-        simple_a: "S", simple_b: "S"
     };
     var SIDE_IDS = [
         "trio_a", "trio_b", "fives", "cumulative_a", "cumulative_b",
         "infinite_scroll", "simple_a", "simple_b"
     ];
+    var RULE_GROUP_IDS = ["main", "trio", "fives", "cumulative", "infinite_scroll", "simple", "movie"];
+    var SHARED_ACCUMULATION_NOTE = "Each color accumulates separately—cards of different colors are never combined. Unless stated otherwise, accumulation may be nonconsecutive.";
     var localEmbeddedData = {};
     var activeController = null;
     var lastResult = null;
@@ -248,6 +248,9 @@
             showMain: parseBoolean(getEmbeddedData("cs_show_main_cards"), DEFAULTS.showMain),
             showMovie: parseBoolean(getEmbeddedData("cs_show_movie_cards"), DEFAULTS.showMovie),
             showPoints: parseBoolean(getEmbeddedData("cs_show_total_points"), DEFAULTS.showPoints),
+            showMainCardPayoff: parseBoolean(getEmbeddedData("cs_show_main_card_payoff"), DEFAULTS.showMainCardPayoff),
+            showMovieCardPayoff: parseBoolean(getEmbeddedData("cs_show_movie_card_payoff"), DEFAULTS.showMovieCardPayoff),
+            showSideCardPayoff: parseBoolean(getEmbeddedData("cs_show_side_card_payoff"), DEFAULTS.showSideCardPayoff),
             showClickFeedback: parseBoolean(getEmbeddedData("cs_show_click_feedback"), DEFAULTS.showClickFeedback),
             feedbackMessageMs: numberValue(getEmbeddedData("cs_feedback_message_ms"), DEFAULTS.feedbackMessageMs),
             usePostClickDelay: parseBoolean(getEmbeddedData("cs_use_post_click_delay"), DEFAULTS.usePostClickDelay),
@@ -271,6 +274,9 @@
         var pairs = {
             cs_show_round: config.showRound, cs_show_main_cards: config.showMain,
             cs_show_movie_cards: config.showMovie, cs_show_total_points: config.showPoints,
+            cs_show_main_card_payoff: config.showMainCardPayoff,
+            cs_show_movie_card_payoff: config.showMovieCardPayoff,
+            cs_show_side_card_payoff: config.showSideCardPayoff,
             cs_show_click_feedback: config.showClickFeedback,
             cs_feedback_message_ms: config.feedbackMessageMs,
             cs_use_post_click_delay: config.usePostClickDelay,
@@ -362,6 +368,9 @@
         inputs.showMain = checkboxField(display, "Show main-card counter?", config.showMain);
         inputs.showMovie = checkboxField(display, "Show movie-card counter?", config.showMovie);
         inputs.showPoints = checkboxField(display, "Show points counter?", config.showPoints);
+        inputs.showMainCardPayoff = checkboxField(display, "Show main-card +0/+B pts. text?", config.showMainCardPayoff);
+        inputs.showMovieCardPayoff = checkboxField(display, "Show movie-card +0/+M pts. text?", config.showMovieCardPayoff);
+        inputs.showSideCardPayoff = checkboxField(display, "Show non-Simple side-card +0/+X pts. text?", config.showSideCardPayoff);
         inputs.showClickFeedback = checkboxField(display, "Show per-click point feedback?", config.showClickFeedback);
         timing = setupSection(root, "Timing");
         inputs.feedbackMessageMs = numberField(timing, "Feedback message duration (ms)", config.feedbackMessageMs, 0, 5000);
@@ -376,6 +385,9 @@
                 profile: config.profile,
                 showRound: inputs.showRound.checked, showMain: inputs.showMain.checked,
                 showMovie: inputs.showMovie.checked, showPoints: inputs.showPoints.checked,
+                showMainCardPayoff: inputs.showMainCardPayoff.checked,
+                showMovieCardPayoff: inputs.showMovieCardPayoff.checked,
+                showSideCardPayoff: inputs.showSideCardPayoff.checked,
                 showClickFeedback: inputs.showClickFeedback.checked,
                 feedbackMessageMs: numberValue(inputs.feedbackMessageMs.value, -1),
                 usePostClickDelay: inputs.usePostClickDelay.checked,
@@ -480,18 +492,19 @@
         return result;
     }
 
-    function taskTypeKey(taskId) {
-        return TASK_TYPE_KEYS[taskId] || "";
-    }
-
-    function addRule(parent, key, label, payoff, appearance) {
+    function addRuleGroup(parent, group) {
         var row = element("div", "csq-rule-row");
         var heading = element("div", "csq-rule-heading");
-        appendText(heading, "span", key, "csq-rule-code");
-        appendText(heading, "span", label, "csq-rule-label");
+        group.members.forEach(function (member, index) {
+            var mapping = element("span", "csq-rule-mapping");
+            mapping.style.setProperty("--rule-color", member.color.hex);
+            appendText(mapping, "span", member.color.label, "csq-rule-color");
+            appendText(mapping, "span", member.label, "csq-rule-task-badge");
+            heading.appendChild(mapping);
+            if (index < group.members.length - 1) { appendText(heading, "span", "·", "csq-rule-separator"); }
+        });
         row.appendChild(heading);
-        appendText(row, "p", payoff, "csq-rule-payoff");
-        appendText(row, "p", appearance, "csq-rule-appearance");
+        appendText(row, "p", group.description, "csq-rule-payoff");
         parent.appendChild(row);
     }
 
@@ -505,7 +518,27 @@
         return labels.slice(0, -1).join(", ") + " or " + labels[labels.length - 1];
     }
 
-    function rulesForProfile(profile, includeMovie) {
+    function pointsWithSign(value) {
+        return "+" + formatInteger(value) + " pts.";
+    }
+
+    function payoffSeries(base, increment) {
+        return "+" + formatInteger(base) + ", +" + formatInteger(base + increment) + ", +" + formatInteger(base + 2 * increment) + ", …";
+    }
+
+    function signedChoiceList(values) {
+        return "+" + formatChoiceList(values).replace(/, /g, ", +").replace(/ or /g, " or +");
+    }
+
+    function ruleMember(profile, environment, taskId) {
+        return {
+            taskId: taskId,
+            label: TASK_LABELS[taskId],
+            color: profile.colors[environment.colorMap[taskId]]
+        };
+    }
+
+    function ruleGroupsForEnvironment(profile, environment, includeMovie) {
         var tasks = taskLookup(profile);
         var trioA = tasks.trio_a;
         var trioB = tasks.trio_b;
@@ -515,54 +548,67 @@
         var infinite = tasks.infinite_scroll;
         var simpleA = tasks.simple_a;
         var simpleB = tasks.simple_b;
-        var rules = [
+        var mainMember = ruleMember(profile, environment, "main");
+        var trioAMember = ruleMember(profile, environment, "trio_a");
+        var trioBMember = ruleMember(profile, environment, "trio_b");
+        var fivesMember = ruleMember(profile, environment, "fives");
+        var cumulativeAMember = ruleMember(profile, environment, "cumulative_a");
+        var cumulativeBMember = ruleMember(profile, environment, "cumulative_b");
+        var infiniteMember = ruleMember(profile, environment, "infinite_scroll");
+        var simpleAMember = ruleMember(profile, environment, "simple_a");
+        var simpleBMember = ruleMember(profile, environment, "simple_b");
+        var movieMember = ruleMember(profile, environment, "movie");
+        var groups = [
             {
-                key: "M", label: "Main",
-                payoff: formatInteger(profile.main_bonus) + " points for collecting at least " + profile.main_target + " cards.",
-                appearance: "Appears every round."
+                groupId: "main", members: [mainMember],
+                description: "Pays " + pointsWithSign(profile.main_bonus) + " when " + profile.main_target + " " + mainMember.color.label + " cards are accumulated."
             },
             {
-                key: "T", label: "Trio",
-                payoff: "A: " + formatInteger(trioA.group_bonus) + " points for every " + trioA.group_size + " collected cards; B: " + formatInteger(trioB.group_bonus) + " points for every " + trioB.group_size + " collected cards.",
-                appearance: "Not necessarily consecutive."
+                groupId: "trio", members: [trioAMember, trioBMember],
+                description: "For every " + trioA.group_size + " cards of the same color accumulated: " + trioAMember.color.label + " pays " + pointsWithSign(trioA.group_bonus) + "; " + trioBMember.color.label + " pays " + pointsWithSign(trioB.group_bonus)
             },
             {
-                key: "F", label: "Fives",
-                payoff: formatInteger(fives.group_bonus) + " points for every " + fives.group_size + " collected cards.",
-                appearance: "Not necessarily consecutive."
+                groupId: "fives", members: [fivesMember],
+                description: "For every " + fives.group_size + " cards of the same color accumulated: " + fivesMember.color.label + " pays " + pointsWithSign(fives.group_bonus)
             },
             {
-                key: "C", label: "Cumulative",
-                payoff: "A: " + cumulativeA.marginal_base + ", " + (cumulativeA.marginal_base + cumulativeA.marginal_increment) + ", " + (cumulativeA.marginal_base + 2 * cumulativeA.marginal_increment) + ", … points; B: " + cumulativeB.marginal_base + ", " + (cumulativeB.marginal_base + cumulativeB.marginal_increment) + ", " + (cumulativeB.marginal_base + 2 * cumulativeB.marginal_increment) + ", … points.",
-                appearance: "Not necessarily consecutive."
+                groupId: "cumulative", members: [cumulativeAMember, cumulativeBMember],
+                description: "Each card pays immediately. " + cumulativeAMember.color.label + " starts at " + pointsWithSign(cumulativeA.marginal_base) + " and rises by " + pointsWithSign(cumulativeA.marginal_increment) + " per " + cumulativeAMember.color.label + " card (" + payoffSeries(cumulativeA.marginal_base, cumulativeA.marginal_increment) + "); " + cumulativeBMember.color.label + " starts at " + pointsWithSign(cumulativeB.marginal_base) + " and rises by " + pointsWithSign(cumulativeB.marginal_increment) + " per " + cumulativeBMember.color.label + " card (" + payoffSeries(cumulativeB.marginal_base, cumulativeB.marginal_increment) + ")."
             },
             {
-                key: "IS", label: "Infinite scroll",
-                payoff: infinite.marginal_base + ", " + (infinite.marginal_base + infinite.marginal_increment) + ", " + (infinite.marginal_base + 2 * infinite.marginal_increment) + ", … points within each run.",
-                appearance: "Appears in consecutive runs of " + infinite.run_length_min + "–" + infinite.run_length_max + " rounds."
+                groupId: "infinite_scroll", members: [infiniteMember],
+                description: "Each card pays immediately. " + infiniteMember.color.label + " starts at " + pointsWithSign(infinite.marginal_base) + " and rises by " + pointsWithSign(infinite.marginal_increment) + " for each consecutive " + infiniteMember.color.label + " card within a " + infinite.run_length_min + "–" + infinite.run_length_max + "-round run (" + payoffSeries(infinite.marginal_base, infinite.marginal_increment) + "); the increase resets after the run."
             },
             {
-                key: "S", label: "Simple",
-                payoff: "A: " + formatChoiceList(simpleA.outcomes.map(function (item) { return item.points; })) + " points; B: " + formatChoiceList(simpleB.outcomes.map(function (item) { return item.points; })) + " points. Current payoff shown on card.",
-                appearance: "Not necessarily consecutive."
+                groupId: "simple", members: [simpleAMember, simpleBMember],
+                description: "Pays the amount shown each time: " + simpleAMember.color.label + " pays " + signedChoiceList(simpleA.outcomes.map(function (item) { return item.points; })) + " pts.; " + simpleBMember.color.label + " pays " + signedChoiceList(simpleB.outcomes.map(function (item) { return item.points; })) + " pts."
+            },
+            {
+                groupId: "movie", members: [movieMember],
+                description: "Pays " + pointsWithSign(profile.movie_bonus) + " when all " + profile.movie_rounds + " " + movieMember.color.label + " cards are accumulated; available in rounds " + (profile.rounds - profile.movie_rounds + 1) + "–" + profile.rounds + "."
             }
         ];
-        if (includeMovie) {
-            rules.push({
-                key: "MV", label: "Movie",
-                payoff: formatInteger(profile.movie_bonus) + " points for collecting all " + profile.movie_rounds + " cards.",
-                appearance: "Appears in the final " + profile.movie_rounds + " consecutive rounds."
-            });
-        }
-        return rules;
+        return groups.filter(function (group) { return includeMovie || group.groupId !== "movie"; }).sort(function (left, right) {
+            return ruleOrderValue(environment.seed, left.groupId) - ruleOrderValue(environment.seed, right.groupId)
+                || RULE_GROUP_IDS.indexOf(left.groupId) - RULE_GROUP_IDS.indexOf(right.groupId);
+        });
     }
 
-    function renderRulesPanel(parent, profile, includeMovie) {
+    function ruleOrderValue(seed, groupId) {
+        var hash = (integerValue(seed, 0) >>> 0) ^ 2166136261;
+        var index;
+        for (index = 0; index < groupId.length; index += 1) {
+            hash ^= groupId.charCodeAt(index);
+            hash = Math.imul(hash, 16777619) >>> 0;
+        }
+        return hash;
+    }
+
+    function renderRulesPanel(parent, profile, environment, includeMovie) {
         clearElement(parent);
         appendText(parent, "h3", "Payoff key");
-        rulesForProfile(profile, includeMovie).forEach(function (rule) {
-            addRule(parent, rule.key, rule.label, rule.payoff, rule.appearance);
-        });
+        appendText(parent, "p", SHARED_ACCUMULATION_NOTE, "csq-rule-note");
+        ruleGroupsForEnvironment(profile, environment, includeMovie).forEach(function (group) { addRuleGroup(parent, group); });
     }
 
     function initialTaskState() {
@@ -602,27 +648,70 @@
             + (taskState.movie >= profile.movieRounds ? profile.movieBonus : 0);
     }
 
-    function taskProgressText(bankProfile, state, round, card) {
+    function currentCardPayoff(bankProfile, state, round, card) {
         var taskId = card.taskId;
         var task = taskLookup(bankProfile)[taskId];
         var count;
-        var next;
-        if (taskId === "main") { return ""; }
-        if (taskId === "movie") { return state.movie + " of " + bankProfile.movie_rounds + " collected"; }
+        if (taskId === "main") {
+            return state.main < bankProfile.main_target && state.main + 1 >= bankProfile.main_target ? bankProfile.main_bonus : 0;
+        }
+        if (taskId === "movie") {
+            return state.movie < bankProfile.movie_rounds && state.movie + 1 >= bankProfile.movie_rounds ? bankProfile.movie_bonus : 0;
+        }
         count = state.counts[taskId];
         if (task.type === "group") {
-            next = task.group_size - (count % task.group_size);
-            return count + " chosen · " + next + " to next " + task.group_bonus + "-point bonus";
+            return (count + 1) % task.group_size === 0 ? task.group_bonus : 0;
         }
         if (task.type === "cumulative") {
-            next = task.marginal_base + task.marginal_increment * count;
-            return "+ " + next + " points";
+            return task.marginal_base + task.marginal_increment * count;
         }
         if (task.type === "run") {
-            next = task.marginal_base + task.marginal_increment * (state.runCounts[String(round.infiniteRunId)] || 0);
-            return "+ " + next + " points";
+            return task.marginal_base + task.marginal_increment * (state.runCounts[String(round.infiniteRunId)] || 0);
         }
-        return "+ " + card.simplePayoff + " points";
+        return card.simplePayoff;
+    }
+
+    function cardPayoffText(bankProfile, state, round, card, config) {
+        var taskId = card.taskId;
+        var task = taskLookup(bankProfile)[taskId];
+        var visible = task && task.type === "simple"
+            || taskId === "main" && config.showMainCardPayoff
+            || taskId === "movie" && config.showMovieCardPayoff
+            || SIDE_IDS.indexOf(taskId) >= 0 && (!task || task.type !== "simple") && config.showSideCardPayoff;
+        return visible ? "+" + formatInteger(currentCardPayoff(bankProfile, state, round, card)) + " pts." : "";
+    }
+
+    function cardFooterText(bankProfile, state, round, card) {
+        var taskId = card.taskId;
+        var task = taskLookup(bankProfile)[taskId];
+        var count;
+        var remaining;
+        if (!task) { return ""; }
+        if (task.type === "group") {
+            count = state.counts[taskId];
+            remaining = task.group_size - (count % task.group_size);
+            return remaining + " more for +" + formatInteger(task.group_bonus) + " pts. bonus";
+        }
+        if (task.type === "run") {
+            remaining = integerValue(round.infiniteRoundsRemaining, 0);
+            return remaining > 0 ? remaining + (remaining === 1 ? " round" : " rounds") + " left in this run" : "";
+        }
+        return "";
+    }
+
+    function cardDisplayText(bankProfile, state, round, card, config) {
+        var payoff = cardPayoffText(bankProfile, state, round, card, config);
+        var footer = cardFooterText(bankProfile, state, round, card);
+        return { payoff: payoff, footer: footer, combined: [payoff, footer].filter(Boolean).join(" · ") };
+    }
+
+    function taskProgressText(bankProfile, state, round, card, config) {
+        config = config || {
+            showMainCardPayoff: DEFAULTS.showMainCardPayoff,
+            showMovieCardPayoff: DEFAULTS.showMovieCardPayoff,
+            showSideCardPayoff: DEFAULTS.showSideCardPayoff
+        };
+        return cardDisplayText(bankProfile, state, round, card, config).combined;
     }
 
     function utf8ByteLength(value) {
@@ -767,6 +856,29 @@
         return global.performance && global.performance.now ? global.performance.now() : Date.now();
     }
 
+    function compactGameTopGap(root) {
+        var header;
+        var headerRect;
+        var rootRect;
+        var gap;
+        var offset = 0;
+        if (!root || !root.style || !root.getBoundingClientRect || !global.document || !global.document.querySelector) {
+            return { headerFound: false, gap: 0, offset: 0 };
+        }
+        root.style.removeProperty("margin-top");
+        header = global.document.querySelector("#HeaderContainer, .Skin #Header, .Skin header");
+        if (!header || !header.getBoundingClientRect) { return { headerFound: false, gap: 0, offset: 0 }; }
+        headerRect = header.getBoundingClientRect();
+        if (headerRect.width <= 0 || headerRect.height <= 0) { return { headerFound: false, gap: 0, offset: 0 }; }
+        rootRect = root.getBoundingClientRect();
+        gap = Math.max(0, Math.round(rootRect.top - headerRect.bottom));
+        if (gap > 24) {
+            offset = Math.min(120, Math.max(0, gap - 18));
+            root.style.setProperty("margin-top", "-" + offset + "px", "important");
+        }
+        return { headerFound: true, gap: gap, offset: offset };
+    }
+
     function initGame(question) {
         var root = getRoot("csq-game-root", question);
         var bootstrap = readBootstrap(); var error = validateBootstrap(bootstrap);
@@ -787,7 +899,7 @@
         status.appendChild(statusLeft); status.appendChild(statusRight); shell.appendChild(status);
         cue = element("div", "cs-cue"); shell.appendChild(cue); cards = element("div", "cs-card-row"); shell.appendChild(cards);
         rulesPanel = element("aside", "csq-rules-panel"); rulesPanel.setAttribute("aria-label", "Card payoff reminder");
-        renderRulesPanel(rulesPanel, bank.profile, movieRuleVisible);
+        renderRulesPanel(rulesPanel, bank.profile, environment, movieRuleVisible);
         gameLayout.appendChild(shell); gameLayout.appendChild(rulesPanel); root.appendChild(gameLayout);
         state = {
             environment: environment, task: initialTaskState(), roundIndex: 0,
@@ -846,10 +958,13 @@
 
         function cardSetForLog(round) {
             return round.cards.map(function (card) {
+                var display = cardDisplayText(bank.profile, state.task, round, card, config);
                 return {
                     position: card.position, task_id: card.taskId, task_label: TASK_LABELS[card.taskId],
                     simple_payoff: card.simplePayoff,
-                    progress: taskProgressText(bank.profile, state.task, round, card),
+                    marginal_points: currentCardPayoff(bank.profile, state.task, round, card),
+                    payoff_text: display.payoff, footer_text: display.footer,
+                    progress: display.combined,
                     color_id: bank.profile.colors[environment.colorMap[card.taskId]].id
                 };
             });
@@ -874,7 +989,7 @@
             Array.prototype.forEach.call(cards.querySelectorAll("button"), function (node) { node.disabled = true; });
             button.className += " cs-card-selected";
             if (config.showClickFeedback) {
-                cue.textContent = card.taskId === "main" ? "Main task selected" : card.taskId === "movie" ? "Movie task selected" : "+" + reward + " points";
+                cue.textContent = card.taskId === "main" ? "Main task selected" : card.taskId === "movie" ? "Movie task selected" : "+" + reward + " pts.";
                 cue.className = "cs-cue cs-cue-visible " + (reward ? "cs-cue-points" : "");
             }
             decision = {
@@ -913,30 +1028,29 @@
             clearElement(cards); clearElement(cue); cue.className = "cs-cue"; counters();
             if (showMovieRule !== movieRuleVisible) {
                 movieRuleVisible = showMovieRule;
-                renderRulesPanel(rulesPanel, bank.profile, movieRuleVisible);
+                renderRulesPanel(rulesPanel, bank.profile, environment, movieRuleVisible);
             }
             cards.className = "cs-card-row cs-card-row-new";
             shell.setAttribute("data-card-count", round.cards.length);
             state.roundStartedAt = nowMonotonic();
             round.cards.forEach(function (card) {
                 var color = bank.profile.colors[environment.colorMap[card.taskId]];
-                var progress = taskProgressText(bank.profile, state.task, round, card);
+                var display = cardDisplayText(bank.profile, state.task, round, card, config);
                 var heading;
+                var payoffSlot;
                 var button = element("button", "cs-card"); button.type = "button";
                 button.setAttribute("data-task-id", card.taskId);
                 button.setAttribute("data-position", card.position);
                 button.setAttribute("data-round", round.number);
-                button.setAttribute("data-type-key", taskTypeKey(card.taskId));
-                button.setAttribute("aria-label", color.label + " card, " + TASK_LABELS[card.taskId] + (progress ? ". " + progress : ""));
+                button.setAttribute("aria-label", color.label + " card, " + TASK_LABELS[card.taskId] + (display.combined ? ". " + display.combined : ""));
                 button.style.setProperty("--card-color", color.hex);
                 heading = element("span", "cs-card-heading");
                 appendText(heading, "span", color.label, "cs-card-color-label");
-                appendText(heading, "span", taskTypeKey(card.taskId), "cs-card-type-key");
                 button.appendChild(heading);
-                if (progress) { appendText(button, "span", progress, "cs-points"); }
-                if (card.taskId === "infinite_scroll" && round.number === round.infiniteRunStart) {
-                    appendText(button, "span", "New run: exactly " + (round.infiniteRunEnd - round.infiniteRunStart + 1) + " rounds", "cs-multiplier");
-                }
+                payoffSlot = element("span", "cs-card-payoff-slot");
+                appendText(payoffSlot, "span", display.payoff, "cs-card-payoff");
+                button.appendChild(payoffSlot);
+                appendText(button, "span", display.footer, "cs-card-footer");
                 button.addEventListener("pointerdown", function () { markActivity("card_pointerdown"); });
                 button.addEventListener("click", function () { choose(round, card, button); });
                 cards.appendChild(button);
@@ -949,12 +1063,15 @@
             addListener(global, type, function () { markActivity("window_" + type); }, true);
         });
         addListener(global, "focus", function () { markActivity("window_focus"); }, true);
+        addListener(global, "resize", function () { compactGameTopGap(root); }, false);
         var inactivityTimer = global.setInterval(function () {
             refreshInactivityClock();
             if (!state.finished && authority && Date.now() - state.lastActivityAt >= config.inactivitySeconds * 1000) { finish("inactive"); }
         }, 250);
         timers.push(inactivityTimer);
         renderRound();
+        timers.push(global.setTimeout(function () { compactGameTopGap(root); }, 0));
+        timers.push(global.setTimeout(function () { compactGameTopGap(root); }, 250));
         var controller = {
             state: state, finish: finish,
             cleanup: function () {
@@ -962,6 +1079,7 @@
                 listeners.forEach(function (item) { item[0].removeEventListener(item[1], item[2], item[3]); }); listeners = [];
                 if (!state.finished) { clearOwner(token); }
                 if (global.document && global.document.body) { global.document.body.classList.remove("csq-game-active"); }
+                if (root && root.style) { root.style.removeProperty("margin-top"); }
                 root.__csqController = null;
             }
         };
@@ -1051,9 +1169,13 @@
             profileValues: profileValues, readConfig: readConfig, validateConfig: validateConfig,
             decodeEnvironment: decodeEnvironment, selectEnvironment: selectEnvironment,
             initialTaskState: initialTaskState, applyChoice: applyChoice,
-            taskProgressText: taskProgressText, taskTypeKey: taskTypeKey,
+            currentCardPayoff: currentCardPayoff, cardPayoffText: cardPayoffText,
+            cardFooterText: cardFooterText, cardDisplayText: cardDisplayText,
+            taskProgressText: taskProgressText,
             awardedTotalPoints: awardedTotalPoints,
-            rulesForProfile: rulesForProfile,
+            sharedAccumulationNote: SHARED_ACCUMULATION_NOTE,
+            ruleGroupsForEnvironment: ruleGroupsForEnvironment,
+            compactGameTopGap: compactGameTopGap,
             utf8ByteLength: utf8ByteLength,
             csvValue: csvValue, decisionToCsvRow: decisionToCsvRow,
             packRecords: packRecords, packDecisionRows: packDecisionRows,
