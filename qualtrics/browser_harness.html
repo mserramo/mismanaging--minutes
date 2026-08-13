@@ -11,13 +11,28 @@
         .harness-shell { box-sizing: border-box; width: calc(100vw - 24px); margin: 8px 12px; }
         .simulate-stanford .harness-toolbar { display: none; }
         .simulate-stanford .harness-shell { margin-top: 72px; }
-        .harness-toolbar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+        .harness-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 8px; }
         .harness-toolbar button, #NextButton, .csq-continue-button {
             min-height: 42px; padding: 9px 17px; border: 0; border-radius: 6px;
             background: #0f4c81; color: #fff; cursor: pointer; font: inherit; font-weight: 700;
         }
+        .harness-toolbar label { display: inline-flex; align-items: center; gap: 7px; min-height: 42px; padding: 0 10px; border: 1px solid #cbd5e1; border-radius: 6px; background: #fff; font-weight: 700; }
+        .harness-toolbar select, .harness-toolbar input { min-height: 32px; border: 1px solid #94a3b8; border-radius: 4px; background: #fff; font: inherit; }
+        .harness-toolbar input { box-sizing: border-box; width: 76px; padding: 4px 7px; }
         .harness-page { padding: 24px; border: 1px solid #cbd5e1; border-radius: 8px; background: #fff; }
         .harness-status { margin: 12px 0 0; color: #475569; font-size: 14px; }
+        .harness-diagnostics { margin-top: 10px; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 8px; background: #fff; }
+        .harness-diagnostics summary { cursor: pointer; font-weight: 800; }
+        .harness-diagnostic-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; margin: 10px 0; }
+        .harness-diagnostic-actions button { min-height: 34px; padding: 6px 10px; border: 1px solid #0f4c81; border-radius: 5px; background: #fff; color: #0f4c81; cursor: pointer; font: inherit; font-size: 13px; font-weight: 750; }
+        .harness-diagnostic-actions input { box-sizing: border-box; width: 70px; min-height: 34px; padding: 5px 7px; }
+        .harness-assertions { display: grid; grid-template-columns: repeat(auto-fit, minmax(265px, 1fr)); gap: 6px; margin: 0; padding: 0; list-style: none; font-size: 13px; }
+        .harness-assertion { padding: 6px 8px; border-left: 4px solid #64748b; background: #f8fafc; }
+        .harness-assertion-pass { border-color: #15803d; background: #f0fdf4; }
+        .harness-assertion-fail { border-color: #b91c1c; background: #fef2f2; }
+        .harness-assertion-skip { border-color: #a16207; background: #fffbeb; }
+        .harness-assertion strong { display: block; }
+        .harness-assertion span { color: #475569; }
         #csq-game-root { max-width: 100%; overflow-x: auto; padding: 2px 2px 10px; }
         .csq-game-layout { display: flex; align-items: flex-start; justify-content: flex-start; gap: 16px; width: max-content; min-width: 100%; }
         .cs-task { box-sizing: border-box; flex: 0 0 auto; width: max-content; max-width: none; margin: 0; }
@@ -54,6 +69,41 @@
         .csq-rule-color { color: var(--rule-color); font-size: 14.5px; font-weight: 850; }
         .csq-rule-task-badge { padding: 1px 6px; border-radius: 999px; background: #e5e7eb; color: #374151; font-size: 11.5px; font-weight: 800; line-height: 1.25; }
         .csq-rule-payoff { margin: 3px 0 0; color: #1f2937; font-size: 13.25px; line-height: 1.3; }
+        /* Kept in lockstep with the generated QSF so the local harness is layout-faithful. */
+        .csq-all-at-once { --csq-choice-scale: 1; --csq-toolbar-height: 96px; box-sizing: border-box; width: 100%; min-width: 0; }
+        .csq-all-toolbar { position: fixed !important; top: 8px; left: 8px; z-index: 10000; box-sizing: border-box; width: calc(100vw - 16px); display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 18px; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; background: rgba(255, 255, 255, 0.97); box-shadow: 0 2px 8px rgba(15, 23, 42, 0.09); font-size: 13px; line-height: 1.25; }
+        .csq-all-toolbar-spacer { height: var(--csq-toolbar-height); }
+        .csq-all-toolbar-primary, .csq-all-toolbar-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+        .csq-all-toolbar-primary { font-size: 14px; }
+        .csq-all-toolbar-controls { margin-left: auto; }
+        .csq-all-layout { display: block; width: 100%; min-width: 0; margin-top: 10px; }
+        .csq-all-scroll { box-sizing: border-box; width: 100%; min-width: 0; height: calc(100vh - var(--csq-toolbar-height) - 44px); min-height: 420px; overflow: auto; overscroll-behavior: contain; scrollbar-gutter: stable; border: 1px solid #cbd5e1; border-radius: 8px; background: #f8fafc; }
+        .csq-all-list { box-sizing: border-box; display: flex; width: 100%; min-width: 100%; flex-direction: column; gap: 10px; padding: 8px; }
+        .csq-all-round { box-sizing: border-box; width: max-content; min-width: 100%; padding: 10px 8px 12px; border: 1px solid #d8e0ea; border-radius: 7px; background: #fff; scroll-margin: 12px; }
+        .csq-all-round-scale { box-sizing: border-box; width: max-content; transform: scale(var(--csq-choice-scale)); transform-origin: top left; }
+        .csq-all-round-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 24px; margin: 0 0 8px; color: #334155; font-size: 14px; font-weight: 750; }
+        .csq-all-card-row { display: flex !important; flex-flow: row nowrap !important; align-items: stretch; gap: 8px; width: max-content; min-width: max-content; }
+        .csq-all-round-input { box-sizing: border-box; width: 58px; min-height: 34px; margin: 0; padding: 4px 6px; border: 1px solid #94a3b8; border-radius: 5px; background: #fff; color: #0f172a; font: inherit; font-variant-numeric: tabular-nums; }
+        .csq-all-at-once .cs-card { flex-basis: 108px; width: 108px; min-width: 108px; min-height: 190px; }
+        .csq-all-helper { margin: 0; color: #475569; font-size: 13px; line-height: 1.35; }
+        .csq-all-done { padding: 7px 10px; border: 1px solid #86efac; border-radius: 6px; background: #f0fdf4; color: #166534; font-size: 13px; font-weight: 750; }
+        .csq-all-nav-button { min-height: 34px; padding: 6px 12px; border: 0; border-radius: 6px; background: #0f4c81; color: #fff; cursor: pointer; font-family: inherit; font-size: 13px; line-height: 1.2; font-weight: 750; }
+        .csq-all-nav-button:hover, .csq-all-nav-button:focus { background: #0b365b; }
+        .csq-all-nav-button:disabled { background: #94a3b8; cursor: not-allowed; }
+        .csq-all-zoom { display: inline-flex; align-items: center; gap: 8px; color: #334155; font-size: 13px; font-weight: 700; white-space: nowrap; }
+        .csq-all-zoom input[type="range"] { width: 120px; }
+        .csq-all-zoom-value { display: inline-block; min-width: 42px; color: #0f172a; font-variant-numeric: tabular-nums; text-align: right; }
+        .csq-all-wide-blocker { box-sizing: border-box; max-width: 760px; margin: 16px auto; padding: 18px 20px; border: 2px solid #b45309; border-radius: 8px; background: #fffbeb; color: #78350f; font-weight: 700; line-height: 1.45; }
+        .csq-all-wide-blocker[hidden] { display: none !important; }
+        .csq-key-toggle { border: 1px solid #94a3b8; background: #fff; color: #334155; }
+        .csq-key-toggle:hover, .csq-key-toggle:focus { background: #f1f5f9; color: #0f172a; }
+        .csq-all-at-once > .csq-rules-panel { position: fixed !important; top: 120px; right: 8px; bottom: 8px; left: auto; z-index: 9999; flex: none; width: min(400px, calc(100vw - 24px)); max-height: none; padding-top: 38px; overflow: auto; box-shadow: 0 10px 28px rgba(15, 23, 42, 0.2); }
+        .csq-all-at-once > .csq-rules-panel[hidden] { display: none !important; }
+        .csq-key-close { position: sticky; top: 0; z-index: 2; float: right; min-height: 26px; padding: 3px 8px; border: 1px solid #94a3b8; border-radius: 5px; background: #fff; color: #334155; cursor: pointer; font-family: inherit; font-size: 12px; font-weight: 750; }
+        @media (min-width: 1280px) and (max-width: 1369px) {
+            .csq-all-card-row { gap: 2px; }
+            .csq-all-at-once .cs-card { flex-basis: 93px; width: 93px; min-width: 93px; }
+        }
         @media (max-width: 680px) { .csq-field { grid-template-columns: 1fr; } }
     </style>
 </head>
@@ -65,21 +115,39 @@
         <button type="button" id="show-intro">Intro</button>
         <button type="button" id="show-game">Game</button>
         <button type="button" id="show-outcome">Outcome</button>
+        <label for="harness-treatment">Treatment
+            <select id="harness-treatment">
+                <option value="sequential">Sequential</option>
+                <option value="all_at_once">All at once</option>
+            </select>
+        </label>
+        <button type="button" id="open-reference-viewport" title="Open a fresh all-at-once harness window at the reference size">Open 1370×768</button>
     </div>
     <section class="harness-page">
         <div id="csq-setup-root" class="cs-setup"></div>
-        <div id="csq-intro-root" class="cs-shell" hidden>
-            <h2>Certified card-choice task</h2>
-            <p>Make 100 choices. Every round has the main card and four side-task cards. The final 20 rounds add a movie card.</p>
-            <p>Complete 60 main choices and all 20 movie choices to earn both threshold bonuses.</p>
-            <p>Simple cards are relatively common; Trio and Cumulative cards are moderately common; Fives and Infinite-scroll cards are less common.</p>
-            <p>The visible inactivity clock resets with activity and defaults to two minutes.</p>
-        </div>
+        <div id="csq-instructions-root" class="cs-shell" hidden></div>
         <div id="csq-game-root" hidden></div>
         <div id="csq-outcome-root" hidden></div>
         <button type="button" id="NextButton">Next</button>
         <p id="harness-status" class="harness-status" aria-live="polite"></p>
     </section>
+    <details class="harness-diagnostics" id="harness-diagnostics">
+        <summary>All-at-once development checks</summary>
+        <div class="harness-diagnostic-actions">
+            <button type="button" id="run-all-at-once-checks">Run DOM/layout checks</button>
+            <button type="button" id="run-radio-check">Test round 1 replacement</button>
+            <button type="button" id="answer-all-rounds">Answer every unfinished round</button>
+            <button type="button" id="set-zoom-100">Zoom 100%</button>
+            <button type="button" id="set-zoom-75">Zoom 75%</button>
+            <button type="button" id="go-next-unanswered">Next unanswered</button>
+            <label for="harness-round-jump">Round</label>
+            <input type="number" id="harness-round-jump" min="1" max="100" value="81">
+            <button type="button" id="jump-to-round">Jump</button>
+            <button type="button" id="open-narrow-viewport">Open 1279px blocker test</button>
+            <button type="button" id="run-inactivity-test">Run 2-second partial-inactivity test</button>
+        </div>
+        <ul id="harness-assertions" class="harness-assertions" aria-live="polite"></ul>
+    </details>
 </main>
 <script>
 (function () {
@@ -90,7 +158,14 @@
         document.body.classList.add("simulate-stanford");
         document.getElementById("HeaderContainer").hidden = false;
     }
+    if (query.get("autoGame") === "1") {
+        try { window.sessionStorage.removeItem("csq-predrawn-active-instance-v2"); } catch (storageError) { /* unavailable */ }
+        try { window.top.__CSQ_PREDRAWN_ACTIVE_INSTANCE_V2__ = null; } catch (frameError) { /* cross-origin */ }
+    }
     var defaults = {
+        cs_treatment_mode: query.get("treatment") === "all_at_once" || query.get("treatment") === "all-at-once" ? "all_at_once" : "sequential",
+        cs_all_at_once_default_zoom: "100",
+        cs_all_at_once_min_zoom: "75",
         cs_show_round: "1",
         cs_show_main_cards: "0",
         cs_show_movie_cards: "0",
@@ -114,12 +189,15 @@
     var unloadCallbacks = [];
     var nextButton = document.getElementById("NextButton");
     var status = document.getElementById("harness-status");
+    var treatmentSelect = document.getElementById("harness-treatment");
+    var assertionList = document.getElementById("harness-assertions");
     var roots = {
         setup: document.getElementById("csq-setup-root"),
-        intro: document.getElementById("csq-intro-root"),
+        intro: document.getElementById("csq-instructions-root"),
         game: document.getElementById("csq-game-root"),
         outcome: document.getElementById("csq-outcome-root")
     };
+    treatmentSelect.value = embeddedData.cs_treatment_mode;
     var duplicateGameRoot = null;
     if (query.get("duplicateGameRoot") === "1") {
         duplicateGameRoot = document.createElement("div");
@@ -175,8 +253,322 @@
         nextButton.style.display = page === "intro" ? "" : "none";
         status.textContent = "Harness page: " + page;
         if (page === "setup") { window.CSQ.initSetup(questionFor(page)); }
+        if (page === "intro") {
+            if (typeof window.CSQ.initInstructions === "function") {
+                window.CSQ.initInstructions(questionFor(page));
+            } else {
+                roots.intro.innerHTML = "<h2>Certified card-choice task</h2>" +
+                    "<p>Make 100 choices. Every round has the main card and four side-task cards. The final 20 rounds add a movie card.</p>" +
+                    "<p>Complete 60 main choices and all 20 movie choices to earn both threshold bonuses.</p>" +
+                    "<p>The visible inactivity clock resets with activity and defaults to two minutes.</p>";
+            }
+        }
         if (page === "game") { window.CSQ.initGame(questionFor(page)); }
         if (page === "outcome") { window.CSQ.initOutcome(questionFor(page)); }
+    }
+
+    function queryFirst(root, selectors) {
+        var index;
+        var found;
+        for (index = 0; index < selectors.length; index += 1) {
+            found = root.querySelector(selectors[index]);
+            if (found) { return found; }
+        }
+        return null;
+    }
+
+    function roundCards(row) {
+        return Array.prototype.slice.call(row.querySelectorAll("button.cs-card, button[data-task-id]"));
+    }
+
+    function roundRows() {
+        var selectors = [
+            "[data-csq-round]", ".csq-all-at-once-round", ".csq-all-round",
+            ".csq-round-row", ".csq-choice-set", "[data-round-index]", "[role='radiogroup']"
+        ];
+        var candidates = [];
+        var seen = [];
+        var selectorIndex;
+        for (selectorIndex = 0; selectorIndex < selectors.length; selectorIndex += 1) {
+            candidates = Array.prototype.filter.call(roots.game.querySelectorAll(selectors[selectorIndex]), function (node) {
+                return roundCards(node).length >= 5;
+            });
+            if (candidates.length) { return candidates; }
+        }
+        if (!candidates.length) {
+            Array.prototype.forEach.call(roots.game.querySelectorAll("button.cs-card[data-round], button[data-task-id][data-round]"), function (card) {
+                var row = card.closest(".cs-card-row") || card.parentElement;
+                if (row && seen.indexOf(row) < 0 && roundCards(row).length >= 5) {
+                    seen.push(row); candidates.push(row);
+                }
+            });
+        }
+        return candidates;
+    }
+
+    function selectedCards(row) {
+        return roundCards(row).filter(function (card) {
+            return card.classList.contains("cs-card-selected") ||
+                card.getAttribute("aria-checked") === "true" ||
+                card.getAttribute("aria-pressed") === "true" ||
+                card.getAttribute("data-selected") === "true" ||
+                card.getAttribute("data-selected") === "1";
+        });
+    }
+
+    function gameControl(kind) {
+        var selectors = {
+            toolbar: ["[data-csq-toolbar]", ".csq-all-at-once-toolbar", ".csq-all-toolbar", ".csq-fixed-toolbar"],
+            key: ["[data-csq-payoff-key]", ".csq-rules-panel"],
+            keyToggle: ["button[data-csq='all-key-toggle']", "button.csq-key-toggle"],
+            scroll: ["[data-csq-round-scroll]", ".csq-all-at-once-scroll", ".csq-all-scroll", ".csq-round-scroll"],
+            zoom: ["input[data-csq='all-zoom']", "input[data-csq-zoom]", ".csq-all-zoom input[type='range']", "input.csq-all-at-once-zoom", "input.csq-all-zoom", "#csq-all-zoom"],
+            done: ["button[data-csq='all-done']", "button[data-csq-done]", "button.csq-all-at-once-done", "button.csq-all-done", "#csq-done"],
+            next: ["button[data-csq='all-next-unanswered']", "button[data-csq-next-unanswered]", "button.csq-next-unanswered", "#csq-next-unanswered"],
+            jumpInput: ["input[data-csq='all-round-jump-input']", "input[data-csq-round-jump]", "input.csq-round-jump", "#csq-round-jump"],
+            jumpButton: ["button[data-csq='all-round-jump-button']", "button[data-csq-round-jump-button]", "button.csq-round-jump-button", "#csq-round-jump-button"],
+            blocker: ["[data-csq-width-blocker]", ".csq-all-wide-blocker", ".csq-width-blocker", ".csq-all-narrow-blocker"]
+        };
+        return queryFirst(roots.game, selectors[kind]);
+    }
+
+    function visible(node) {
+        var style;
+        var rect;
+        if (!node || node.hidden || node.getAttribute("aria-hidden") === "true") { return false; }
+        style = window.getComputedStyle(node); rect = node.getBoundingClientRect();
+        return style.display !== "none" && style.visibility !== "hidden" && rect.width > 0 && rect.height > 0;
+    }
+
+    function fixedWithinView(node) {
+        var position = node ? window.getComputedStyle(node).position : "";
+        return position === "sticky" || position === "fixed";
+    }
+
+    function assertion(name, pass, detail, skipped) {
+        return {name: name, pass: !!pass, detail: detail || "", skipped: !!skipped};
+    }
+
+    function renderAssertions(results, replace) {
+        if (replace) { assertionList.innerHTML = ""; }
+        results.forEach(function (result) {
+            var item = document.createElement("li");
+            var title = document.createElement("strong");
+            var detail = document.createElement("span");
+            item.className = "harness-assertion " + (result.skipped ? "harness-assertion-skip" : result.pass ? "harness-assertion-pass" : "harness-assertion-fail");
+            title.textContent = (result.skipped ? "SKIP · " : result.pass ? "PASS · " : "FAIL · ") + result.name;
+            detail.textContent = result.detail;
+            item.appendChild(title); item.appendChild(detail); assertionList.appendChild(item);
+        });
+        document.getElementById("harness-diagnostics").open = true;
+        return results;
+    }
+
+    function runAllAtOnceChecks() {
+        var rows = roundRows();
+        var toolbar = gameControl("toolbar");
+        var key = gameControl("key");
+        var keyToggle = gameControl("keyToggle");
+        var scroll = gameControl("scroll");
+        var zoom = gameControl("zoom");
+        var done = gameControl("done");
+        var next = gameControl("next");
+        var jumpInput = gameControl("jumpInput");
+        var blocker = gameControl("blocker");
+        var sampleCard;
+        var countPattern = /Viewing rounds?\s+\d+\s*[–-]\s*\d+\s+of\s+100/i;
+        var cardCounts = rows.map(function (row) { return roundCards(row).length; });
+        var noWrap = rows.length === 100 && rows.every(function (row) {
+            var cards = roundCards(row);
+            var firstTop = cards.length ? cards[0].getBoundingClientRect().top : 0;
+            return cards.every(function (card) { return Math.abs(card.getBoundingClientRect().top - firstTop) <= 2; });
+        });
+        var answered = rows.reduce(function (sum, row) { return sum + (selectedCards(row).length === 1 ? 1 : 0); }, 0);
+        sampleCard = rows.length && roundCards(rows[0]).length ? roundCards(rows[0])[0] : null;
+        var viewing = roots.game.querySelector("[data-csq='all-viewing']");
+        var answeredCounter = roots.game.querySelector("[data-csq='all-answered']");
+        var pointsCounter = roots.game.querySelector("[data-csq='all-points']");
+        var inactivityCounter = roots.game.querySelector("[data-csq='all-inactivity']");
+        var result = [
+            assertion("100 rendered rounds", rows.length === 100, rows.length + " round containers found"),
+            assertion("Five/six cards per round", cardCounts.length === 100 && cardCounts.slice(0, 80).every(function (count) { return count === 5; }) && cardCounts.slice(80).every(function (count) { return count === 6; }), cardCounts.length ? "counts " + cardCounts.slice(0, 3).join("/") + " … " + cardCounts.slice(-3).join("/") : "no round cards found"),
+            assertion("Cards stay on one row", noWrap, noWrap ? "all card tops align" : "at least one choice set wraps or is missing"),
+            assertion("Viewport-fixed control toolbar", !!toolbar && window.getComputedStyle(toolbar).position === "fixed", toolbar ? "position: " + window.getComputedStyle(toolbar).position : "toolbar selector not found"),
+            assertion("Payoff-key control", !!keyToggle && keyToggle.getAttribute("aria-controls") === (key && key.id), keyToggle ? "expanded=" + keyToggle.getAttribute("aria-expanded") : "toggle not found"),
+            assertion("Floating payoff-key drawer", !!key && (!visible(key) || window.getComputedStyle(key).position === "fixed"), key ? (visible(key) ? "open and fixed" : "collapsed by default") : "payoff key not found"),
+            assertion("Decision list uses full width", !!scroll && scroll.clientWidth >= roots.game.clientWidth - 24, scroll ? scroll.clientWidth + "px list / " + roots.game.clientWidth + "px root" : "scroll container not found"),
+            assertion("Visible-range counter", !!viewing ? countPattern.test(viewing.textContent) : !!toolbar && countPattern.test(toolbar.textContent), viewing ? viewing.textContent.trim() : toolbar ? toolbar.textContent.replace(/\s+/g, " ").trim().slice(0, 120) : "toolbar not found"),
+            assertion("Answered counter", !!answeredCounter && /Answered\s+\d+\s+of\s+100/i.test(answeredCounter.textContent), answeredCounter ? answeredCounter.textContent.trim() : "counter not found"),
+            assertion("Points counter", !!pointsCounter && /Points\s*:\s*\d+/i.test(pointsCounter.textContent), pointsCounter ? pointsCounter.textContent.trim() : "counter not found"),
+            assertion("Inactivity counter", !!inactivityCounter && /Inactive in\s+\d+:\d\d/i.test(inactivityCounter.textContent), inactivityCounter ? inactivityCounter.textContent.trim() : "counter not found"),
+            assertion("Scrollable 100-round list", !!scroll && scroll.scrollHeight > scroll.clientHeight, scroll ? scroll.clientHeight + "px visible / " + scroll.scrollHeight + "px total" : "scroll container not found"),
+            assertion("Exactly one or zero choices per round", rows.length === 100 && rows.every(function (row) { return selectedCards(row).length <= 1; }), answered + " answered"),
+            assertion("Done gating", !!done && (answered === 100 ? !done.disabled : done.disabled), done ? "answered " + answered + "; disabled=" + done.disabled : "Done button not found"),
+            assertion("Zoom range includes 75–100", !!zoom && Number(zoom.min) <= 75 && Number(zoom.max) >= 100, zoom ? "min=" + zoom.min + ", max=" + zoom.max + ", value=" + zoom.value : "zoom control not found"),
+            assertion("Next unanswered control", !!next, next ? "control found" : "control not found"),
+            assertion("Round jump control", !!jumpInput, jumpInput ? "current value " + jumpInput.value : "input not found"),
+            assertion("Narrow-width blocker state", !!blocker && (window.innerWidth < 1280 ? visible(blocker) : !visible(blocker)), blocker ? (visible(blocker) ? "visible at " : "hidden at ") + window.innerWidth + "px" : "blocker element not found"),
+            assertion("Narrow-width interaction lock", window.innerWidth >= 1280 || !!sampleCard && (sampleCard.disabled || sampleCard.getAttribute("aria-disabled") === "true"), window.innerWidth >= 1280 ? "not applicable at this width" : sampleCard ? "disabled=" + sampleCard.disabled + ", aria-disabled=" + sampleCard.getAttribute("aria-disabled") : "no card found", window.innerWidth >= 1280),
+            assertion("No horizontal choice scrolling", window.innerWidth < 1280 || !!scroll && scroll.scrollWidth <= scroll.clientWidth + 2, scroll ? scroll.scrollWidth + "px content / " + scroll.clientWidth + "px viewport" : "scroll container not found", window.innerWidth < 1280),
+            assertion("No page-level horizontal scroll", document.documentElement.scrollWidth <= window.innerWidth + 2, document.documentElement.scrollWidth + "px document / " + window.innerWidth + "px viewport")
+        ];
+        status.textContent = "All-at-once checks: " + result.filter(function (item) { return item.pass; }).length + " of " + result.length + " passed.";
+        return renderAssertions(result, true);
+    }
+
+    function afterPaint(callback) {
+        window.requestAnimationFrame(function () { window.requestAnimationFrame(callback); });
+    }
+
+    function runRadioCheck() {
+        var rows = roundRows();
+        var row = rows[0];
+        var cards = row ? roundCards(row) : [];
+        var scroll = gameControl("scroll");
+        var beforeScroll = scroll ? scroll.scrollTop : window.scrollY;
+        if (cards.length < 2) {
+            renderAssertions([assertion("Radio-like replacement", false, "Round 1 with at least two cards was not found")], false);
+            return;
+        }
+        cards[0].click();
+        afterPaint(function () {
+            cards[1].click();
+            afterPaint(function () {
+                var once = selectedCards(row);
+                var replacementPass = once.length === 1 && once[0] === cards[1];
+                var afterScroll = scroll ? scroll.scrollTop : window.scrollY;
+                cards[1].click();
+                afterPaint(function () {
+                    var twice = selectedCards(row);
+                    renderAssertions([
+                        assertion("Radio-like replacement", replacementPass, replacementPass ? "second card replaced the first" : once.length + " selected after replacement"),
+                        assertion("Selected card cannot deselect itself", twice.length === 1 && twice[0] === cards[1], twice.length + " selected after clicking it again"),
+                        assertion("Replacement preserves scroll", Math.abs(afterScroll - beforeScroll) <= 2, beforeScroll + "px before / " + afterScroll + "px after")
+                    ], false);
+                });
+            });
+        });
+    }
+
+    function answerAllRounds() {
+        var rows = roundRows();
+        var index = 0;
+        function answerBatch() {
+            var stop = Math.min(index + 10, rows.length);
+            for (; index < stop; index += 1) {
+                if (!selectedCards(rows[index]).length) {
+                    var cards = roundCards(rows[index]);
+                    if (cards.length && !cards[0].disabled) {
+                        cards[0].click();
+                        if (!selectedCards(rows[index]).length) {
+                            var radio = cards[0].querySelector("input[type='radio']");
+                            if (radio && !radio.disabled) { radio.click(); }
+                        }
+                    }
+                }
+            }
+            if (index < rows.length) { window.setTimeout(answerBatch, 0); }
+            else {
+                afterPaint(function () {
+                    var done = gameControl("done");
+                    var answered = roundRows().filter(function (row) { return selectedCards(row).length === 1; }).length;
+                    renderAssertions([
+                        assertion("Answer-all helper completed 100 rounds", answered === 100, answered + " answered"),
+                        assertion("Done enables after all answers", !!done && !done.disabled, done ? "disabled=" + done.disabled : "Done button not found")
+                    ], false);
+                    status.textContent = "Answer-all helper finished. Review choices or select Done in the task toolbar.";
+                });
+            }
+        }
+        answerBatch();
+    }
+
+    function setTaskZoom(value) {
+        var zoom = gameControl("zoom");
+        var scroll = gameControl("scroll");
+        var visibleBefore = roots.game.querySelector("[data-csq='all-viewing']");
+        var startBefore = visibleBefore && visibleBefore.textContent.match(/rounds?\s+(\d+)/i);
+        if (!zoom) {
+            renderAssertions([assertion("Set zoom to " + value + "%", false, "zoom control not found")], false);
+            return;
+        }
+        zoom.value = String(value);
+        zoom.dispatchEvent(new Event("input", {bubbles: true}));
+        zoom.dispatchEvent(new Event("change", {bubbles: true}));
+        afterPaint(function () {
+            var paneRect = scroll ? scroll.getBoundingClientRect() : null;
+            var fullRows = paneRect ? roundRows().filter(function (row) {
+                var rect = row.getBoundingClientRect();
+                return rect.top >= paneRect.top - 1 && rect.bottom <= paneRect.bottom + 1;
+            }).length : 0;
+            var visibleAfter = roots.game.querySelector("[data-csq='all-viewing']");
+            var startAfter = visibleAfter && visibleAfter.textContent.match(/rounds?\s+(\d+)/i);
+            var expectedRows = value === 75 ? fullRows >= 3 && fullRows <= 4 : fullRows >= 2 && fullRows <= 3;
+            renderAssertions([
+                assertion("Set zoom to " + value + "%", Number(zoom.value) === value, "control value is " + zoom.value),
+                assertion(value + "% full-row density", expectedRows, fullRows + " complete rows visible; expected " + (value === 75 ? "3–4" : "2–3")),
+                assertion(value + "% preserves top round", !startBefore || !startAfter || startBefore[1] === startAfter[1], "round " + (startBefore ? startBefore[1] : "?") + " before / " + (startAfter ? startAfter[1] : "?") + " after")
+            ], false);
+        });
+    }
+
+    function clickNextUnanswered() {
+        var button = gameControl("next");
+        if (button) { button.click(); status.textContent = "Clicked the task's Next unanswered control."; }
+        else { renderAssertions([assertion("Next unanswered control", false, "control not found")], false); }
+    }
+
+    function jumpToRound(number) {
+        var input = gameControl("jumpInput");
+        var button = gameControl("jumpButton");
+        if (!input) { renderAssertions([assertion("Round jump", false, "task round-jump input not found")], false); return; }
+        input.value = String(number); input.dispatchEvent(new Event("input", {bubbles: true})); input.dispatchEvent(new Event("change", {bubbles: true}));
+        if (button) { button.click(); }
+        else { input.dispatchEvent(new KeyboardEvent("keydown", {key: "Enter", bubbles: true})); }
+        status.textContent = "Requested task round " + number + ".";
+    }
+
+    function freshHarnessUrl(width, inactivitySeconds) {
+        var url = new URL(window.location.href);
+        url.search = "";
+        url.searchParams.set("autoGame", "1");
+        url.searchParams.set("fast", "1");
+        url.searchParams.set("treatment", "all_at_once");
+        url.searchParams.set("stanford", "1");
+        url.searchParams.set("checks", "1");
+        if (inactivitySeconds) { url.searchParams.set("inactivitySeconds", String(inactivitySeconds)); }
+        return {url: url.toString(), features: "popup=yes,width=" + width + ",height=768,resizable=yes,scrollbars=yes"};
+    }
+
+    function openViewport(width) {
+        var target = freshHarnessUrl(width);
+        var popup = window.open(target.url, "csq_harness_" + width + "_" + Date.now(), target.features);
+        if (!popup) { status.textContent = "The test window was blocked by the browser. Allow popups and try again."; }
+    }
+
+    function runInactivityTest() {
+        var prior = embeddedData.cs_inactivity_seconds;
+        if (window.innerWidth < 1280) {
+            renderAssertions([assertion("Partial inactivity finish", false, "widen this harness to at least 1280px before running the test", true)], false);
+            return;
+        }
+        embeddedData.cs_treatment_mode = "all_at_once";
+        embeddedData.cs_inactivity_seconds = "2";
+        embeddedData.cs_task_status = "";
+        embeddedData.cs_decision_count = "";
+        treatmentSelect.value = "all_at_once";
+        showPage("game");
+        window.setTimeout(function () {
+            var rows = roundRows();
+            var cards = rows.length ? roundCards(rows[0]) : [];
+            if (cards.length) { cards[0].click(); }
+            status.textContent = "Waiting for the 2-second inactivity cutoff after one provisional choice…";
+        }, 100);
+        window.setTimeout(function () {
+            var pass = embeddedData.cs_task_status === "inactive" && Number(embeddedData.cs_decision_count) === 1;
+            renderAssertions([assertion("Partial inactivity finish", pass, "status=" + (embeddedData.cs_task_status || "blank") + ", rows=" + (embeddedData.cs_decision_count || "blank"))], false);
+            embeddedData.cs_inactivity_seconds = prior;
+        }, 3100);
     }
 
     function loadEngine() {
@@ -218,6 +610,7 @@
                         embeddedData.cs_inactivity_seconds = query.get("inactivitySeconds");
                     }
                     showPage("game");
+                    if (query.get("checks") === "1") { window.setTimeout(runAllAtOnceChecks, 250); }
                 } else {
                     showPage("setup");
                 }
@@ -236,6 +629,21 @@
     document.getElementById("show-intro").addEventListener("click", function () { showPage("intro"); });
     document.getElementById("show-game").addEventListener("click", function () { showPage("game"); });
     document.getElementById("show-outcome").addEventListener("click", function () { showPage("outcome"); });
+    treatmentSelect.addEventListener("change", function () {
+        embeddedData.cs_treatment_mode = treatmentSelect.value;
+        if (window.CSQ && window.CSQ.__test) { window.CSQ.__test.setEmbeddedData("cs_treatment_mode", treatmentSelect.value); }
+        status.textContent = "Treatment set to " + (treatmentSelect.value === "all_at_once" ? "all at once" : "sequential") + ". Open Setup, Intro, or Game to inspect that page.";
+    });
+    document.getElementById("open-reference-viewport").addEventListener("click", function () { openViewport(1370); });
+    document.getElementById("open-narrow-viewport").addEventListener("click", function () { openViewport(1279); });
+    document.getElementById("run-all-at-once-checks").addEventListener("click", runAllAtOnceChecks);
+    document.getElementById("run-radio-check").addEventListener("click", runRadioCheck);
+    document.getElementById("answer-all-rounds").addEventListener("click", answerAllRounds);
+    document.getElementById("set-zoom-100").addEventListener("click", function () { setTaskZoom(100); });
+    document.getElementById("set-zoom-75").addEventListener("click", function () { setTaskZoom(75); });
+    document.getElementById("go-next-unanswered").addEventListener("click", clickNextUnanswered);
+    document.getElementById("jump-to-round").addEventListener("click", function () { jumpToRound(Number(document.getElementById("harness-round-jump").value)); });
+    document.getElementById("run-inactivity-test").addEventListener("click", runInactivityTest);
 
     window.harness = {
         ready: null,
@@ -243,6 +651,7 @@
         get: function (name) { return embeddedData[name] || ""; },
         set: function (name, value) {
             embeddedData[name] = String(value == null ? "" : value);
+            if (name === "cs_treatment_mode") { treatmentSelect.value = embeddedData[name]; }
             if (window.CSQ) { window.CSQ.__test.setEmbeddedData(name, embeddedData[name]); }
         },
         setMany: function (values) {
@@ -253,7 +662,18 @@
         showIntro: function () { showPage("intro"); },
         showGame: function (values) { if (values) { this.setMany(values); } showPage("game"); },
         showOutcome: function () { showPage("outcome"); },
-        activePage: function () { return activePage; }
+        activePage: function () { return activePage; },
+        setTreatment: function (mode) { this.set("cs_treatment_mode", mode); },
+        roundRows: roundRows,
+        controls: gameControl,
+        runAllAtOnceChecks: runAllAtOnceChecks,
+        runRadioCheck: runRadioCheck,
+        answerAllRounds: answerAllRounds,
+        setZoom: setTaskZoom,
+        nextUnanswered: clickNextUnanswered,
+        jumpToRound: jumpToRound,
+        runInactivityTest: runInactivityTest,
+        openViewport: openViewport
     };
     window.harness.ready = loadEngine().catch(function (error) {
         status.textContent = error.message;

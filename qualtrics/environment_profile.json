@@ -1,6 +1,6 @@
 {
-  "profile_version": "certified-baseline-v3",
-  "generator_version": "predrawn-cp-sat-v3",
+  "profile_version": "certified-baseline-v4",
+  "generator_version": "predrawn-cp-sat-v4",
   "bank_size": 2048,
   "base_seed": 2026081001,
   "rounds": 100,
@@ -18,7 +18,7 @@
     {"id": "fives", "label": "Fives", "type": "group", "weight": 0.07, "group_size": 5, "group_bonus": 60},
     {"id": "cumulative_a", "label": "Cumulative A", "type": "cumulative", "weight": 0.10, "marginal_base": 2, "marginal_increment": 2},
     {"id": "cumulative_b", "label": "Cumulative B", "type": "cumulative", "weight": 0.10, "marginal_base": 1, "marginal_increment": 3},
-    {"id": "infinite_scroll", "label": "Infinite scroll", "type": "run", "weight": 0.08, "marginal_base": 2, "marginal_increment": 4, "run_length_min": 4, "run_length_max": 7},
+    {"id": "infinite_scroll", "label": "Infinite scroll", "type": "run", "weight": 0.08, "marginal_base": 2, "marginal_increment": 4, "run_length_min": 4, "run_length_max": 7, "streak_resets_on_nonselection": true},
     {"id": "simple_a", "label": "Simple A", "type": "simple", "weight": 0.22, "outcomes": [{"points": 4, "probability": 0.30}, {"points": 8, "probability": 0.50}, {"points": 12, "probability": 0.20}]},
     {"id": "simple_b", "label": "Simple B", "type": "simple", "weight": 0.21, "outcomes": [{"points": 2, "probability": 0.45}, {"points": 10, "probability": 0.40}, {"points": 16, "probability": 0.15}]}
   ],

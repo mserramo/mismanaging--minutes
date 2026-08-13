@@ -6,6 +6,8 @@ data fields named ``cs_log_chunk_001`` through ``cs_log_chunk_064``. This
 utility supports both legacy ``csv-v1`` and certified-environment ``csv-v2``
 rows. It repeats response-level columns and appends the decision columns
 declared in ``cs_log_columns`` without duplicating environment chunk payloads.
+When a response includes ``cs_treatment_mode``, it also emits the normalized
+analysis column ``treatment_mode`` on each reconstructed decision row.
 """
 
 from __future__ import annotations
@@ -27,6 +29,8 @@ COLUMNS_COLUMN = "cs_log_columns"
 FORMAT_COLUMN = "cs_log_format_version"
 OVERFLOW_COLUMN = "cs_log_overflow"
 OVERFLOW_ROWS_COLUMN = "cs_log_overflow_rows"
+SOURCE_TREATMENT_COLUMN = "cs_treatment_mode"
+ANALYSIS_TREATMENT_COLUMN = "treatment_mode"
 SUPPORTED_FORMATS = frozenset({"csv-v1", "csv-v2"})
 DEFAULT_TEST_FORMAT = "csv-v1"
 MAX_CHUNKS = 64
@@ -290,6 +294,15 @@ def decode_records(
         and name not in CHUNK_COLUMNS
         and name not in ENVIRONMENT_CHUNK_COLUMNS
     ]
+    analysis_response_fields = list(response_fields)
+    has_treatment_mode = SOURCE_TREATMENT_COLUMN in header
+    if has_treatment_mode:
+        if ANALYSIS_TREATMENT_COLUMN in response_fields:
+            raise DecodeError(
+                f"{source_name}: export contains both {SOURCE_TREATMENT_COLUMN!r} "
+                f"and reserved analysis column {ANALYSIS_TREATMENT_COLUMN!r}"
+            )
+        analysis_response_fields.append(ANALYSIS_TREATMENT_COLUMN)
     data_start = _data_start_index(records, header_index)
 
     output_rows: list[list[str]] = []
@@ -323,7 +336,9 @@ def decode_records(
             )
         if decision_columns:
             if canonical_decision_columns is None:
-                collisions = sorted(set(response_fields) & set(decision_columns))
+                collisions = sorted(
+                    set(analysis_response_fields) & set(decision_columns)
+                )
                 if collisions:
                     raise DecodeError(
                         f"{context}: decision columns collide with response-level "
@@ -341,11 +356,13 @@ def decode_records(
             continue
 
         response_values = [response[name] for name in response_fields]
+        if has_treatment_mode:
+            response_values.append(response[SOURCE_TREATMENT_COLUMN])
         output_rows.extend(response_values + decision for decision in decisions)
 
     decision_header = canonical_decision_columns or []
     return DecodedExport(
-        output_header=response_fields + decision_header,
+        output_header=analysis_response_fields + decision_header,
         output_rows=output_rows,
         response_count=response_count,
         zero_decision_response_count=zero_decision_response_count,
@@ -381,10 +398,17 @@ def _csv_record(values: Sequence[str]) -> str:
 class _SelfTests(unittest.TestCase):
     maxDiff = None
 
-    def _write_export(self, path: Path, responses: Sequence[Sequence[str]]) -> None:
+    def _write_export(
+        self,
+        path: Path,
+        responses: Sequence[Sequence[str]],
+        *,
+        include_treatment_mode: bool = False,
+    ) -> None:
         header = [
             "ResponseId",
             "cs_task_status",
+            *([SOURCE_TREATMENT_COLUMN] if include_treatment_mode else []),
             COUNT_COLUMN,
             COLUMNS_COLUMN,
             FORMAT_COLUMN,
@@ -414,10 +438,11 @@ class _SelfTests(unittest.TestCase):
         overflow: str = "0",
         overflow_rows: str = "0",
         format_version: str = DEFAULT_TEST_FORMAT,
+        treatment_mode: str | None = None,
     ) -> list[str]:
         encoded_columns = _csv_record(decision_columns).removesuffix("\r\n")
         chunk_values = list(chunks) + [""] * (MAX_CHUNKS - len(chunks))
-        return [
+        response = [
             response_id,
             status,
             str(len(chunks) if count is None else count),
@@ -427,6 +452,9 @@ class _SelfTests(unittest.TestCase):
             overflow_rows,
             *chunk_values,
         ]
+        if treatment_mode is not None:
+            response.insert(2, treatment_mode)
+        return response
 
     def test_multichunk_round_trip_quotes_and_zero_decisions(self) -> None:
         columns = ["screen_number", "chosen_card_id", "note"]
@@ -460,6 +488,80 @@ class _SelfTests(unittest.TestCase):
             self.assertEqual(rows[0]["note"], 'He said "yes"')
             self.assertEqual(rows[1]["chosen_card_id"], 'card "two"')
             self.assertNotIn("R_zero", {row["ResponseId"] for row in rows})
+            self.assertNotIn(ANALYSIS_TREATMENT_COLUMN, decoded.output_header)
+
+    def test_all_at_once_complete_and_partial_logs(self) -> None:
+        columns = [
+            "round", "chosen_task_id", "response_time_ms", "task_elapsed_ms",
+        ]
+        completed = [
+            [
+                str(round_number),
+                "main" if round_number <= 60 else "simple_a",
+                "",
+                str(round_number * 275),
+            ]
+            for round_number in range(1, 101)
+        ]
+        partial = [
+            [str(round_number), "simple_b", "", str(round_number * 410)]
+            for round_number in range(1, 18)
+        ]
+        completed_chunks = [
+            "".join(_csv_record(row) for row in completed[:55]),
+            "".join(_csv_record(row) for row in completed[55:]),
+        ]
+        partial_chunks = ["".join(_csv_record(row) for row in partial)]
+
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            input_path = Path(temporary_directory) / "all-at-once.csv"
+            output_path = Path(temporary_directory) / "decoded.csv"
+            self._write_export(
+                input_path,
+                [
+                    self._response(
+                        "R_complete",
+                        "completed",
+                        columns,
+                        completed_chunks,
+                        format_version="csv-v2",
+                        treatment_mode="all_at_once",
+                    ),
+                    self._response(
+                        "R_partial",
+                        "inactive",
+                        columns,
+                        partial_chunks,
+                        format_version="csv-v2",
+                        treatment_mode="all_at_once",
+                    ),
+                ],
+                include_treatment_mode=True,
+            )
+
+            decoded = decode_file(input_path, output_path)
+
+            self.assertEqual(decoded.response_count, 2)
+            self.assertEqual(len(decoded.output_rows), 117)
+            self.assertIn(SOURCE_TREATMENT_COLUMN, decoded.output_header)
+            self.assertIn(ANALYSIS_TREATMENT_COLUMN, decoded.output_header)
+            with output_path.open("r", encoding="utf-8", newline="") as stream:
+                rows = list(csv.DictReader(stream))
+            complete_rows = [row for row in rows if row["ResponseId"] == "R_complete"]
+            partial_rows = [row for row in rows if row["ResponseId"] == "R_partial"]
+            self.assertEqual(len(complete_rows), 100)
+            self.assertEqual(len(partial_rows), 17)
+            self.assertTrue(
+                all(row["treatment_mode"] == "all_at_once" for row in rows)
+            )
+            self.assertTrue(
+                all(row["cs_treatment_mode"] == "all_at_once" for row in rows)
+            )
+            self.assertTrue(all(row["response_time_ms"] == "" for row in rows))
+            self.assertEqual(complete_rows[0]["task_elapsed_ms"], "275")
+            self.assertEqual(complete_rows[-1]["task_elapsed_ms"], "27500")
+            self.assertEqual(partial_rows[0]["task_elapsed_ms"], "410")
+            self.assertEqual(partial_rows[-1]["task_elapsed_ms"], "6970")
 
     def test_malformed_decision_row_is_response_specific(self) -> None:
         columns = ["screen_number", "chosen_card_id", "note"]
@@ -506,6 +608,7 @@ class _SelfTests(unittest.TestCase):
                 row = next(csv.DictReader(stream))
             self.assertEqual(row["chosen_task_id"], "movie")
             self.assertIn('"task_id":"movie"', row["displayed_choice_set_json"])
+            self.assertNotIn(ANALYSIS_TREATMENT_COLUMN, decoded.output_header)
 
     def test_chunk_count_mismatch_and_overflow_fail(self) -> None:
         columns = ["screen_number"]

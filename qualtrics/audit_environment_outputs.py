@@ -29,6 +29,47 @@ def contribution_delta(before_raw: str, after_raw: str) -> int:
     return int(after.get("contribution", 0)) - int(before.get("contribution", 0))
 
 
+def audit_infinite_streak(
+    sequence_id: int,
+    round_number: int,
+    plan_name: str,
+    chosen_task_id: str,
+    infinite_row: dict[str, str],
+    base: int,
+    increment: int,
+) -> None:
+    before = json.loads(infinite_row[f"{plan_name}_task_state_before"])
+    after = json.loads(infinite_row[f"{plan_name}_task_state_after"])
+    before_streak = int(before.get("run_streak", 0))
+    after_streak = int(after.get("run_streak", 0))
+    contribution_added = int(after.get("contribution", 0)) - int(
+        before.get("contribution", 0)
+    )
+    if chosen_task_id == "infinite_scroll":
+        expected_reward = base + increment * before_streak
+        if after_streak != before_streak + 1:
+            raise ValueError(
+                f"sequence {sequence_id} round {round_number}: {plan_name} "
+                "Infinite Scrolling streak did not increment"
+            )
+        if contribution_added != expected_reward:
+            raise ValueError(
+                f"sequence {sequence_id} round {round_number}: {plan_name} "
+                f"Infinite Scrolling reward {contribution_added} != {expected_reward}"
+            )
+    else:
+        if after_streak != 0:
+            raise ValueError(
+                f"sequence {sequence_id} round {round_number}: {plan_name} "
+                "non-IS choice did not reset the Infinite Scrolling streak"
+            )
+        if contribution_added != 0:
+            raise ValueError(
+                f"sequence {sequence_id} round {round_number}: {plan_name} "
+                "non-IS choice changed the Infinite Scrolling contribution"
+            )
+
+
 def unpack_rounds(bank: dict[str, Any], packed: dict[str, Any]) -> list[list[tuple[str, int | None]]]:
     raw = base64.b64decode(packed["rounds_b64"])
     task_order = bank["task_order"]
@@ -57,12 +98,46 @@ def unpack_rounds(bank: dict[str, Any], packed: dict[str, Any]) -> list[list[tup
     return rounds
 
 
+def reconstructed_run_metadata(
+    rounds: Sequence[Sequence[tuple[str, int | None]]],
+) -> dict[int, tuple[int, int, int]]:
+    """Reconstruct the chronological run IDs available to the browser."""
+    metadata: dict[int, tuple[int, int, int]] = {}
+    run_id = 0
+    round_index = 0
+    while round_index < len(rounds):
+        has_infinite = any(
+            task_id == "infinite_scroll" for task_id, _payoff in rounds[round_index]
+        )
+        if not has_infinite:
+            round_index += 1
+            continue
+        start = round_index
+        while round_index + 1 < len(rounds) and any(
+            task_id == "infinite_scroll"
+            for task_id, _payoff in rounds[round_index + 1]
+        ):
+            round_index += 1
+        end = round_index
+        run_id += 1
+        for member_index in range(start, end + 1):
+            metadata[member_index] = (run_id, start + 1, end + 1)
+        round_index += 1
+    return metadata
+
+
 def audit(
     profile_path: Path, bank_path: Path, detail_path: Path, summary_path: Path
 ) -> dict[str, int]:
     profile = load_profile(profile_path)
     verify_files(profile, bank_path, detail_path, summary_path)
     bank = json.loads(bank_path.read_text())
+    infinite_task = next(
+        task for task in profile["side_tasks"]
+        if task["id"] == "infinite_scroll"
+    )
+    infinite_base = int(infinite_task["marginal_base"])
+    infinite_increment = int(infinite_task["marginal_increment"])
     bank_by_id = {int(item["sequence_id"]): item for item in bank["sequences"]}
     with summary_path.open("r", encoding="utf-8", newline="") as stream:
         summaries = {int(row["sequence_id"]): row for row in csv.DictReader(stream)}
@@ -79,6 +154,7 @@ def audit(
         key_function = lambda row: (int(row["sequence_id"]), int(row["round"]))
         decoded_sequence_id = 0
         decoded_rounds: list[list[tuple[str, int | None]]] = []
+        decoded_run_metadata: dict[int, tuple[int, int, int]] = {}
         for key, grouped_rows in itertools.groupby(reader, key=key_function):
             rows = list(grouped_rows)
             row_count += len(rows)
@@ -90,6 +166,7 @@ def audit(
             if sequence_id != decoded_sequence_id:
                 decoded_sequence_id = sequence_id
                 decoded_rounds = unpack_rounds(bank, bank_by_id[sequence_id])
+                decoded_run_metadata = reconstructed_run_metadata(decoded_rounds)
             expected_cards = decoded_rounds[round_number - 1]
             actual_cards = [
                 (row["task_id"], int(row["displayed_simple_payoff"]) if row["displayed_simple_payoff"] else None)
@@ -107,6 +184,52 @@ def audit(
                 raise ValueError(f"sequence {sequence_id} round {round_number}: reserve choice is not unique")
             optimizer_row = optimizer_rows[0]
             reserve_row = reserve_rows[0]
+            infinite_rows = [row for row in rows if row["task_id"] == "infinite_scroll"]
+            if infinite_rows:
+                infinite_row = infinite_rows[0]
+                expected_run_id, expected_start, expected_end = (
+                    decoded_run_metadata[round_number - 1]
+                )
+                actual_run_metadata = (
+                    int(infinite_row["availability_run_id"]),
+                    int(infinite_row["availability_run_start"]),
+                    int(infinite_row["availability_run_end"]),
+                )
+                if actual_run_metadata != (
+                    expected_run_id,
+                    expected_start,
+                    expected_end,
+                ):
+                    raise ValueError(
+                        f"sequence {sequence_id} round {round_number}: CSV run "
+                        f"metadata {actual_run_metadata} != browser-reconstructed "
+                        f"{(expected_run_id, expected_start, expected_end)}"
+                    )
+                if int(infinite_row["availability_rounds_remaining"]) != (
+                    expected_end - round_number + 1
+                ):
+                    raise ValueError(
+                        f"sequence {sequence_id} round {round_number}: invalid "
+                        "availability rounds remaining"
+                    )
+                audit_infinite_streak(
+                    sequence_id,
+                    round_number,
+                    "optimizer",
+                    optimizer_row["task_id"],
+                    infinite_row,
+                    infinite_base,
+                    infinite_increment,
+                )
+                audit_infinite_streak(
+                    sequence_id,
+                    round_number,
+                    "reserve",
+                    reserve_row["task_id"],
+                    infinite_row,
+                    infinite_base,
+                    infinite_increment,
+                )
             if optimizer_row["task_id"] in SIDE_TASKS:
                 optimizer_pay[sequence_id] += contribution_delta(
                     optimizer_row["optimizer_task_state_before"],

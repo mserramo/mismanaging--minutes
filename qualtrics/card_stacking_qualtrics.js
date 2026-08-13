@@ -2,6 +2,9 @@
     "use strict";
 
     var DEFAULTS = {
+        treatmentMode: "sequential",
+        allAtOnceDefaultZoom: 100,
+        allAtOnceMinZoom: 75,
         showRound: true,
         showMain: false,
         showMovie: false,
@@ -242,8 +245,12 @@
 
     function readConfig(bank) {
         var profile = profileValues(bank.profile);
+        var treatmentMode = String(getEmbeddedData("cs_treatment_mode") || DEFAULTS.treatmentMode).toLowerCase();
         return {
             profile: profile,
+            treatmentMode: treatmentMode,
+            allAtOnceDefaultZoom: numberValue(getEmbeddedData("cs_all_at_once_default_zoom"), DEFAULTS.allAtOnceDefaultZoom),
+            allAtOnceMinZoom: numberValue(getEmbeddedData("cs_all_at_once_min_zoom"), DEFAULTS.allAtOnceMinZoom),
             showRound: parseBoolean(getEmbeddedData("cs_show_round"), DEFAULTS.showRound),
             showMain: parseBoolean(getEmbeddedData("cs_show_main_cards"), DEFAULTS.showMain),
             showMovie: parseBoolean(getEmbeddedData("cs_show_movie_cards"), DEFAULTS.showMovie),
@@ -262,6 +269,9 @@
 
     function validateConfig(config) {
         var errors = [];
+        if (["sequential", "all_at_once"].indexOf(config.treatmentMode) < 0) { errors.push("Treatment must be sequential or all-at-once."); }
+        if (config.allAtOnceMinZoom < 50 || config.allAtOnceMinZoom > 100) { errors.push("Minimum all-at-once zoom must be 50–100%."); }
+        if (config.allAtOnceDefaultZoom < config.allAtOnceMinZoom || config.allAtOnceDefaultZoom > 100) { errors.push("Default all-at-once zoom must be between its minimum and 100%."); }
         if ([1, 2, 3, 4].indexOf(config.profile.sideCardsPerRound) < 0) { errors.push("The certified side-card count must be an integer from 1 through 4."); }
         if (config.feedbackMessageMs < 0 || config.feedbackMessageMs > 5000) { errors.push("Feedback duration must be 0–5,000 ms."); }
         if (config.postClickDelayMs < 0 || config.postClickDelayMs > 5000) { errors.push("Post-click delay must be 0–5,000 ms."); }
@@ -272,6 +282,9 @@
 
     function persistConfig(config) {
         var pairs = {
+            cs_treatment_mode: config.treatmentMode,
+            cs_all_at_once_default_zoom: config.allAtOnceDefaultZoom,
+            cs_all_at_once_min_zoom: config.allAtOnceMinZoom,
             cs_show_round: config.showRound, cs_show_main_cards: config.showMain,
             cs_show_movie_cards: config.showMovie, cs_show_total_points: config.showPoints,
             cs_show_main_card_payoff: config.showMainCardPayoff,
@@ -311,6 +324,20 @@
         return input;
     }
 
+    function selectField(parent, label, value, options) {
+        var wrap = element("div", "csq-field");
+        var input = element("select", "csq-input");
+        appendText(wrap, "label", label, "csq-label");
+        options.forEach(function (option) {
+            var node = element("option", "", option.label);
+            node.value = option.value;
+            if (option.value === value) { node.selected = true; }
+            input.appendChild(node);
+        });
+        wrap.appendChild(input); parent.appendChild(wrap);
+        return input;
+    }
+
     function checkboxField(parent, label, checked) {
         var wrap = element("div", "csq-checkbox-field");
         var labelNode = element("label", "csq-checkbox-label");
@@ -328,6 +355,7 @@
         var bank = bootstrap.bank;
         var config;
         var economic;
+        var treatment;
         var display;
         var timing;
         var inputs = {};
@@ -344,6 +372,13 @@
         appendText(root, "p", "Certified economic parameters are read-only. Only presentation and timing controls can be changed here.", "cs-setup-note");
         if (error) { appendText(root, "div", error, "cs-debug-notice"); return null; }
         config = readConfig(bank);
+        treatment = setupSection(root, "Treatment");
+        inputs.treatmentMode = selectField(treatment, "Choice presentation", config.treatmentMode, [
+            { value: "sequential", label: "Sequential" },
+            { value: "all_at_once", label: "All at once" }
+        ]);
+        readonlyField(treatment, "All-at-once starting zoom", config.allAtOnceDefaultZoom + "%");
+        readonlyField(treatment, "All-at-once minimum zoom", config.allAtOnceMinZoom + "%");
         economic = setupSection(root, "Certified economic environment");
         readonlyField(economic, "Profile version", bank.profile.profile_version);
         readonlyField(economic, "Rounds (R₀)", config.profile.rounds);
@@ -383,6 +418,9 @@
         button.addEventListener("click", function () {
             var next = {
                 profile: config.profile,
+                treatmentMode: inputs.treatmentMode.value,
+                allAtOnceDefaultZoom: config.allAtOnceDefaultZoom,
+                allAtOnceMinZoom: config.allAtOnceMinZoom,
                 showRound: inputs.showRound.checked, showMain: inputs.showMain.checked,
                 showMovie: inputs.showMovie.checked, showPoints: inputs.showPoints.checked,
                 showMainCardPayoff: inputs.showMainCardPayoff.checked,
@@ -400,6 +438,52 @@
             problems.forEach(function (problem) { appendText(errorsBox, "p", problem); });
             if (!problems.length) { persistConfig(next); clickNextButton(question); }
         });
+        var controller = { cleanup: function () { root.__csqController = null; } };
+        root.__csqController = controller; activateController(question, controller); return controller;
+    }
+
+    function initInstructions(question) {
+        var root = getRoot("csq-instructions-root", question);
+        var bootstrap = readBootstrap(false);
+        var error = validateBootstrap(bootstrap, false);
+        var bank = bootstrap.bank;
+        var config = error ? null : readConfig(bank);
+        var profile;
+        var list;
+        if (!root) { return null; }
+        clearElement(root); root.className = "cs-shell"; showNextButton(question);
+        if (error || validateConfig(config).length) {
+            appendText(root, "div", error || validateConfig(config).join(" "), "cs-debug-notice");
+            return null;
+        }
+        profile = bank.profile;
+        appendText(root, "h2", "Card-choice task");
+        if (config.treatmentMode === "all_at_once") {
+            appendText(root, "p", "All " + profile.rounds + " choice sets will appear together in one scrollable list. Choose one card in every round. You may revisit any round and change its choice until you select Done.");
+            appendText(root, "p", "The fixed controls remain visible while you scroll and show which rounds are in view, how many are answered, and your current payoff. Use the zoom control, round jump, or Next unanswered button to navigate. Open the payoff reminder only when you need it with the Payoff key button. Done becomes available after all rounds are answered.");
+        } else {
+            appendText(root, "p", "You will make exactly " + profile.rounds + " choices, one round at a time. Each choice is final before the next round appears.");
+        }
+        appendText(root, "p", "Every round contains the main card and exactly " + profile.side_cards_per_round + " side-task cards. The final " + profile.movie_rounds + " rounds also contain an additional movie card.");
+        appendText(root, "p", "Choosing the main card at least " + profile.main_target + " times earns " + formatInteger(profile.main_bonus) + " pts. Choosing all " + profile.movie_rounds + " movie cards earns " + formatInteger(profile.movie_bonus) + " pts. Each bonus is received only if its requirement is met.");
+        appendText(root, "h3", "Side-task rules");
+        list = element("ul");
+        [
+            ["Trio A", "30 pts. for every completed group of 3 choices."],
+            ["Trio B", "36 pts. for every completed group of 3 choices."],
+            ["Fives", "60 pts. for every completed group of 5 choices."],
+            ["Cumulative A", "successive choices pay 2, 4, 6, 8, … pts."],
+            ["Cumulative B", "successive choices pay 1, 4, 7, 10, … pts."],
+            ["Infinite Scrolling", "within each availability run, uninterrupted choices pay 2, 6, 10, 14, … pts. Choosing another card breaks the streak, so the next Infinite Scrolling choice restarts at 2 pts."],
+            ["Simple A", "the displayed card pays 4, 8, or 12 pts., with probabilities 30%, 50%, and 20%."],
+            ["Simple B", "the displayed card pays 2, 10, or 16 pts., with probabilities 45%, 40%, and 15%."]
+        ].forEach(function (item) {
+            var row = element("li");
+            var strong = element("strong", "", item[0] + ": ");
+            row.appendChild(strong); row.appendChild(global.document.createTextNode(item[1])); list.appendChild(row);
+        });
+        root.appendChild(list);
+        appendText(root, "p", "Each task has one fixed color for you. Progress shown on a card is evaluated in round order. Please stay active: the visible inactivity clock resets when activity is captured and the task ends at zero.");
         var controller = { cleanup: function () { root.__csqController = null; } };
         root.__csqController = controller; activateController(question, controller); return controller;
     }
@@ -577,7 +661,7 @@
             },
             {
                 groupId: "infinite_scroll", members: [infiniteMember],
-                description: "Each card pays immediately. " + infiniteMember.color.label + " starts at " + pointsWithSign(infinite.marginal_base) + " and rises by " + pointsWithSign(infinite.marginal_increment) + " for each consecutive " + infiniteMember.color.label + " card within a " + infinite.run_length_min + "–" + infinite.run_length_max + "-round run (" + payoffSeries(infinite.marginal_base, infinite.marginal_increment) + "); the increase resets after the run."
+                description: "Each card pays immediately. " + infiniteMember.color.label + " starts at " + pointsWithSign(infinite.marginal_base) + " and rises by " + pointsWithSign(infinite.marginal_increment) + " for each uninterrupted " + infiniteMember.color.label + " choice within a " + infinite.run_length_min + "–" + infinite.run_length_max + "-round run (" + payoffSeries(infinite.marginal_base, infinite.marginal_increment) + "). Choosing another card breaks the streak; the next " + infiniteMember.color.label + " choice restarts at " + pointsWithSign(infinite.marginal_base)
             },
             {
                 groupId: "simple", members: [simpleAMember, simpleBMember],
@@ -614,11 +698,18 @@
     function initialTaskState() {
         var counts = {}; var contributions = {};
         SIDE_IDS.forEach(function (id) { counts[id] = 0; contributions[id] = 0; });
-        return { main: 0, movie: 0, sidePay: 0, counts: counts, runCounts: {}, contributions: contributions, completedBonuses: { trio_a: 0, trio_b: 0, fives: 0 } };
+        return { main: 0, movie: 0, sidePay: 0, counts: counts, runStreaks: {}, contributions: contributions, completedBonuses: { trio_a: 0, trio_b: 0, fives: 0 } };
     }
 
     function cloneState(state) {
         return JSON.parse(JSON.stringify(state));
+    }
+
+    function breakInfiniteStreak(bankProfile, state, round, chosenTaskId) {
+        var runKey;
+        if (!round || round.infiniteRunId === null || typeof round.infiniteRunId === "undefined" || chosenTaskId === "infinite_scroll") { return; }
+        runKey = String(round.infiniteRunId);
+        state.runStreaks[runKey] = 0;
     }
 
     function applyChoice(bankProfile, state, round, card) {
@@ -628,6 +719,7 @@
         var before;
         var reward = 0;
         var runKey;
+        breakInfiniteStreak(bankProfile, state, round, taskId);
         if (taskId === "main") { state.main += 1; return 0; }
         if (taskId === "movie") { state.movie += 1; return 0; }
         task = tasks[taskId]; before = state.counts[taskId]; state.counts[taskId] += 1;
@@ -636,8 +728,9 @@
         } else if (task.type === "cumulative") {
             reward = task.marginal_base + task.marginal_increment * before;
         } else if (task.type === "run") {
-            runKey = String(round.infiniteRunId); before = state.runCounts[runKey] || 0;
-            reward = task.marginal_base + task.marginal_increment * before; state.runCounts[runKey] = before + 1;
+            if (round.infiniteRunId === null || typeof round.infiniteRunId === "undefined") { throw new Error("Infinite Scrolling card is missing its availability run."); }
+            runKey = String(round.infiniteRunId); before = state.runStreaks[runKey] || 0;
+            reward = task.marginal_base + task.marginal_increment * before; state.runStreaks[runKey] = before + 1;
         } else { reward = card.simplePayoff; }
         state.sidePay += reward; state.contributions[taskId] += reward; return reward;
     }
@@ -666,7 +759,7 @@
             return task.marginal_base + task.marginal_increment * count;
         }
         if (task.type === "run") {
-            return task.marginal_base + task.marginal_increment * (state.runCounts[String(round.infiniteRunId)] || 0);
+            return task.marginal_base + task.marginal_increment * (state.runStreaks[String(round.infiniteRunId)] || 0);
         }
         return card.simplePayoff;
     }
@@ -721,6 +814,129 @@
             showSideCardPayoff: DEFAULTS.showSideCardPayoff
         };
         return cardDisplayText(bankProfile, state, round, card, config).combined;
+    }
+
+    function displayedCardSet(bankProfile, environment, state, round, config) {
+        return round.cards.map(function (card) {
+            var display = cardDisplayText(bankProfile, state, round, card, config);
+            return {
+                position: card.position,
+                task_id: card.taskId,
+                task_label: TASK_LABELS[card.taskId],
+                simple_payoff: card.simplePayoff,
+                marginal_points: currentCardPayoff(bankProfile, state, round, card),
+                payoff_text: display.payoff,
+                footer_text: display.footer,
+                footer_lines: display.footerLines,
+                progress: display.combined,
+                color_id: bankProfile.colors[environment.colorMap[card.taskId]].id
+            };
+        });
+    }
+
+    function decisionRecord(bankProfile, environment, round, card, before, after, reward, displayed, responseTime, taskElapsed) {
+        var profile = profileValues(bankProfile);
+        return {
+            round: round.number,
+            phase: round.phase,
+            sequence_id: environment.sequenceId,
+            seed: environment.seed,
+            chosen_task_id: card.taskId,
+            chosen_task_label: TASK_LABELS[card.taskId],
+            chosen_position: card.position,
+            chosen_is_main: card.taskId === "main" ? 1 : 0,
+            chosen_is_movie: card.taskId === "movie" ? 1 : 0,
+            chosen_is_side: SIDE_IDS.indexOf(card.taskId) >= 0 ? 1 : 0,
+            displayed_choice_set_json: JSON.stringify(displayed),
+            task_state_before_json: JSON.stringify(before),
+            task_state_after_json: JSON.stringify(after),
+            side_points_added: reward,
+            side_points_total: after.sidePay,
+            main_count: after.main,
+            movie_count: after.movie,
+            main_complete: after.main >= profile.mainTarget ? 1 : 0,
+            movie_complete: after.movie >= profile.movieRounds ? 1 : 0,
+            main_bonus_awarded: after.main >= profile.mainTarget ? profile.mainBonus : 0,
+            movie_bonus_awarded: after.movie >= profile.movieRounds ? profile.movieBonus : 0,
+            total_points: awardedTotalPoints(profile, after),
+            response_time_ms: responseTime === null || typeof responseTime === "undefined" ? "" : responseTime,
+            task_elapsed_ms: taskElapsed === null || typeof taskElapsed === "undefined" ? "" : taskElapsed,
+            infinite_run_id: round.infiniteRunId || "",
+            infinite_rounds_remaining: round.infiniteRoundsRemaining || ""
+        };
+    }
+
+    function evaluateAllocation(bankProfile, environment, selections, config, timing) {
+        var state = initialTaskState();
+        var trace = [];
+        var decisions = [];
+        var answered = 0;
+        timing = timing || {};
+        environment.rounds.forEach(function (round, index) {
+            var before = cloneState(state);
+            var displayed = displayedCardSet(bankProfile, environment, before, round, config);
+            var taskId = selections[index] || null;
+            var card = taskId ? round.cards.find(function (candidate) { return candidate.taskId === taskId; }) : null;
+            var reward = 0;
+            var after;
+            if (card) {
+                reward = applyChoice(bankProfile, state, round, card);
+                answered += 1;
+            } else {
+                breakInfiniteStreak(bankProfile, state, round, null);
+            }
+            after = cloneState(state);
+            trace.push({ round: round, before: before, after: after, card: card, reward: reward, displayed: displayed });
+            if (card) {
+                decisions.push(decisionRecord(
+                    bankProfile,
+                    environment,
+                    round,
+                    card,
+                    before,
+                    after,
+                    reward,
+                    displayed,
+                    timing.responseTimes ? timing.responseTimes[index] : "",
+                    timing.selectionElapsedMs ? timing.selectionElapsedMs[index] : ""
+                ));
+            }
+        });
+        return { task: state, trace: trace, decisions: decisions, answeredCount: answered };
+    }
+
+    function createCardButton(bankProfile, environment, round, card, state, config, selected, onChoose, onActivity) {
+        var button = element("button", "cs-card");
+        var heading = element("span", "cs-card-heading");
+        var payoffSlot = element("span", "cs-card-payoff-slot");
+        var footer = element("span", "cs-card-footer");
+        button.type = "button";
+        button.setAttribute("data-task-id", card.taskId);
+        button.setAttribute("data-position", card.position);
+        button.setAttribute("data-round", round.number);
+        button.setAttribute("role", "radio");
+        appendText(heading, "span", "", "cs-card-color-label");
+        appendText(payoffSlot, "span", "", "cs-card-payoff");
+        button.appendChild(heading); button.appendChild(payoffSlot); button.appendChild(footer);
+        button.__csqCard = { heading: heading.firstChild, payoff: payoffSlot.firstChild, footer: footer };
+        if (onActivity) { button.addEventListener("pointerdown", function () { onActivity("card_pointerdown"); }); }
+        if (onChoose) { button.addEventListener("click", function () { onChoose(round, card, button); }); }
+        updateCardButton(button, bankProfile, environment, round, card, state, config, selected);
+        return button;
+    }
+
+    function updateCardButton(button, bankProfile, environment, round, card, state, config, selected) {
+        var color = bankProfile.colors[environment.colorMap[card.taskId]];
+        var display = cardDisplayText(bankProfile, state, round, card, config);
+        var refs = button.__csqCard;
+        refs.heading.textContent = color.label;
+        refs.payoff.textContent = display.payoff;
+        clearElement(refs.footer);
+        display.footerLines.forEach(function (line) { appendText(refs.footer, "span", line, "cs-card-footer-line"); });
+        button.className = "cs-card" + (selected ? " cs-card-selected" : "");
+        button.style.setProperty("--card-color", color.hex);
+        button.setAttribute("aria-checked", selected ? "true" : "false");
+        button.setAttribute("aria-label", color.label + " card, " + TASK_LABELS[card.taskId] + (display.combined ? ". " + display.combined : "") + (selected ? ". Selected" : ""));
     }
 
     function utf8ByteLength(value) {
@@ -796,6 +1012,9 @@
         });
         var fields = {
             cs_task_status: status, cs_decision_count: state.decisions.length,
+            cs_answered_at_end: state.decisions.length,
+            cs_treatment_mode: state.treatmentMode || "sequential",
+            cs_all_at_once_final_zoom: state.treatmentMode === "all_at_once" ? state.zoom : "",
             cs_task_elapsed_ms: elapsed, cs_final_points: total,
             cs_side_points: state.task.sidePay, cs_main_cards_collected: state.task.main,
             cs_movie_cards_collected: state.task.movie, cs_main_complete: mainComplete ? 1 : 0,
@@ -888,7 +1107,7 @@
         return { headerFound: true, gap: gap, offset: offset };
     }
 
-    function initGame(question) {
+    function initSequentialGame(question) {
         var root = getRoot("csq-game-root", question);
         var bootstrap = readBootstrap(); var error = validateBootstrap(bootstrap);
         var bank = bootstrap.bank; var config = error ? null : readConfig(bank);
@@ -897,7 +1116,7 @@
         var timers = []; var listeners = []; var authority = false;
         var state;
         var gameLayout; var shell; var rulesPanel; var statusLeft; var statusRight;
-        var inactivityClock; var cue; var cards; var movieRuleVisible = false;
+        var inactivityClock; var cue; var cards;
         if (!root) { return null; }
         clearElement(root); hideNextButton(question);
         if (error || validateConfig(config).length) { appendText(root, "div", error || validateConfig(config).join(" "), "cs-debug-notice"); return null; }
@@ -908,13 +1127,16 @@
         status.appendChild(statusLeft); status.appendChild(statusRight); shell.appendChild(status);
         cue = element("div", "cs-cue"); shell.appendChild(cue); cards = element("div", "cs-card-row"); shell.appendChild(cards);
         rulesPanel = element("aside", "csq-rules-panel"); rulesPanel.setAttribute("aria-label", "Card payoff reminder");
-        renderRulesPanel(rulesPanel, bank.profile, environment, movieRuleVisible);
+        renderRulesPanel(rulesPanel, bank.profile, environment, true);
         gameLayout.appendChild(shell); gameLayout.appendChild(rulesPanel); root.appendChild(gameLayout);
         state = {
             environment: environment, task: initialTaskState(), roundIndex: 0,
             decisions: [], startedAtWall: Date.now(), roundStartedAt: nowMonotonic(),
             lastActivityAt: Date.now(), activityEventCount: 0, lastActivitySource: "game_start",
-            waiting: false, finished: false
+            waiting: false, finished: false, treatmentMode: "sequential", zoom: "",
+            selections: Array(config.profile.rounds).fill(null),
+            selectionElapsedMs: Array(config.profile.rounds).fill(""),
+            responseTimes: Array(config.profile.rounds).fill("")
         };
         setEmbeddedData("cs_sequence_id", environment.sequenceId);
         setEmbeddedData("cs_seed", environment.seed);
@@ -965,21 +1187,6 @@
             refreshInactivityClock();
         }
 
-        function cardSetForLog(round) {
-            return round.cards.map(function (card) {
-                var display = cardDisplayText(bank.profile, state.task, round, card, config);
-                return {
-                    position: card.position, task_id: card.taskId, task_label: TASK_LABELS[card.taskId],
-                    simple_payoff: card.simplePayoff,
-                    marginal_points: currentCardPayoff(bank.profile, state.task, round, card),
-                    payoff_text: display.payoff, footer_text: display.footer,
-                    footer_lines: display.footerLines,
-                    progress: display.combined,
-                    color_id: bank.profile.colors[environment.colorMap[card.taskId]].id
-                };
-            });
-        }
-
         function finish(statusName) {
             if (state.finished) { return; }
             if (!authority && !claimOwner(token, "finish")) { return; }
@@ -991,39 +1198,28 @@
         }
 
         function choose(round, card, button) {
-            var before; var after; var reward; var decision; var delay; var displayed;
+            var reward; var delay; var evaluation; var chosenIndex = state.roundIndex;
             if (state.finished || state.waiting || state.environment.rounds[state.roundIndex] !== round) { return; }
             markActivity("card_click"); if (!authority) { return; }
-            state.waiting = true; before = cloneState(state.task); displayed = cardSetForLog(round);
-            reward = applyChoice(bank.profile, state.task, round, card); after = cloneState(state.task);
+            state.waiting = true;
+            state.selections[chosenIndex] = card.taskId;
+            state.selectionElapsedMs[chosenIndex] = Math.max(0, Date.now() - state.startedAtWall);
+            state.responseTimes[chosenIndex] = Math.max(0, Math.round(nowMonotonic() - state.roundStartedAt));
+            evaluation = evaluateAllocation(bank.profile, environment, state.selections, config, {
+                responseTimes: state.responseTimes,
+                selectionElapsedMs: state.selectionElapsedMs
+            });
+            reward = evaluation.trace[chosenIndex].reward;
+            state.decisions = evaluation.decisions;
             Array.prototype.forEach.call(cards.querySelectorAll("button"), function (node) { node.disabled = true; });
             button.className += " cs-card-selected";
             if (config.showClickFeedback) {
                 cue.textContent = card.taskId === "main" ? "Main task selected" : card.taskId === "movie" ? "Movie task selected" : "+" + reward + " pts.";
                 cue.className = "cs-cue cs-cue-visible " + (reward ? "cs-cue-points" : "");
             }
-            decision = {
-                round: round.number, phase: round.phase, sequence_id: environment.sequenceId,
-                seed: environment.seed, chosen_task_id: card.taskId,
-                chosen_task_label: TASK_LABELS[card.taskId], chosen_position: card.position,
-                chosen_is_main: card.taskId === "main" ? 1 : 0,
-                chosen_is_movie: card.taskId === "movie" ? 1 : 0,
-                chosen_is_side: SIDE_IDS.indexOf(card.taskId) >= 0 ? 1 : 0,
-                displayed_choice_set_json: JSON.stringify(displayed),
-                task_state_before_json: JSON.stringify(before), task_state_after_json: JSON.stringify(after),
-                side_points_added: reward, side_points_total: state.task.sidePay,
-                main_count: state.task.main, movie_count: state.task.movie,
-                main_complete: state.task.main >= config.profile.mainTarget ? 1 : 0,
-                movie_complete: state.task.movie >= config.profile.movieRounds ? 1 : 0,
-                main_bonus_awarded: state.task.main >= config.profile.mainTarget ? config.profile.mainBonus : 0,
-                movie_bonus_awarded: state.task.movie >= config.profile.movieRounds ? config.profile.movieBonus : 0,
-                total_points: awardedTotalPoints(config.profile, state.task),
-                response_time_ms: Math.max(0, Math.round(nowMonotonic() - state.roundStartedAt)),
-                task_elapsed_ms: Math.max(0, Date.now() - state.startedAtWall),
-                infinite_run_id: round.infiniteRunId || "",
-                infinite_rounds_remaining: round.infiniteRoundsRemaining || ""
-            };
-            state.decisions.push(decision); counters(); state.roundIndex += 1;
+            state.roundIndex += 1;
+            state.task = state.roundIndex < config.profile.rounds ? cloneState(evaluation.trace[state.roundIndex].before) : evaluation.task;
+            counters();
             if (state.roundIndex >= config.profile.rounds) {
                 delay = config.showClickFeedback ? config.feedbackMessageMs : 0;
                 timers.push(global.setTimeout(function () { finish("completed"); }, delay)); return;
@@ -1034,39 +1230,12 @@
 
         function renderRound() {
             var round = environment.rounds[state.roundIndex];
-            var showMovieRule = round.cards.some(function (card) { return card.taskId === "movie"; });
             clearElement(cards); clearElement(cue); cue.className = "cs-cue"; counters();
-            if (showMovieRule !== movieRuleVisible) {
-                movieRuleVisible = showMovieRule;
-                renderRulesPanel(rulesPanel, bank.profile, environment, movieRuleVisible);
-            }
             cards.className = "cs-card-row cs-card-row-new";
             shell.setAttribute("data-card-count", round.cards.length);
             state.roundStartedAt = nowMonotonic();
             round.cards.forEach(function (card) {
-                var color = bank.profile.colors[environment.colorMap[card.taskId]];
-                var display = cardDisplayText(bank.profile, state.task, round, card, config);
-                var footer;
-                var heading;
-                var payoffSlot;
-                var button = element("button", "cs-card"); button.type = "button";
-                button.setAttribute("data-task-id", card.taskId);
-                button.setAttribute("data-position", card.position);
-                button.setAttribute("data-round", round.number);
-                button.setAttribute("aria-label", color.label + " card, " + TASK_LABELS[card.taskId] + (display.combined ? ". " + display.combined : ""));
-                button.style.setProperty("--card-color", color.hex);
-                heading = element("span", "cs-card-heading");
-                appendText(heading, "span", color.label, "cs-card-color-label");
-                button.appendChild(heading);
-                payoffSlot = element("span", "cs-card-payoff-slot");
-                appendText(payoffSlot, "span", display.payoff, "cs-card-payoff");
-                button.appendChild(payoffSlot);
-                footer = element("span", "cs-card-footer");
-                display.footerLines.forEach(function (line) { appendText(footer, "span", line, "cs-card-footer-line"); });
-                button.appendChild(footer);
-                button.addEventListener("pointerdown", function () { markActivity("card_pointerdown"); });
-                button.addEventListener("click", function () { choose(round, card, button); });
-                cards.appendChild(button);
+                cards.appendChild(createCardButton(bank.profile, environment, round, card, state.task, config, false, choose, markActivity));
             });
         }
 
@@ -1097,6 +1266,450 @@
             }
         };
         root.__csqController = controller; activateController(question, controller); return controller;
+    }
+
+    function viewportIsTooNarrow(width) {
+        return numberValue(width, 0) < 1280;
+    }
+
+    function initAllAtOnceGame(question) {
+        var root = getRoot("csq-game-root", question);
+        var bootstrap = readBootstrap();
+        var error = validateBootstrap(bootstrap);
+        var bank = bootstrap.bank;
+        var config = error ? null : readConfig(bank);
+        var environment = error ? null : selectEnvironment(bank);
+        var token = "csq-all-" + Date.now() + "-" + Math.floor(Math.random() * 1e9);
+        var timers = [];
+        var listeners = [];
+        var rowRefs = [];
+        var authority = false;
+        var visibleFrame = null;
+        var feedbackTimer = null;
+        var state;
+        var toolbar;
+        var toolbarSpacer;
+        var primary;
+        var controls;
+        var viewingCounter;
+        var answeredCounter;
+        var mainCounter;
+        var movieCounter;
+        var pointsCounter;
+        var inactivityClock;
+        var feedback;
+        var zoomInput;
+        var zoomValue;
+        var jumpInput;
+        var jumpButton;
+        var nextUnanswered;
+        var doneButton;
+        var keyToggle;
+        var keyCloseButton;
+        var keyOpen = false;
+        var helper;
+        var blocker;
+        var layout;
+        var scrollPane;
+        var list;
+        var rulesPanel;
+        if (!root) { return null; }
+        clearElement(root); hideNextButton(question);
+        if (error || validateConfig(config).length) {
+            appendText(root, "div", error || validateConfig(config).join(" "), "cs-debug-notice");
+            return null;
+        }
+        if (global.document && global.document.body) { global.document.body.classList.add("csq-game-active", "csq-all-at-once-active"); }
+        root.className = "csq-all-at-once";
+        root.style.setProperty("--csq-choice-scale", String(config.allAtOnceDefaultZoom / 100));
+
+        toolbar = element("div", "csq-all-toolbar");
+        primary = element("div", "csq-all-toolbar-primary");
+        controls = element("div", "csq-all-toolbar-controls");
+        viewingCounter = appendText(primary, "span", "Viewing rounds 1–1 of " + config.profile.rounds);
+        viewingCounter.setAttribute("data-csq", "all-viewing");
+        answeredCounter = appendText(primary, "span", "Answered 0 of " + config.profile.rounds);
+        answeredCounter.setAttribute("data-csq", "all-answered");
+        if (config.showMain) { mainCounter = appendText(primary, "span", ""); }
+        if (config.showMovie) { movieCounter = appendText(primary, "span", ""); }
+        if (config.showPoints) {
+            pointsCounter = appendText(primary, "span", "Points: 0");
+            pointsCounter.setAttribute("data-csq", "all-points");
+        }
+        inactivityClock = appendText(primary, "span", "", "cs-inactivity-clock");
+        inactivityClock.setAttribute("data-csq", "all-inactivity");
+        feedback = appendText(primary, "span", "", "csq-all-feedback");
+        toolbar.appendChild(primary);
+
+        var zoomLabel = element("label", "csq-all-zoom");
+        zoomLabel.appendChild(global.document.createTextNode("View "));
+        zoomInput = element("input"); zoomInput.type = "range";
+        zoomInput.min = config.allAtOnceMinZoom; zoomInput.max = 100; zoomInput.step = 1;
+        zoomInput.value = config.allAtOnceDefaultZoom; zoomInput.setAttribute("data-csq", "all-zoom");
+        zoomValue = element("span", "csq-all-zoom-value", config.allAtOnceDefaultZoom + "%");
+        zoomLabel.appendChild(zoomInput); zoomLabel.appendChild(zoomValue); controls.appendChild(zoomLabel);
+
+        keyToggle = element("button", "csq-all-nav-button csq-key-toggle", "Payoff key");
+        keyToggle.type = "button"; keyToggle.setAttribute("data-csq", "all-key-toggle");
+        keyToggle.setAttribute("aria-expanded", "false"); controls.appendChild(keyToggle);
+
+        var jumpLabel = element("label", "csq-all-jump");
+        jumpLabel.appendChild(global.document.createTextNode("Round "));
+        jumpInput = element("input", "csq-all-round-input"); jumpInput.type = "number";
+        jumpInput.min = 1; jumpInput.max = config.profile.rounds; jumpInput.value = 1;
+        jumpInput.setAttribute("data-csq", "all-round-jump-input"); jumpLabel.appendChild(jumpInput);
+        controls.appendChild(jumpLabel);
+        jumpButton = element("button", "csq-all-nav-button", "Go"); jumpButton.type = "button";
+        jumpButton.setAttribute("data-csq", "all-round-jump-button"); controls.appendChild(jumpButton);
+        nextUnanswered = element("button", "csq-all-nav-button", "Next unanswered"); nextUnanswered.type = "button";
+        nextUnanswered.setAttribute("data-csq", "all-next-unanswered"); controls.appendChild(nextUnanswered);
+        doneButton = element("button", "csq-all-nav-button csq-all-done", "Done"); doneButton.type = "button"; doneButton.disabled = true;
+        doneButton.setAttribute("data-csq", "all-done"); controls.appendChild(doneButton);
+        toolbar.appendChild(controls); root.appendChild(toolbar);
+        toolbarSpacer = element("div", "csq-all-toolbar-spacer");
+        toolbarSpacer.setAttribute("aria-hidden", "true"); root.appendChild(toolbarSpacer);
+        helper = appendText(root, "p", "Answer every round to enable Done.", "csq-all-helper");
+        blocker = appendText(root, "div", "This task needs a wider browser window. Please widen the window or use a computer with at least 1280 pixels of browser width. Your choices are preserved and the inactivity timer is paused.", "csq-all-wide-blocker");
+        blocker.hidden = true; blocker.setAttribute("role", "alert");
+        layout = element("div", "csq-all-layout");
+        scrollPane = element("div", "csq-all-scroll"); scrollPane.tabIndex = 0;
+        scrollPane.setAttribute("aria-label", "All card-choice rounds");
+        list = element("div", "csq-all-list"); scrollPane.appendChild(list);
+        rulesPanel = element("aside", "csq-rules-panel"); rulesPanel.setAttribute("aria-label", "Card payoff reminder");
+        rulesPanel.id = "csq-all-payoff-key"; rulesPanel.hidden = true;
+        keyToggle.setAttribute("aria-controls", rulesPanel.id);
+        renderRulesPanel(rulesPanel, bank.profile, environment, true);
+        keyCloseButton = element("button", "csq-key-close", "Close"); keyCloseButton.type = "button";
+        keyCloseButton.setAttribute("aria-label", "Close payoff key"); rulesPanel.insertBefore(keyCloseButton, rulesPanel.firstChild);
+        layout.appendChild(scrollPane); root.appendChild(layout); root.appendChild(rulesPanel);
+
+        state = {
+            environment: environment,
+            task: initialTaskState(),
+            decisions: [],
+            selections: Array(config.profile.rounds).fill(null),
+            selectionElapsedMs: Array(config.profile.rounds).fill(""),
+            responseTimes: Array(config.profile.rounds).fill(""),
+            evaluation: null,
+            startedAtWall: Date.now(),
+            lastActivityAt: Date.now(),
+            activityEventCount: 0,
+            lastActivitySource: "game_start",
+            finished: false,
+            narrow: false,
+            narrowStartedAt: null,
+            zoom: config.allAtOnceDefaultZoom,
+            treatmentMode: "all_at_once",
+            visibleStart: 0,
+            visibleEnd: 0
+        };
+        state.evaluation = evaluateAllocation(bank.profile, environment, state.selections, config, {
+            responseTimes: state.responseTimes, selectionElapsedMs: state.selectionElapsedMs
+        });
+        state.task = state.evaluation.task; state.decisions = state.evaluation.decisions;
+        setEmbeddedData("cs_sequence_id", environment.sequenceId);
+        setEmbeddedData("cs_seed", environment.seed);
+        if (isLikelyVisible(root)) { authority = claimOwner(token, "game_start_visible"); }
+
+        function addListener(target, type, callback, options) {
+            if (!target || !target.addEventListener) { return; }
+            target.addEventListener(type, callback, options); listeners.push([target, type, callback, options]);
+        }
+
+        function markActivity(source) {
+            if (state.finished || state.narrow) { return; }
+            authority = claimOwner(token, source) || authority;
+            if (!authority) { return; }
+            state.lastActivityAt = Date.now(); state.activityEventCount += 1; state.lastActivitySource = source;
+            refreshInactivityClock();
+        }
+
+        function syncFloatingChrome() {
+            var rootRect;
+            var toolbarRect;
+            var viewportWidth;
+            var viewportHeight;
+            var left;
+            var right;
+            var panelWidth;
+            if (!root || !toolbar || !toolbarSpacer || !root.getBoundingClientRect) { return; }
+            rootRect = root.getBoundingClientRect();
+            viewportWidth = currentViewportWidth();
+            viewportHeight = global.innerHeight || (global.document && global.document.documentElement.clientHeight) || 768;
+            left = Math.max(8, rootRect.left);
+            right = Math.min(viewportWidth - 8, rootRect.right);
+            if (right - left < 320) { left = 8; right = Math.max(328, viewportWidth - 8); }
+            toolbar.style.left = Math.round(left) + "px";
+            toolbar.style.width = Math.max(320, Math.round(right - left)) + "px";
+            toolbar.style.top = Math.round(Math.max(8, Math.min(rootRect.top, viewportHeight - toolbar.offsetHeight - 8))) + "px";
+            toolbarSpacer.style.height = Math.ceil(toolbar.offsetHeight) + "px";
+            root.style.setProperty("--csq-toolbar-height", Math.ceil(toolbar.offsetHeight) + "px");
+            if (!rulesPanel.hidden) {
+                toolbarRect = toolbar.getBoundingClientRect();
+                panelWidth = Math.min(400, Math.max(280, right - left));
+                rulesPanel.style.left = Math.round(right - panelWidth) + "px";
+                rulesPanel.style.width = Math.round(panelWidth) + "px";
+                rulesPanel.style.top = Math.round(Math.min(viewportHeight - 120, toolbarRect.bottom + 8)) + "px";
+                rulesPanel.style.bottom = "8px";
+            }
+        }
+
+        function setKeyOpen(open) {
+            keyOpen = !!open && !state.narrow;
+            rulesPanel.hidden = !keyOpen;
+            keyToggle.textContent = keyOpen ? "Hide payoff key" : "Payoff key";
+            keyToggle.setAttribute("aria-expanded", keyOpen ? "true" : "false");
+            if (keyOpen) { syncFloatingChrome(); }
+        }
+
+        function inactivityClockText() {
+            var remaining;
+            var minutes;
+            var seconds;
+            if (state.narrow) { return "Inactivity paused"; }
+            remaining = Math.max(0, Math.ceil((config.inactivitySeconds * 1000 - (Date.now() - state.lastActivityAt)) / 1000));
+            minutes = Math.floor(remaining / 60); seconds = remaining % 60;
+            return "Inactive in " + minutes + ":" + String(seconds).padStart(2, "0");
+        }
+
+        function refreshInactivityClock() {
+            var remainingSeconds;
+            inactivityClock.textContent = inactivityClockText();
+            remainingSeconds = state.narrow ? config.inactivitySeconds : Math.max(0, Math.ceil((config.inactivitySeconds * 1000 - (Date.now() - state.lastActivityAt)) / 1000));
+            inactivityClock.className = "cs-inactivity-clock" + (!state.narrow && remainingSeconds <= 10 ? " cs-inactivity-warning" : "");
+        }
+
+        function refreshCounters() {
+            var answered = state.evaluation.answeredCount;
+            answeredCounter.textContent = "Answered " + answered + " of " + config.profile.rounds;
+            if (mainCounter) { mainCounter.textContent = "Main: " + state.task.main + " / " + config.profile.mainTarget; }
+            if (movieCounter) { movieCounter.textContent = "Movie: " + state.task.movie + " / " + config.profile.movieRounds; }
+            if (pointsCounter) { pointsCounter.textContent = "Points: " + awardedTotalPoints(config.profile, state.task); }
+            doneButton.disabled = state.narrow || answered !== config.profile.rounds;
+            nextUnanswered.disabled = state.narrow || answered === config.profile.rounds;
+            if (answered === config.profile.rounds) {
+                helper.textContent = "All rounds are answered. You may review and change any choice before selecting Done.";
+            } else {
+                helper.textContent = "Answer every round to enable Done. " + (config.profile.rounds - answered) + " remaining.";
+            }
+            refreshInactivityClock();
+        }
+
+        function updateRound(index) {
+            var ref = rowRefs[index];
+            var trace = state.evaluation.trace[index];
+            var selectedTaskId = state.selections[index];
+            ref.status.textContent = selectedTaskId ? "Answered" : "Not answered";
+            ref.outer.setAttribute("data-selected-task", selectedTaskId || "");
+            ref.outer.setAttribute("data-answered", selectedTaskId ? "1" : "0");
+            trace.round.cards.forEach(function (card) {
+                updateCardButton(ref.buttons[card.taskId], bank.profile, environment, trace.round, card, trace.before, config, selectedTaskId === card.taskId);
+            });
+        }
+
+        function recomputeFrom(index) {
+            state.evaluation = evaluateAllocation(bank.profile, environment, state.selections, config, {
+                responseTimes: state.responseTimes, selectionElapsedMs: state.selectionElapsedMs
+            });
+            state.task = state.evaluation.task; state.decisions = state.evaluation.decisions;
+            for (; index < rowRefs.length; index += 1) { updateRound(index); }
+            refreshCounters();
+        }
+
+        function showFeedback(index) {
+            var trace = state.evaluation.trace[index];
+            var taskId = state.selections[index];
+            if (!config.showClickFeedback) { return; }
+            if (feedbackTimer) { global.clearTimeout(feedbackTimer); }
+            feedback.textContent = taskId === "main" ? "Main task selected" : taskId === "movie" ? "Movie task selected" : "+" + trace.reward + " pts.";
+            feedbackTimer = global.setTimeout(function () { feedback.textContent = ""; }, config.feedbackMessageMs);
+            timers.push(feedbackTimer);
+        }
+
+        function choose(round, card) {
+            var index = round.number - 1;
+            if (state.finished || state.narrow || state.selections[index] === card.taskId) { return; }
+            markActivity("card_click"); if (!authority) { return; }
+            state.selections[index] = card.taskId;
+            state.selectionElapsedMs[index] = Math.max(0, Date.now() - state.startedAtWall);
+            recomputeFrom(index); showFeedback(index);
+        }
+
+        environment.rounds.forEach(function (round, index) {
+            var outer = element("section", "csq-all-round");
+            var scale = element("div", "csq-all-round-scale");
+            var heading = element("div", "csq-all-round-heading");
+            var status = element("span", "csq-all-round-status", "Not answered");
+            var cardRow = element("div", "csq-all-card-row");
+            var buttons = {};
+            outer.setAttribute("data-round", round.number); outer.setAttribute("data-answered", "0");
+            heading.appendChild(element("span", "", "Round " + round.number + " of " + config.profile.rounds));
+            heading.appendChild(status); scale.appendChild(heading);
+            cardRow.setAttribute("role", "radiogroup"); cardRow.setAttribute("aria-label", "Round " + round.number);
+            round.cards.forEach(function (card) {
+                var button = createCardButton(bank.profile, environment, round, card, state.evaluation.trace[index].before, config, false, choose, markActivity);
+                buttons[card.taskId] = button; cardRow.appendChild(button);
+            });
+            scale.appendChild(cardRow); outer.appendChild(scale); list.appendChild(outer);
+            rowRefs.push({ outer: outer, scale: scale, status: status, cardRow: cardRow, buttons: buttons });
+        });
+
+        function visibleRange() {
+            var paneRect = scrollPane.getBoundingClientRect();
+            var first = -1;
+            var last = -1;
+            rowRefs.forEach(function (ref, index) {
+                var rect = ref.outer.getBoundingClientRect();
+                if (rect.bottom > paneRect.top + 1 && rect.top < paneRect.bottom - 1) {
+                    if (first < 0) { first = index; }
+                    last = index;
+                }
+            });
+            if (first < 0) { first = Math.max(0, Math.min(config.profile.rounds - 1, state.visibleStart)); last = first; }
+            return { first: first, last: last };
+        }
+
+        function refreshVisibleRange() {
+            var range = visibleRange();
+            state.visibleStart = range.first; state.visibleEnd = range.last;
+            viewingCounter.textContent = "Viewing rounds " + (range.first + 1) + "–" + (range.last + 1) + " of " + config.profile.rounds;
+            jumpInput.value = range.first + 1;
+            visibleFrame = null;
+        }
+
+        function scheduleVisibleRange() {
+            if (visibleFrame !== null) { return; }
+            if (global.requestAnimationFrame) { visibleFrame = global.requestAnimationFrame(refreshVisibleRange); }
+            else { visibleFrame = global.setTimeout(refreshVisibleRange, 16); }
+        }
+
+        function resizeScaledRounds() {
+            var scale = state.zoom / 100;
+            rowRefs.forEach(function (ref) {
+                var naturalHeight;
+                var scaledPaddingAndBorder = 22 * scale;
+                ref.outer.style.removeProperty("height");
+                naturalHeight = ref.scale.scrollHeight || Math.max(1, ref.scale.getBoundingClientRect().height / scale);
+                ref.outer.style.height = Math.ceil(naturalHeight * scale + scaledPaddingAndBorder) + "px";
+            });
+        }
+
+        function setZoom(value) {
+            var range = visibleRange();
+            var anchor = rowRefs[range.first];
+            var beforeTop = anchor ? anchor.outer.getBoundingClientRect().top - scrollPane.getBoundingClientRect().top : 0;
+            state.zoom = Math.max(config.allAtOnceMinZoom, Math.min(100, integerValue(value, config.allAtOnceDefaultZoom)));
+            zoomInput.value = state.zoom; zoomValue.textContent = state.zoom + "%";
+            root.style.setProperty("--csq-choice-scale", String(state.zoom / 100));
+            resizeScaledRounds();
+            if (anchor) { scrollPane.scrollTop += anchor.outer.getBoundingClientRect().top - scrollPane.getBoundingClientRect().top - beforeTop; }
+            scheduleVisibleRange();
+        }
+
+        function scrollToRound(index) {
+            var ref = rowRefs[Math.max(0, Math.min(config.profile.rounds - 1, index))];
+            if (!ref || state.narrow) { return; }
+            scrollPane.scrollTo({ top: Math.max(0, ref.outer.offsetTop - list.offsetTop - 8), behavior: "smooth" });
+            scheduleVisibleRange();
+        }
+
+        function goToNextUnanswered() {
+            var start = state.visibleEnd;
+            var offset;
+            var index;
+            for (offset = 1; offset <= config.profile.rounds; offset += 1) {
+                index = (start + offset) % config.profile.rounds;
+                if (!state.selections[index]) { scrollToRound(index); return; }
+            }
+        }
+
+        function currentViewportWidth() {
+            var view = root.ownerDocument && root.ownerDocument.defaultView;
+            return view && view.innerWidth ? view.innerWidth : global.innerWidth;
+        }
+
+        function setNarrowMode() {
+            var narrow = viewportIsTooNarrow(currentViewportWidth());
+            var changed = narrow !== state.narrow;
+            state.narrow = narrow; blocker.hidden = !narrow; layout.hidden = narrow;
+            zoomInput.disabled = narrow; jumpInput.disabled = narrow; jumpButton.disabled = narrow; keyToggle.disabled = narrow;
+            if (narrow && keyOpen) { setKeyOpen(false); }
+            Array.prototype.forEach.call(list.querySelectorAll("button"), function (button) { button.disabled = narrow; });
+            if (narrow && state.narrowStartedAt === null) { state.narrowStartedAt = Date.now(); }
+            if (!narrow && state.narrowStartedAt !== null) {
+                state.narrowStartedAt = null; state.lastActivityAt = Date.now(); state.lastActivitySource = "wide_view_resumed";
+                resizeScaledRounds(); scheduleVisibleRange();
+            }
+            refreshCounters();
+            if (changed) { compactGameTopGap(root); }
+            syncFloatingChrome();
+        }
+
+        function finish(statusName) {
+            if (state.finished || statusName === "completed" && state.evaluation.answeredCount !== config.profile.rounds) { return; }
+            if (!authority && !claimOwner(token, "finish")) { return; }
+            authority = true; state.finished = true;
+            state.task = state.evaluation.task; state.decisions = state.evaluation.decisions;
+            timers.forEach(function (timer) { global.clearTimeout(timer); global.clearInterval(timer); }); timers = [];
+            listeners.forEach(function (item) { item[0].removeEventListener(item[1], item[2], item[3]); }); listeners = [];
+            persistFinalData(state, statusName, bootstrap); clearBankChunks(bootstrap);
+            clearOwner(token); clickNextButton(question);
+        }
+
+        addListener(scrollPane, "scroll", function () { markActivity("decision_scroll"); scheduleVisibleRange(); }, { passive: true });
+        addListener(rulesPanel, "scroll", function () { markActivity("payoff_key_scroll"); }, { passive: true });
+        addListener(zoomInput, "input", function () { markActivity("zoom_change"); setZoom(zoomInput.value); });
+        addListener(keyToggle, "click", function () { markActivity("payoff_key_toggle"); setKeyOpen(!keyOpen); });
+        addListener(keyCloseButton, "click", function () { markActivity("payoff_key_close"); setKeyOpen(false); keyToggle.focus(); });
+        addListener(jumpButton, "click", function () { markActivity("round_jump"); scrollToRound(integerValue(jumpInput.value, 1) - 1); });
+        addListener(jumpInput, "keydown", function (event) { if (event.key === "Enter") { event.preventDefault(); markActivity("round_jump_enter"); scrollToRound(integerValue(jumpInput.value, 1) - 1); } });
+        addListener(nextUnanswered, "click", function () { markActivity("next_unanswered"); goToNextUnanswered(); });
+        addListener(doneButton, "click", function () { markActivity("done"); finish("completed"); });
+        ["pointerdown", "mousedown", "touchstart", "keydown", "wheel"].forEach(function (type) {
+            addListener(root, type, function () { markActivity("root_" + type); }, true);
+        });
+        addListener(global, "focus", function () { markActivity("window_focus"); }, true);
+        addListener(global, "scroll", function () { syncFloatingChrome(); markActivity("window_scroll"); }, { passive: true });
+        addListener(global, "resize", function () { setNarrowMode(); compactGameTopGap(root); syncFloatingChrome(); scheduleVisibleRange(); }, false);
+
+        var inactivityTimer = global.setInterval(function () {
+            refreshInactivityClock();
+            if (!state.finished && !state.narrow && authority && Date.now() - state.lastActivityAt >= config.inactivitySeconds * 1000) { finish("inactive"); }
+        }, 250);
+        timers.push(inactivityTimer);
+        rowRefs.forEach(function (_ref, index) { updateRound(index); });
+        setKeyOpen(false); setZoom(config.allAtOnceDefaultZoom); setNarrowMode(); syncFloatingChrome(); refreshCounters(); refreshVisibleRange();
+        timers.push(global.setTimeout(function () { compactGameTopGap(root); resizeScaledRounds(); syncFloatingChrome(); refreshVisibleRange(); }, 0));
+        timers.push(global.setTimeout(function () { compactGameTopGap(root); resizeScaledRounds(); syncFloatingChrome(); refreshVisibleRange(); }, 250));
+        var controller = {
+            state: state,
+            finish: finish,
+            recompute: function () { recomputeFrom(0); },
+            setZoom: setZoom,
+            scrollToRound: scrollToRound,
+            cleanup: function () {
+                timers.forEach(function (timer) { global.clearTimeout(timer); global.clearInterval(timer); }); timers = [];
+                listeners.forEach(function (item) { item[0].removeEventListener(item[1], item[2], item[3]); }); listeners = [];
+                if (visibleFrame !== null) {
+                    if (global.cancelAnimationFrame) { global.cancelAnimationFrame(visibleFrame); } else { global.clearTimeout(visibleFrame); }
+                }
+                if (!state.finished) { clearOwner(token); }
+                if (global.document && global.document.body) { global.document.body.classList.remove("csq-game-active", "csq-all-at-once-active"); }
+                if (toolbar && toolbar.style) { toolbar.style.display = "none"; }
+                if (rulesPanel) { rulesPanel.hidden = true; }
+                if (root && root.style) { root.style.removeProperty("margin-top"); root.style.removeProperty("--csq-choice-scale"); root.style.removeProperty("--csq-toolbar-height"); }
+                root.__csqController = null;
+            }
+        };
+        root.__csqController = controller; activateController(question, controller); return controller;
+    }
+
+    function initGame(question) {
+        var bootstrap = readBootstrap(false);
+        var error = validateBootstrap(bootstrap, false);
+        var config = error ? null : readConfig(bootstrap.bank);
+        if (!error && !validateConfig(config).length && config.treatmentMode === "all_at_once") { return initAllAtOnceGame(question); }
+        return initSequentialGame(question);
     }
 
     function addDefinition(list, term, value) {
@@ -1146,10 +1759,13 @@
         if (status === "inactive") { appendText(root, "p", "The task ended after " + getEmbeddedData("cs_inactivity_seconds") + " consecutive seconds without captured activity.", "cs-debug-notice"); }
         panel = element("div", "cs-debug-panel"); appendText(panel, "h3", "Certified environment and outcome"); list = element("dl");
         [
-            ["Task status", status], ["Sequence ID", getEmbeddedData("cs_sequence_id")], ["Seed", getEmbeddedData("cs_seed")],
+            ["Task status", status], ["Treatment", getEmbeddedData("cs_treatment_mode")],
+            ["Sequence ID", getEmbeddedData("cs_sequence_id")], ["Seed", getEmbeddedData("cs_seed")],
             ["Profile version", getEmbeddedData("cs_profile_version")], ["Bank hash", getEmbeddedData("cs_bank_hash")],
             ["Task-to-color map", getEmbeddedData("cs_task_color_map")],
-            ["Answered rounds", getEmbeddedData("cs_decision_count")], ["Main choices", getEmbeddedData("cs_main_cards_collected")],
+            ["Answered rounds", getEmbeddedData("cs_answered_at_end") || getEmbeddedData("cs_decision_count")],
+            ["Final all-at-once zoom", getEmbeddedData("cs_all_at_once_final_zoom")],
+            ["Main choices", getEmbeddedData("cs_main_cards_collected")],
             ["Movie choices", getEmbeddedData("cs_movie_cards_collected")], ["Main completed", yesNo(getEmbeddedData("cs_main_complete"))],
             ["Movie completed", yesNo(getEmbeddedData("cs_movie_complete"))], ["Side-task points", getEmbeddedData("cs_side_points")],
             ["Main bonus awarded", getEmbeddedData("cs_main_bonus_awarded")], ["Movie bonus awarded", getEmbeddedData("cs_movie_bonus_awarded")],
@@ -1175,13 +1791,14 @@
     }
 
     global.CSQ = {
-        initSetup: initSetup, initGame: initGame, initOutcome: initOutcome, cleanup: cleanup,
+        initSetup: initSetup, initInstructions: initInstructions, initGame: initGame, initOutcome: initOutcome, cleanup: cleanup,
         __test: {
             defaults: DEFAULTS, decisionColumns: DECISION_COLUMNS.slice(0),
             parseBoolean: parseBoolean, readBootstrap: readBootstrap, validateBootstrap: validateBootstrap,
             profileValues: profileValues, readConfig: readConfig, validateConfig: validateConfig,
             decodeEnvironment: decodeEnvironment, selectEnvironment: selectEnvironment,
             initialTaskState: initialTaskState, applyChoice: applyChoice,
+            evaluateAllocation: evaluateAllocation, viewportIsTooNarrow: viewportIsTooNarrow,
             currentCardPayoff: currentCardPayoff, cardPayoffText: cardPayoffText,
             cardFooterLines: cardFooterLines, cardFooterText: cardFooterText,
             cardDisplayText: cardDisplayText,

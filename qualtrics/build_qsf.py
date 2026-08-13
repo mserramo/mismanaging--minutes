@@ -67,6 +67,9 @@ LOG_COLUMNS = [
 # Configuration fields are editable in Survey Flow after import.  The visible
 # development setup page writes the same fields before the task begins.
 CONFIG_FIELDS = {
+    "cs_treatment_mode": "sequential",
+    "cs_all_at_once_default_zoom": "100",
+    "cs_all_at_once_min_zoom": "75",
     "cs_show_round": "1",
     "cs_show_main_cards": "0",
     "cs_show_movie_cards": "0",
@@ -85,7 +88,9 @@ CONFIG_FIELDS = {
 OUTPUT_FIELDS: dict[str, str | None] = {
     "cs_task_status": None,
     "cs_decision_count": None,
+    "cs_answered_at_end": None,
     "cs_task_elapsed_ms": None,
+    "cs_all_at_once_final_zoom": None,
     "cs_final_points": None,
     "cs_side_points": None,
     "cs_main_cards_collected": None,
@@ -532,6 +537,235 @@ def build_header(bank: dict[str, Any]) -> str:
   font-size: 13.25px;
   line-height: 1.3;
 }
+.csq-all-at-once {
+  --csq-choice-scale: 1;
+  --csq-toolbar-height: 96px;
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+}
+.csq-all-toolbar {
+  position: fixed !important;
+  top: 8px;
+  left: 8px;
+  z-index: 10000;
+  box-sizing: border-box;
+  width: calc(100vw - 16px);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 18px;
+  padding: 10px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.97);
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.09);
+  font-size: 13px;
+  line-height: 1.25;
+}
+.csq-all-toolbar-spacer { height: var(--csq-toolbar-height); }
+.csq-all-toolbar-primary,
+.csq-all-toolbar-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+.csq-all-toolbar-primary { font-size: 14px; }
+.csq-all-toolbar-controls { margin-left: auto; }
+.csq-all-layout {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  margin-top: 10px;
+}
+.csq-all-scroll {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  height: calc(100vh - var(--csq-toolbar-height) - 44px);
+  min-height: 420px;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+.csq-all-list {
+  box-sizing: border-box;
+  display: flex;
+  width: 100%;
+  min-width: 100%;
+  flex-direction: column;
+  gap: 10px;
+  padding: 8px;
+}
+.csq-all-round {
+  box-sizing: border-box;
+  width: max-content;
+  min-width: 100%;
+  padding: 10px 8px 12px;
+  border: 1px solid #d8e0ea;
+  border-radius: 7px;
+  background: #fff;
+  scroll-margin: 12px;
+}
+.csq-all-round-scale {
+  box-sizing: border-box;
+  width: max-content;
+  transform: scale(var(--csq-choice-scale));
+  transform-origin: top left;
+}
+.csq-all-round-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 24px;
+  margin: 0 0 8px;
+  color: #334155;
+  font-size: 14px;
+  font-weight: 750;
+}
+.csq-all-card-row {
+  display: flex !important;
+  flex-flow: row nowrap !important;
+  align-items: stretch;
+  gap: 8px;
+  width: max-content;
+  min-width: max-content;
+}
+.csq-all-round-input {
+  box-sizing: border-box;
+  width: 58px;
+  min-height: 34px;
+  margin: 0;
+  padding: 4px 6px;
+  border: 1px solid #94a3b8;
+  border-radius: 5px;
+  background: #fff;
+  color: #0f172a;
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+}
+.csq-all-at-once .cs-card {
+  flex-basis: 108px;
+  width: 108px;
+  min-width: 108px;
+  min-height: 190px;
+}
+.csq-all-helper {
+  margin: 0;
+  color: #475569;
+  font-size: 13px;
+  line-height: 1.35;
+}
+.csq-all-done {
+  padding: 7px 10px;
+  border: 1px solid #86efac;
+  border-radius: 6px;
+  background: #f0fdf4;
+  color: #166534;
+  font-size: 13px;
+  font-weight: 750;
+}
+.csq-all-nav-button {
+  min-height: 34px;
+  padding: 6px 12px;
+  border: 0;
+  border-radius: 6px;
+  background: #0f4c81;
+  color: #fff;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.2;
+  font-weight: 750;
+}
+.csq-all-nav-button:hover,
+.csq-all-nav-button:focus { background: #0b365b; }
+.csq-all-nav-button:disabled {
+  background: #94a3b8;
+  cursor: not-allowed;
+}
+.csq-all-zoom {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #334155;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.csq-all-zoom input[type="range"] { width: 120px; }
+.csq-all-zoom-value {
+  display: inline-block;
+  min-width: 42px;
+  color: #0f172a;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+.csq-all-wide-blocker {
+  box-sizing: border-box;
+  max-width: 760px;
+  margin: 16px auto;
+  padding: 18px 20px;
+  border: 2px solid #b45309;
+  border-radius: 8px;
+  background: #fffbeb;
+  color: #78350f;
+  font-weight: 700;
+  line-height: 1.45;
+}
+.csq-all-wide-blocker[hidden] { display: none !important; }
+.csq-key-toggle {
+  border: 1px solid #94a3b8;
+  background: #fff;
+  color: #334155;
+}
+.csq-key-toggle:hover,
+.csq-key-toggle:focus { background: #f1f5f9; color: #0f172a; }
+.csq-all-at-once > .csq-rules-panel {
+  position: fixed !important;
+  top: 120px;
+  right: 8px;
+  bottom: 8px;
+  left: auto;
+  z-index: 9999;
+  flex: none;
+  width: min(400px, calc(100vw - 24px));
+  max-height: none;
+  padding-top: 38px;
+  overflow: auto;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.2);
+}
+.csq-all-at-once > .csq-rules-panel[hidden] { display: none !important; }
+.csq-key-close {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  float: right;
+  min-height: 26px;
+  padding: 3px 8px;
+  border: 1px solid #94a3b8;
+  border-radius: 5px;
+  background: #fff;
+  color: #334155;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 750;
+}
+@media (min-width: 1280px) and (max-width: 1369px) {
+  .csq-all-card-row { gap: 2px; }
+  .csq-all-at-once .cs-card {
+    flex-basis: 93px;
+    width: 93px;
+    min-width: 93px;
+  }
+}
 @media (max-width: 680px) {
   .csq-field { grid-template-columns: 1fr; gap: 5px; }
 }
@@ -552,6 +786,11 @@ def build_header(bank: dict[str, Any]) -> str:
 SETUP_JS = """Qualtrics.SurveyEngine.addOnReady(function () {
     if (!window.CSQ) { throw new Error('Card Stacking engine did not load.'); }
     window.CSQ.initSetup(this);
+});"""
+
+INTRO_JS = """Qualtrics.SurveyEngine.addOnReady(function () {
+    if (!window.CSQ) { throw new Error('Card Stacking engine did not load.'); }
+    window.CSQ.initInstructions(this);
 });"""
 
 GAME_JS = """Qualtrics.SurveyEngine.addOnReady(function () {
@@ -711,25 +950,9 @@ def build_qsf() -> dict[str, Any]:
             "QID2",
             "cs_instructions",
             "Card Stacking Game instructions",
-            f"""<div class="cs-shell">
-<h2>Card-choice task</h2>
-<p>You will make exactly {bank['profile']['rounds']} choices. Every round contains the main card and exactly {bank['profile']['side_cards_per_round']} side-task cards. The final {bank['profile']['movie_rounds']} rounds also contain an additional movie card.</p>
-<p>Choosing the main card at least {bank['profile']['main_target']} times earns {bank['profile']['main_bonus']} points. Choosing all {bank['profile']['movie_rounds']} movie cards earns {bank['profile']['movie_bonus']} points. You receive each bonus only if its requirement is met.</p>
-<h3>Side-task rules</h3>
-<ul>
-<li><strong>Trio A:</strong> 30 points for every completed group of 3 choices.</li>
-<li><strong>Trio B:</strong> 36 points for every completed group of 3 choices.</li>
-<li><strong>Fives:</strong> 60 points for every completed group of 5 choices.</li>
-<li><strong>Cumulative A:</strong> successive choices pay 2, 4, 6, 8, … points.</li>
-<li><strong>Cumulative B:</strong> successive choices pay 1, 4, 7, 10, … points.</li>
-<li><strong>Infinite scroll:</strong> within each availability run, successive choices pay 2, 6, 10, 14, … points. When a run begins, its exact 4–7-round length is shown.</li>
-<li><strong>Simple A:</strong> the displayed card pays 4, 8, or 12 points, with probabilities 30%, 50%, and 20%.</li>
-<li><strong>Simple B:</strong> the displayed card pays 2, 10, or 16 points, with probabilities 45%, 40%, and 15%.</li>
-</ul>
-<p>Side-task progress is shown only when that task's card appears.</p>
-<p>The color assigned to each task is fixed for you, while the available side tasks vary across rounds. Simple cards are relatively common; Trio and Cumulative cards are moderately common; Fives and Infinite-scroll cards are less common. The realized order and counts are not disclosed.</p>
-<p>Please stay active. The visible inactivity clock resets when activity is captured; at zero, the task ends.</p>
-</div>""",
+            '<div id="csq-instructions-root"></div>'
+            "<noscript>This task requires JavaScript.</noscript>",
+            INTRO_JS,
         ),
         db_question(
             survey_id,
@@ -811,6 +1034,11 @@ def validate_generated_qsf(qsf: dict[str, Any]) -> None:
             raise ValueError(
                 f"Question description mismatch in {element['PrimaryAttribute']}"
             )
+    intro_payload = sqs[1]["Payload"]
+    if 'id="csq-instructions-root"' not in intro_payload["QuestionText"]:
+        raise ValueError("QID2 must provide the treatment-aware instructions root")
+    if intro_payload.get("QuestionJS") != INTRO_JS:
+        raise ValueError("QID2 must initialize treatment-aware instructions")
 
     fl = next(element for element in elements if element["Element"] == "FL")
     flow = fl["Payload"]["Flow"]
@@ -823,6 +1051,9 @@ def validate_generated_qsf(qsf: dict[str, Any]) -> None:
         raise ValueError("Embedded-data field names must be unique")
     values = {field["Field"]: field.get("Value") for field in embedded}
     expected_defaults = {
+        "cs_treatment_mode": "sequential",
+        "cs_all_at_once_default_zoom": "100",
+        "cs_all_at_once_min_zoom": "75",
         "cs_show_main_cards": "0",
         "cs_show_movie_cards": "0",
         "cs_show_total_points": "1",
@@ -836,6 +1067,18 @@ def validate_generated_qsf(qsf: dict[str, Any]) -> None:
             raise ValueError(
                 f"Embedded-data default {name} must be {expected_value!r}"
             )
+    required_treatment_outputs = {
+        "cs_all_at_once_final_zoom",
+        "cs_answered_at_end",
+    }
+    missing_treatment_outputs = required_treatment_outputs - set(names)
+    if missing_treatment_outputs:
+        raise ValueError(
+            "Missing all-at-once output field(s): "
+            + ", ".join(sorted(missing_treatment_outputs))
+        )
+    if "treatment_mode" in LOG_COLUMNS or "cs_treatment_mode" in LOG_COLUMNS:
+        raise ValueError("Treatment mode must remain response-level metadata")
     if "cs_show_side_points" in names:
         raise ValueError("The removed side-only points counter field is still present")
     expected_chunks = [

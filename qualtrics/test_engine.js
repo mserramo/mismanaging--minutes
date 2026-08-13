@@ -39,6 +39,9 @@ assert.equal(engine.defaults.showMainCardPayoff, false);
 assert.equal(engine.defaults.showMovieCardPayoff, false);
 assert.equal(engine.defaults.showSideCardPayoff, true);
 assert.equal(engine.defaults.inactivitySeconds, 120);
+assert.equal(engine.defaults.treatmentMode, "sequential");
+assert.equal(engine.defaults.allAtOnceDefaultZoom, 100);
+assert.equal(engine.defaults.allAtOnceMinZoom, 75);
 assert.equal(Object.hasOwn(engine.defaults, "showSidePoints"), false);
 const firstRuleEnvironment = engine.decodeEnvironment(bank, bank.sequences[0]);
 const preMovieRuleGroups = engine.ruleGroupsForEnvironment(profile, firstRuleEnvironment, false);
@@ -107,8 +110,8 @@ assert.equal(
 );
 assert.match(preMovieRuleGroups.find((group) => group.groupId === "trio").description, /every 3 cards of the same color/i);
 assert.match(preMovieRuleGroups.find((group) => group.groupId === "fives").description, /every 5 cards of the same color/i);
-assert.match(preMovieRuleGroups.find((group) => group.groupId === "infinite_scroll").description, /consecutive/i);
-assert.match(preMovieRuleGroups.find((group) => group.groupId === "infinite_scroll").description, /resets/i);
+assert.match(preMovieRuleGroups.find((group) => group.groupId === "infinite_scroll").description, /uninterrupted/i);
+assert.match(preMovieRuleGroups.find((group) => group.groupId === "infinite_scroll").description, /breaks the streak/i);
 movieRuleGroups.forEach((group) => {
     assert.doesNotMatch(group.description, /\bpoints?\b/i);
     assert.match(group.description, /pts\./i);
@@ -193,6 +196,7 @@ if (!process.env.CSQ_BANK_PATH) {
 
 for (const packed of bank.sequences) {
     const environment = engine.decodeEnvironment(bank, packed);
+    let expectedInfiniteRunId = 0;
     assert.equal(environment.rounds.length, 100);
     assert.equal(environment.sequenceId, packed.sequence_id);
     for (const round of environment.rounds) {
@@ -225,6 +229,8 @@ for (const packed of bank.sequences) {
         const end = index;
         assert.ok(end - start + 1 >= 4 && end - start + 1 <= 7);
         const runId = environment.rounds[start].infiniteRunId;
+        expectedInfiniteRunId += 1;
+        assert.equal(runId, expectedInfiniteRunId);
         for (let runIndex = start; runIndex <= end; runIndex += 1) {
             const round = environment.rounds[runIndex];
             assert.equal(round.infiniteRunId, runId);
@@ -261,6 +267,13 @@ assert.deepEqual(chooseRepeated("fives", 6).gains, [0, 0, 0, 0, 60, 0]);
 assert.deepEqual(chooseRepeated("cumulative_a", 4).gains, [2, 4, 6, 8]);
 assert.deepEqual(chooseRepeated("cumulative_b", 4).gains, [1, 4, 7, 10]);
 assert.deepEqual(chooseRepeated("infinite_scroll", 4, null, 7).gains, [2, 6, 10, 14]);
+const resetState = engine.initialTaskState();
+const runRound = round("infinite_scroll", null, 7);
+const breakRound = { number: 2, cards: [{ taskId: "main", position: 1 }], infiniteRunId: 7, infiniteRoundsRemaining: 3 };
+assert.equal(engine.applyChoice(profile, resetState, runRound, runRound.cards[0]), 2);
+assert.equal(engine.applyChoice(profile, resetState, runRound, runRound.cards[0]), 6);
+assert.equal(engine.applyChoice(profile, resetState, breakRound, breakRound.cards[0]), 0);
+assert.equal(engine.applyChoice(profile, resetState, runRound, runRound.cards[0]), 2);
 assert.deepEqual(chooseRepeated("simple_a", 1, 12).gains, [12]);
 assert.deepEqual(chooseRepeated("simple_b", 1, 16).gains, [16]);
 assert.equal(definitions.trio_a.group_bonus, 30);
@@ -286,7 +299,7 @@ assert.equal(engine.taskProgressText(profile, progressState, round("simple_a", 1
 assert.equal(engine.taskProgressText(profile, progressState, round("cumulative_a"), round("cumulative_a").cards[0]), "+2 pts.");
 progressState.counts.cumulative_a = 2;
 assert.equal(engine.taskProgressText(profile, progressState, round("cumulative_a"), round("cumulative_a").cards[0]), "+6 pts.");
-progressState.runCounts["7"] = 2;
+progressState.runStreaks["7"] = 2;
 assert.equal(engine.taskProgressText(profile, progressState, round("infinite_scroll", null, 7), round("infinite_scroll", null, 7).cards[0]), "+10 pts. · 4 cards left in this run");
 assert.equal(engine.cardPayoffText(profile, progressState, round("simple_a", 12), round("simple_a", 12).cards[0], hiddenNonSimplePayoffsConfig), "+12 pts.");
 assert.equal(engine.cardPayoffText(profile, progressState, round("cumulative_a"), round("cumulative_a").cards[0], hiddenNonSimplePayoffsConfig), "");
@@ -318,6 +331,56 @@ totalState.movie = profile.movie_rounds;
 assert.equal(engine.awardedTotalPoints(engine.profileValues(profile), totalState), 100 + profile.main_bonus + profile.movie_bonus);
 
 const sampleEnvironment = engine.decodeEnvironment(bank, bank.sequences[0]);
+const blankAllocation = Array(100).fill(null);
+const blankEvaluation = engine.evaluateAllocation(profile, sampleEnvironment, blankAllocation, defaultCardTextConfig);
+assert.equal(blankEvaluation.answeredCount, 0);
+assert.equal(blankEvaluation.decisions.length, 0);
+assert.equal(blankEvaluation.task.sidePay, 0);
+
+const completeAllocation = sampleEnvironment.rounds.map((item) => item.cards[0].taskId);
+const selectionTimes = Array.from({ length: 100 }, (_, index) => (index + 1) * 250);
+const completeEvaluation = engine.evaluateAllocation(profile, sampleEnvironment, completeAllocation, defaultCardTextConfig, {
+    responseTimes: Array(100).fill(""), selectionElapsedMs: selectionTimes
+});
+assert.equal(completeEvaluation.answeredCount, 100);
+assert.equal(completeEvaluation.decisions.length, 100);
+assert.ok(completeEvaluation.decisions.every((decision) => decision.response_time_ms === ""));
+assert.equal(completeEvaluation.decisions[99].task_elapsed_ms, 25000);
+assert.deepEqual(completeEvaluation.task, completeEvaluation.trace[99].after);
+
+const partialAllocation = completeAllocation.slice();
+partialAllocation[17] = null;
+const partialEvaluation = engine.evaluateAllocation(profile, sampleEnvironment, partialAllocation, defaultCardTextConfig, {
+    responseTimes: Array(100).fill(""), selectionElapsedMs: selectionTimes
+});
+assert.equal(partialEvaluation.answeredCount, 99);
+assert.equal(partialEvaluation.decisions.length, 99);
+assert.equal(partialEvaluation.decisions.some((decision) => decision.round === 18), false);
+assert.equal(engine.viewportIsTooNarrow(1279), true);
+assert.equal(engine.viewportIsTooNarrow(1280), false);
+
+let runStartIndex = sampleEnvironment.rounds.findIndex((item, index, rounds) =>
+    item.cards.some((card) => card.taskId === "infinite_scroll")
+    && index + 2 < rounds.length
+    && rounds[index + 1].infiniteRunId === item.infiniteRunId
+    && rounds[index + 2].infiniteRunId === item.infiniteRunId
+);
+assert.ok(runStartIndex >= 0);
+const streakAllocation = Array(100).fill(null);
+streakAllocation[runStartIndex] = "infinite_scroll";
+streakAllocation[runStartIndex + 1] = "infinite_scroll";
+streakAllocation[runStartIndex + 2] = "infinite_scroll";
+let streakEvaluation = engine.evaluateAllocation(profile, sampleEnvironment, streakAllocation, defaultCardTextConfig);
+assert.deepEqual(streakEvaluation.trace.slice(runStartIndex, runStartIndex + 3).map((item) => item.reward), [2, 6, 10]);
+streakAllocation[runStartIndex + 1] = null;
+streakEvaluation = engine.evaluateAllocation(profile, sampleEnvironment, streakAllocation, defaultCardTextConfig);
+assert.deepEqual(streakEvaluation.trace.slice(runStartIndex, runStartIndex + 3).map((item) => item.reward), [2, 0, 2]);
+const replacement = sampleEnvironment.rounds[runStartIndex + 1].cards.find((card) => card.taskId !== "infinite_scroll").taskId;
+streakAllocation[runStartIndex + 1] = replacement;
+streakEvaluation = engine.evaluateAllocation(profile, sampleEnvironment, streakAllocation, defaultCardTextConfig);
+assert.equal(streakEvaluation.trace[runStartIndex].reward, 2);
+assert.equal(streakEvaluation.trace[runStartIndex + 2].reward, 2);
+
 const sampleDecisions = Array.from({ length: 100 }, (_, index) => ({
     round: index + 1,
     phase: index < 80 ? "ordinary" : "movie",

@@ -138,6 +138,10 @@ def load_profile(path: Path) -> dict[str, Any]:
             sum(item["probability"] for item in task["outcomes"]) - 1
         ) > 1e-9:
             errors.append(f"{task['id']} outcome probabilities must sum to 1")
+        if task["type"] == "run" and task.get("streak_resets_on_nonselection") is not True:
+            errors.append(
+                f"{task['id']} must set streak_resets_on_nonselection to true"
+            )
     if len(profile["colors"]) < len(TASK_ORDER):
         errors.append("the palette must provide one color per task")
     cumulative_cap = int(profile.get("ordinary_cumulative_appearance_cap", 0))
@@ -221,6 +225,22 @@ def _place_infinite_runs(
         for round_index in range(start, end + 1):
             occupied.add(round_index)
             metadata[round_index] = (run_id, start + 1, end + 1)
+    # Run IDs are part of the review/logging interface, but the compact runtime
+    # bank intentionally stores only card availability. The browser therefore
+    # reconstructs runs in chronological order. Normalize the generator's IDs
+    # to that same observable order after random placement without consuming
+    # another RNG draw or changing any round/card assignment.
+    chronological_ids = {
+        bounds: run_id
+        for run_id, bounds in enumerate(
+            sorted({(start, end) for _old_id, start, end in metadata.values()}),
+            start=1,
+        )
+    }
+    metadata = {
+        round_index: (chronological_ids[(start, end)], start, end)
+        for round_index, (_old_id, start, end) in metadata.items()
+    }
     return occupied, metadata
 
 
@@ -396,14 +416,25 @@ def _build_model(
                 ]
                 base = int(task["marginal_base"])
                 increment = int(task["marginal_increment"])
+                # Exact uninterrupted-streak payoff. Each selected card pays
+                # `base`; each all-selected contiguous interval of length at
+                # least two adds one `increment`. A streak of length k therefore
+                # contributes base*k + increment*k*(k-1)/2, while any non-IS
+                # choice sets the corresponding x variable to zero and breaks
+                # every interval spanning that round.
+                interval_terms: list[cp_model.IntVar] = []
+                for start in range(len(run_variables)):
+                    for end in range(start + 1, len(run_variables)):
+                        interval = run_variables[start : end + 1]
+                        all_selected = model.new_bool_var(
+                            f"{prefix}reward_{task_id}_{run_id}_all_{start}_{end}"
+                        )
+                        for variable in interval:
+                            model.add(all_selected <= variable)
+                        model.add(all_selected >= sum(interval) - len(interval) + 1)
+                        interval_terms.append(all_selected)
                 reward_terms.append(
-                    add_count_reward(
-                        f"reward_{task_id}_{run_id}",
-                        run_variables,
-                        lambda count, base=base, increment=increment: (
-                            base * count + increment * count * (count - 1) // 2
-                        ),
-                    )
+                    base * sum(run_variables) + increment * sum(interval_terms)
                 )
             continue
         if task["type"] == "group":
@@ -578,8 +609,8 @@ def planning_index(
         count = int(state["counts"].get(task_id, 0))
         return float(task["marginal_base"] + task["marginal_increment"] * count)
     if task["type"] == "run":
-        run_count = int(state["run_counts"].get(str(round_data.infinite_run_id), 0))
-        return float(task["marginal_base"] + task["marginal_increment"] * run_count)
+        run_streak = int(state["run_streaks"].get(str(round_data.infinite_run_id), 0))
+        return float(task["marginal_base"] + task["marginal_increment"] * run_streak)
     return float(round_data.simple_payoffs[task_id])
 
 
@@ -589,7 +620,7 @@ def initial_task_state() -> dict[str, Any]:
         "movie": 0,
         "side_pay": 0,
         "counts": {task_id: 0 for task_id in SIDE_TASKS},
-        "run_counts": {},
+        "run_streaks": {},
         "contributions": {task_id: 0 for task_id in SIDE_TASKS},
         "completed_bonuses": {"trio_a": 0, "trio_b": 0, "fives": 0},
     }
@@ -601,7 +632,7 @@ def public_task_state(state: dict[str, Any]) -> dict[str, Any]:
         "movie": state["movie"],
         "side_pay": state["side_pay"],
         "counts": dict(state["counts"]),
-        "run_counts": dict(state["run_counts"]),
+        "run_streaks": dict(state["run_streaks"]),
         "contributions": dict(state["contributions"]),
         "completed_bonuses": dict(state["completed_bonuses"]),
     }
@@ -610,6 +641,13 @@ def public_task_state(state: dict[str, Any]) -> dict[str, Any]:
 def apply_choice(
     profile: dict[str, Any], state: dict[str, Any], round_data: Round, task_id: str
 ) -> int:
+    run_key = (
+        str(round_data.infinite_run_id)
+        if round_data.infinite_run_id is not None
+        else None
+    )
+    if run_key is not None and task_id != "infinite_scroll":
+        state["run_streaks"][run_key] = 0
     if task_id == "main":
         state["main"] += 1
         return 0
@@ -626,10 +664,11 @@ def apply_choice(
     elif task["type"] == "cumulative":
         reward = int(task["marginal_base"] + task["marginal_increment"] * before_count)
     elif task["type"] == "run":
-        run_key = str(round_data.infinite_run_id)
-        run_count = int(state["run_counts"].get(run_key, 0))
-        reward = int(task["marginal_base"] + task["marginal_increment"] * run_count)
-        state["run_counts"][run_key] = run_count + 1
+        if run_key is None:
+            raise ValueError("Infinite Scrolling choice is missing an availability run id")
+        run_streak = int(state["run_streaks"].get(run_key, 0))
+        reward = int(task["marginal_base"] + task["marginal_increment"] * run_streak)
+        state["run_streaks"][run_key] = run_streak + 1
     else:
         reward = int(round_data.simple_payoffs[task_id])
     state["side_pay"] += reward
@@ -750,6 +789,20 @@ def certify_sequence(profile: dict[str, Any], sequence_id: int) -> CertifiedSequ
             (main_complete, movie_complete),
             canonical=False,
         )
+        _regime_trace, regime_state = trace_choices(profile, rounds, choices)
+        if int(regime_state["side_pay"]) != value:
+            raise ValueError(
+                f"sequence {sequence_id} failed certification: {key} solver payoff "
+                f"{value} != traced payoff {regime_state['side_pay']}"
+            )
+        if int(regime_state["main"]) != main_complete * int(profile["main_target"]):
+            raise ValueError(
+                f"sequence {sequence_id} failed certification: {key} traced main count is invalid"
+            )
+        if int(regime_state["movie"]) != movie_complete * int(profile["movie_rounds"]):
+            raise ValueError(
+                f"sequence {sequence_id} failed certification: {key} traced movie count is invalid"
+            )
         values[key] = value
         if key == "V11":
             canonical_choices = choices
@@ -957,7 +1010,9 @@ def _state_for_card(state: dict[str, Any], task_id: str, round_data: Round) -> s
             "contribution": state["contributions"][task_id],
         }
         if task_id == "infinite_scroll":
-            payload["run_count"] = state["run_counts"].get(str(round_data.infinite_run_id), 0)
+            payload["run_streak"] = state["run_streaks"].get(
+                str(round_data.infinite_run_id), 0
+            )
     return json.dumps(payload, ensure_ascii=False, separators=(",", ":"), sort_keys=True)
 
 
