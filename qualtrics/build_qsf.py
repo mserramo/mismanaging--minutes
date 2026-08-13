@@ -43,6 +43,7 @@ LOG_COLUMNS = [
     "chosen_task_id",
     "chosen_task_label",
     "chosen_position",
+    "generated_position",
     "chosen_is_main",
     "chosen_is_movie",
     "chosen_is_side",
@@ -110,6 +111,8 @@ OUTPUT_FIELDS: dict[str, str | None] = {
     "cs_sequence_id": None,
     "cs_seed": None,
     "cs_task_color_map": None,
+    "cs_slot_order": None,
+    "cs_layout_version": "fixed-slots-v1",
     "cs_profile_version": None,
     "cs_bank_hash": None,
     "cs_validated_sequences_hash": None,
@@ -121,7 +124,7 @@ OUTPUT_FIELDS: dict[str, str | None] = {
     "cs_benchmark_V11": None,
     "cs_log_columns": ",".join(LOG_COLUMNS),
     "cs_log_chunk_count": None,
-    "cs_log_format_version": "csv-v2",
+    "cs_log_format_version": "csv-v3",
     "cs_log_overflow": None,
     "cs_log_overflow_rows": None,
     "cs_environment_columns": "round,phase,displayed_choice_set_json,infinite_run_id,infinite_run_start,infinite_run_end",
@@ -294,21 +297,23 @@ def build_header(bank: dict[str, Any]) -> str:
   padding-top: 0 !important;
   margin-top: 0 !important;
 }
-#csq-game-root { max-width: 100%; overflow-x: auto; padding: 2px 2px 10px; }
+#csq-game-root { box-sizing: border-box; max-width: 100%; overflow-x: hidden; padding: 2px 2px 10px; }
 .csq-game-layout {
   display: flex;
+  flex-direction: column;
   align-items: flex-start;
   justify-content: flex-start;
-  gap: 16px;
-  width: max-content;
+  gap: 12px;
+  width: 100%;
   min-width: 100%;
 }
 .cs-task {
   box-sizing: border-box;
   flex: 0 0 auto;
-  width: max-content;
+  width: 100%;
   max-width: none;
   margin: 0;
+  padding: 14px 16px 16px;
 }
 .csq-field {
   display: grid;
@@ -401,27 +406,27 @@ def build_header(bank: dict[str, Any]) -> str:
 .csq-validation-errors { color: #991b1b; font-weight: 700; margin-top: 12px; }
 .csq-debug-table-wrap { overflow-x: auto; }
 .cs-card-row {
-  display: flex !important;
-  flex-flow: row nowrap;
+  display: grid !important;
+  grid-template-columns: repeat(10, minmax(0, 1fr)) !important;
   align-items: stretch;
-  gap: 12px;
-  width: max-content;
+  gap: 6px;
+  width: 100%;
 }
 .cs-card {
   box-sizing: border-box;
   position: relative;
   display: block;
-  flex: 0 0 140px;
-  width: 140px;
-  min-width: 140px;
-  min-height: 218px;
-  padding: 13px 8px;
+  flex: 0 0 auto;
+  width: 100%;
+  min-width: 0;
+  min-height: 184px;
+  padding: 11px 5px;
 }
 .cs-card-heading {
   position: absolute;
-  top: 13px;
-  left: 8px;
-  right: 8px;
+  top: 11px;
+  left: 4px;
+  right: 4px;
   display: flex;
   min-height: 25px;
   align-items: flex-start;
@@ -429,6 +434,7 @@ def build_header(bank: dict[str, Any]) -> str:
 }
 .cs-card-color-label {
   color: var(--card-color);
+  font-size: 14px;
   font-weight: 800;
 }
 .cs-card-payoff-slot {
@@ -444,7 +450,7 @@ def build_header(bank: dict[str, Any]) -> str:
   text-align: center;
 }
 .cs-card-payoff {
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 800;
   line-height: 1.2;
   white-space: nowrap;
@@ -461,7 +467,7 @@ def build_header(bank: dict[str, Any]) -> str:
   justify-content: flex-end;
   overflow: hidden;
   color: #64748b;
-  font-size: 11.5px;
+  font-size: 11px;
   font-weight: 650;
   line-height: 1.05;
   text-align: center;
@@ -471,6 +477,26 @@ def build_header(bank: dict[str, Any]) -> str:
   max-width: 100%;
   white-space: nowrap;
 }
+.cs-card-inactive {
+  border-color: #94a3b8 !important;
+  background: #e2e8f0 !important;
+  color: #64748b !important;
+  box-shadow: none !important;
+  cursor: not-allowed !important;
+  opacity: 0.82;
+  transform: none !important;
+}
+.cs-card-inactive:hover,
+.cs-card-inactive:focus {
+  outline: none !important;
+  box-shadow: none !important;
+}
+.cs-card-inactive .cs-card-color-label { color: #64748b !important; }
+.cs-card-inactive .cs-card-payoff {
+  color: #64748b;
+  font-size: 11.5px;
+  font-weight: 700;
+}
 .cs-inactivity-clock {
   color: #475569;
   font-variant-numeric: tabular-nums;
@@ -479,8 +505,12 @@ def build_header(bank: dict[str, Any]) -> str:
 .cs-inactivity-warning { color: #b91c1c; }
 .csq-rules-panel {
   box-sizing: border-box;
-  flex: 0 0 540px;
-  width: 540px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  flex: none;
+  width: 100%;
+  max-width: none;
+  gap: 0 18px;
   padding: 10px 12px;
   border: 1px solid #cbd5e1;
   border-radius: 8px;
@@ -489,18 +519,21 @@ def build_header(bank: dict[str, Any]) -> str:
   overflow: visible;
 }
 .csq-rules-panel h3 {
+  grid-column: 1 / -1;
   margin: 0 0 3px;
   color: #111827;
   font-size: 16px;
   line-height: 1.25;
 }
 .csq-rule-note {
+  grid-column: 1 / -1;
   margin: 0 0 4px;
   color: #334155;
   font-size: 12.5px;
   line-height: 1.3;
 }
 .csq-rule-row {
+  min-width: 0;
   padding: 4px 0 5px;
   border-top: 1px solid #d8e0ea;
 }
@@ -587,7 +620,7 @@ def build_header(bank: dict[str, Any]) -> str:
   height: calc(100vh - var(--csq-toolbar-height) - 44px);
   min-height: 420px;
   overflow: auto;
-  overscroll-behavior: contain;
+  overscroll-behavior: auto;
   scrollbar-gutter: stable;
   border: 1px solid #cbd5e1;
   border-radius: 8px;
@@ -633,7 +666,7 @@ def build_header(bank: dict[str, Any]) -> str:
   display: flex !important;
   flex-flow: row nowrap !important;
   align-items: stretch;
-  gap: 8px;
+  gap: 6px;
   width: max-content;
   min-width: max-content;
 }
@@ -651,10 +684,10 @@ def build_header(bank: dict[str, Any]) -> str:
   font-variant-numeric: tabular-nums;
 }
 .csq-all-at-once .cs-card {
-  flex-basis: 108px;
-  width: 108px;
-  min-width: 108px;
-  min-height: 190px;
+  flex-basis: 104px;
+  width: 104px;
+  min-width: 104px;
+  min-height: 184px;
 }
 .csq-all-helper {
   margin: 0;
@@ -720,50 +753,22 @@ def build_header(bank: dict[str, Any]) -> str:
   line-height: 1.45;
 }
 .csq-all-wide-blocker[hidden] { display: none !important; }
-.csq-key-toggle {
-  border: 1px solid #94a3b8;
-  background: #fff;
-  color: #334155;
-}
-.csq-key-toggle:hover,
-.csq-key-toggle:focus { background: #f1f5f9; color: #0f172a; }
 .csq-all-at-once > .csq-rules-panel {
-  position: fixed !important;
-  top: 120px;
-  right: 8px;
-  bottom: 8px;
-  left: auto;
-  z-index: 9999;
+  position: static !important;
   flex: none;
-  width: min(400px, calc(100vw - 24px));
+  width: 100%;
   max-height: none;
-  padding-top: 38px;
-  overflow: auto;
-  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.2);
+  margin-top: 12px;
+  overflow: visible;
+  box-shadow: none;
 }
 .csq-all-at-once > .csq-rules-panel[hidden] { display: none !important; }
-.csq-key-close {
-  position: sticky;
-  top: 0;
-  z-index: 2;
-  float: right;
-  min-height: 26px;
-  padding: 3px 8px;
-  border: 1px solid #94a3b8;
-  border-radius: 5px;
-  background: #fff;
-  color: #334155;
-  cursor: pointer;
-  font-family: inherit;
-  font-size: 12px;
-  font-weight: 750;
-}
 @media (min-width: 1280px) and (max-width: 1369px) {
-  .csq-all-card-row { gap: 2px; }
+  .csq-all-card-row { gap: 4px; }
   .csq-all-at-once .cs-card {
-    flex-basis: 93px;
-    width: 93px;
-    min-width: 93px;
+    flex-basis: 100px;
+    width: 100px;
+    min-width: 100px;
   }
 }
 @media (max-width: 680px) {
@@ -1070,6 +1075,8 @@ def validate_generated_qsf(qsf: dict[str, Any]) -> None:
     required_treatment_outputs = {
         "cs_all_at_once_final_zoom",
         "cs_answered_at_end",
+        "cs_slot_order",
+        "cs_layout_version",
     }
     missing_treatment_outputs = required_treatment_outputs - set(names)
     if missing_treatment_outputs:
@@ -1079,6 +1086,12 @@ def validate_generated_qsf(qsf: dict[str, Any]) -> None:
         )
     if "treatment_mode" in LOG_COLUMNS or "cs_treatment_mode" in LOG_COLUMNS:
         raise ValueError("Treatment mode must remain response-level metadata")
+    if values.get("cs_log_format_version") != "csv-v3":
+        raise ValueError("Fixed-slot decision logs must use csv-v3")
+    if values.get("cs_layout_version") != "fixed-slots-v1":
+        raise ValueError("Fixed-slot layout version metadata is missing")
+    if "generated_position" not in LOG_COLUMNS:
+        raise ValueError("csv-v3 must preserve the certified generated position")
     if "cs_show_side_points" in names:
         raise ValueError("The removed side-only points counter field is still present")
     expected_chunks = [

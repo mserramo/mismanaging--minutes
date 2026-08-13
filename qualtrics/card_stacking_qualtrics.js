@@ -21,7 +21,7 @@
     };
     var DECISION_COLUMNS = [
         "round", "phase", "sequence_id", "seed", "chosen_task_id",
-        "chosen_task_label", "chosen_position", "chosen_is_main",
+        "chosen_task_label", "chosen_position", "generated_position", "chosen_is_main",
         "chosen_is_movie", "chosen_is_side", "displayed_choice_set_json",
         "task_state_before_json", "task_state_after_json", "side_points_added",
         "side_points_total", "main_count", "movie_count", "main_complete",
@@ -40,6 +40,7 @@
         "infinite_scroll", "simple_a", "simple_b"
     ];
     var RULE_GROUP_IDS = ["main", "trio", "fives", "cumulative", "infinite_scroll", "simple", "movie"];
+    var LAYOUT_VERSION = "fixed-slots-v1";
     var SHARED_ACCUMULATION_NOTE = "Each color accumulates separately—cards of different colors are never combined. Unless stated otherwise, accumulation may be nonconsecutive.";
     var localEmbeddedData = {};
     var activeController = null;
@@ -460,11 +461,11 @@
         appendText(root, "h2", "Card-choice task");
         if (config.treatmentMode === "all_at_once") {
             appendText(root, "p", "All " + profile.rounds + " choice sets will appear together in one scrollable list. Choose one card in every round. You may revisit any round and change its choice until you select Done.");
-            appendText(root, "p", "The fixed controls remain visible while you scroll and show which rounds are in view, how many are answered, and your current payoff. Use the zoom control, round jump, or Next unanswered button to navigate. Open the payoff reminder only when you need it with the Payoff key button. Done becomes available after all rounds are answered.");
+            appendText(root, "p", "The fixed controls remain visible while you scroll and show which rounds are in view, how many are answered, and your current payoff. Use the zoom control, round jump, or Next unanswered button to navigate. The payoff key appears below the decision list. Done becomes available after all rounds are answered.");
         } else {
             appendText(root, "p", "You will make exactly " + profile.rounds + " choices, one round at a time. Each choice is final before the next round appears.");
         }
-        appendText(root, "p", "Every round contains the main card and exactly " + profile.side_cards_per_round + " side-task cards. The final " + profile.movie_rounds + " rounds also contain an additional movie card.");
+        appendText(root, "p", "Every round keeps every task in one permanent position. The main card and exactly " + profile.side_cards_per_round + " side-task cards are active; unavailable tasks are shown in gray and cannot be selected. The movie card becomes active for the final " + profile.movie_rounds + " rounds.");
         appendText(root, "p", "Choosing the main card at least " + profile.main_target + " times earns " + formatInteger(profile.main_bonus) + " pts. Choosing all " + profile.movie_rounds + " movie cards earns " + formatInteger(profile.movie_bonus) + " pts. Each bonus is received only if its requirement is met.");
         appendText(root, "h3", "Side-task rules");
         list = element("ul");
@@ -532,7 +533,12 @@
                 var payoff = null;
                 if (taskId === "simple_a") { payoff = simpleValues.simple_a[simpleCodes & 3]; }
                 if (taskId === "simple_b") { payoff = simpleValues.simple_b[(simpleCodes >> 2) & 3]; }
-                return { taskId: taskId, position: position + 1, simplePayoff: payoff };
+                return {
+                    taskId: taskId,
+                    position: position + 1,
+                    generatedPosition: position + 1,
+                    simplePayoff: payoff
+                };
             });
             rounds.push({ number: index + 1, phase: index + 1 >= movieStart ? "movie" : "ordinary", cards: cards });
         }
@@ -550,7 +556,48 @@
             }
             if (!hasInfinite) { runStart = -1; }
         });
-        return { sequenceId: sequence.sequence_id, seed: sequence.seed, rounds: rounds, colorMap: colorMap, benchmark: sequence };
+        return {
+            sequenceId: sequence.sequence_id,
+            seed: sequence.seed,
+            rounds: rounds,
+            colorMap: colorMap,
+            slotOrder: slotOrderForSeed(sequence.seed),
+            benchmark: sequence
+        };
+    }
+
+    function slotOrderForSeed(seed) {
+        var shuffled = SIDE_IDS.slice(0);
+        var state = (integerValue(seed, 0) >>> 0) ^ 2654435769;
+        var index;
+        var swapIndex;
+        var temporary;
+        function nextUint32() {
+            state ^= state << 13;
+            state ^= state >>> 17;
+            state ^= state << 5;
+            return state >>> 0;
+        }
+        if (!state) { state = 1831565813; }
+        for (index = shuffled.length - 1; index > 0; index -= 1) {
+            swapIndex = nextUint32() % (index + 1);
+            temporary = shuffled[index]; shuffled[index] = shuffled[swapIndex]; shuffled[swapIndex] = temporary;
+        }
+        return shuffled.concat(["main", "movie"]);
+    }
+
+    function fixedSlotsForRound(environment, round) {
+        return environment.slotOrder.map(function (taskId, index) {
+            var generated = round.cards.find(function (card) { return card.taskId === taskId; });
+            return {
+                taskId: taskId,
+                position: index + 1,
+                slotPosition: index + 1,
+                generatedPosition: generated ? generated.generatedPosition || generated.position : null,
+                simplePayoff: generated ? generated.simplePayoff : null,
+                active: !!generated
+            };
+        });
     }
 
     function uniformSequenceIndex(length) {
@@ -817,14 +864,19 @@
     }
 
     function displayedCardSet(bankProfile, environment, state, round, config) {
-        return round.cards.map(function (card) {
-            var display = cardDisplayText(bankProfile, state, round, card, config);
+        return fixedSlotsForRound(environment, round).map(function (card) {
+            var display = card.active
+                ? cardDisplayText(bankProfile, state, round, card, config)
+                : { payoff: "", footer: "", footerLines: [], combined: "" };
             return {
-                position: card.position,
+                position: card.slotPosition,
+                slot_position: card.slotPosition,
+                generated_position: card.generatedPosition,
+                active: card.active,
                 task_id: card.taskId,
                 task_label: TASK_LABELS[card.taskId],
-                simple_payoff: card.simplePayoff,
-                marginal_points: currentCardPayoff(bankProfile, state, round, card),
+                simple_payoff: card.active ? card.simplePayoff : null,
+                marginal_points: card.active ? currentCardPayoff(bankProfile, state, round, card) : null,
                 payoff_text: display.payoff,
                 footer_text: display.footer,
                 footer_lines: display.footerLines,
@@ -843,7 +895,8 @@
             seed: environment.seed,
             chosen_task_id: card.taskId,
             chosen_task_label: TASK_LABELS[card.taskId],
-            chosen_position: card.position,
+            chosen_position: card.slotPosition,
+            generated_position: card.generatedPosition,
             chosen_is_main: card.taskId === "main" ? 1 : 0,
             chosen_is_movie: card.taskId === "movie" ? 1 : 0,
             chosen_is_side: SIDE_IDS.indexOf(card.taskId) >= 0 ? 1 : 0,
@@ -876,7 +929,9 @@
             var before = cloneState(state);
             var displayed = displayedCardSet(bankProfile, environment, before, round, config);
             var taskId = selections[index] || null;
-            var card = taskId ? round.cards.find(function (candidate) { return candidate.taskId === taskId; }) : null;
+            var card = taskId ? fixedSlotsForRound(environment, round).find(function (candidate) {
+                return candidate.taskId === taskId && candidate.active;
+            }) : null;
             var reward = 0;
             var after;
             if (card) {
@@ -912,31 +967,43 @@
         var footer = element("span", "cs-card-footer");
         button.type = "button";
         button.setAttribute("data-task-id", card.taskId);
-        button.setAttribute("data-position", card.position);
+        button.setAttribute("data-position", card.slotPosition);
+        button.setAttribute("data-slot-position", card.slotPosition);
+        button.setAttribute("data-slot-index", card.slotPosition - 1);
+        button.setAttribute("data-active", card.active ? "1" : "0");
         button.setAttribute("data-round", round.number);
         button.setAttribute("role", "radio");
         appendText(heading, "span", "", "cs-card-color-label");
         appendText(payoffSlot, "span", "", "cs-card-payoff");
         button.appendChild(heading); button.appendChild(payoffSlot); button.appendChild(footer);
         button.__csqCard = { heading: heading.firstChild, payoff: payoffSlot.firstChild, footer: footer };
-        if (onActivity) { button.addEventListener("pointerdown", function () { onActivity("card_pointerdown"); }); }
-        if (onChoose) { button.addEventListener("click", function () { onChoose(round, card, button); }); }
+        if (card.active && onActivity) { button.addEventListener("pointerdown", function () { onActivity("card_pointerdown"); }); }
+        if (card.active && onChoose) { button.addEventListener("click", function () { onChoose(round, card, button); }); }
         updateCardButton(button, bankProfile, environment, round, card, state, config, selected);
         return button;
     }
 
     function updateCardButton(button, bankProfile, environment, round, card, state, config, selected) {
         var color = bankProfile.colors[environment.colorMap[card.taskId]];
-        var display = cardDisplayText(bankProfile, state, round, card, config);
+        var display = card.active
+            ? cardDisplayText(bankProfile, state, round, card, config)
+            : { payoff: "", footerLines: [], combined: "" };
         var refs = button.__csqCard;
         refs.heading.textContent = color.label;
-        refs.payoff.textContent = display.payoff;
+        refs.payoff.textContent = card.active ? display.payoff : "Unavailable";
         clearElement(refs.footer);
-        display.footerLines.forEach(function (line) { appendText(refs.footer, "span", line, "cs-card-footer-line"); });
-        button.className = "cs-card" + (selected ? " cs-card-selected" : "");
+        if (card.active) {
+            display.footerLines.forEach(function (line) { appendText(refs.footer, "span", line, "cs-card-footer-line"); });
+        }
+        button.className = "cs-card" + (card.active ? " cs-card-active" : " cs-card-inactive")
+            + (selected && card.active ? " cs-card-selected" : "");
         button.style.setProperty("--card-color", color.hex);
-        button.setAttribute("aria-checked", selected ? "true" : "false");
-        button.setAttribute("aria-label", color.label + " card, " + TASK_LABELS[card.taskId] + (display.combined ? ". " + display.combined : "") + (selected ? ". Selected" : ""));
+        button.disabled = !card.active;
+        button.tabIndex = card.active ? 0 : -1;
+        button.setAttribute("aria-disabled", card.active ? "false" : "true");
+        button.setAttribute("aria-checked", selected && card.active ? "true" : "false");
+        button.setAttribute("aria-label", color.label + " card, " + TASK_LABELS[card.taskId]
+            + (card.active ? (display.combined ? ". " + display.combined : "") + (selected ? ". Selected" : "") : ". Unavailable this round"));
     }
 
     function utf8ByteLength(value) {
@@ -970,8 +1037,11 @@
         return packRecords(decisions.map(function (decision) { return decisionToCsvRow(decision, DECISION_COLUMNS); }), maximumChunks, maximumBytes);
     }
 
-    function environmentRecord(round) {
-        return csvValue(round.number) + "," + csvValue(round.phase) + "," + csvValue(JSON.stringify(round.cards)) + "," + csvValue(round.infiniteRunId || "") + "," + csvValue(round.infiniteRunStart || "") + "," + csvValue(round.infiniteRunEnd || "") + "\r\n";
+    function environmentRecord(environment, round) {
+        return csvValue(round.number) + "," + csvValue(round.phase) + ","
+            + csvValue(JSON.stringify(fixedSlotsForRound(environment, round))) + ","
+            + csvValue(round.infiniteRunId || "") + "," + csvValue(round.infiniteRunStart || "")
+            + "," + csvValue(round.infiniteRunEnd || "") + "\r\n";
     }
 
     function persistChunks(prefix, packed, maximumChunks) {
@@ -998,7 +1068,9 @@
         var bank = bootstrap.bank;
         var profile = profileValues(bank.profile);
         var packed = packDecisionRows(state.decisions, bootstrap.chunkCount, bootstrap.chunkMaxBytes);
-        var environmentPacked = packRecords(state.environment.rounds.map(environmentRecord), bootstrap.chunkCount, bootstrap.chunkMaxBytes);
+        var environmentPacked = packRecords(state.environment.rounds.map(function (round) {
+            return environmentRecord(state.environment, round);
+        }), bootstrap.chunkCount, bootstrap.chunkMaxBytes);
         var mainComplete = state.task.main >= profile.mainTarget;
         var movieComplete = state.task.movie === profile.movieRounds;
         var mainAward = status === "completed" && mainComplete ? profile.mainBonus : 0;
@@ -1028,6 +1100,8 @@
             cs_inactivity_elapsed_ms_at_end: inactiveElapsed,
             cs_sequence_id: state.environment.sequenceId, cs_seed: state.environment.seed,
             cs_task_color_map: JSON.stringify(readableColorMap),
+            cs_slot_order: JSON.stringify(state.environment.slotOrder),
+            cs_layout_version: LAYOUT_VERSION,
             cs_profile_version: bank.profile.profile_version,
             cs_bank_hash: bank.certificate.bank_hash,
             cs_validated_sequences_hash: bank.certificate.validated_sequences_sha256,
@@ -1038,7 +1112,7 @@
             cs_benchmark_V10: state.environment.benchmark.V10,
             cs_benchmark_V11: state.environment.benchmark.V11,
             cs_log_columns: DECISION_COLUMNS.join(","), cs_log_chunk_count: packed.chunks.length,
-            cs_log_format_version: "csv-v2", cs_log_overflow: packed.overflow ? 1 : 0,
+            cs_log_format_version: "csv-v3", cs_log_overflow: packed.overflow ? 1 : 0,
             cs_log_overflow_rows: packed.overflowRows,
             cs_environment_columns: "round,phase,displayed_choice_set_json,infinite_run_id,infinite_run_start,infinite_run_end",
             cs_environment_chunk_count: environmentPacked.chunks.length,
@@ -1084,6 +1158,23 @@
         return global.performance && global.performance.now ? global.performance.now() : Date.now();
     }
 
+    function eventTargetsInactiveCard(event) {
+        var target = event && event.target;
+        var path;
+        if (event && typeof event.composedPath === "function") {
+            path = event.composedPath();
+            if (path.some(function (node) {
+                return node && node.getAttribute && node.getAttribute("data-active") === "0";
+            })) { return true; }
+        }
+        return !!(target && target.closest && target.closest('.cs-card[data-active="0"]'));
+    }
+
+    function persistLayoutMetadata(environment) {
+        setEmbeddedData("cs_slot_order", JSON.stringify(environment.slotOrder));
+        setEmbeddedData("cs_layout_version", LAYOUT_VERSION);
+    }
+
     function compactGameTopGap(root) {
         var header;
         var headerRect;
@@ -1115,18 +1206,21 @@
         var token = "csq-" + Date.now() + "-" + Math.floor(Math.random() * 1e9);
         var timers = []; var listeners = []; var authority = false;
         var state;
-        var gameLayout; var shell; var rulesPanel; var statusLeft; var statusRight;
+        var gameLayout; var shell; var rulesPanel; var statusLeft; var statusRight; var blocker;
         var inactivityClock; var cue; var cards;
         if (!root) { return null; }
         clearElement(root); hideNextButton(question);
         if (error || validateConfig(config).length) { appendText(root, "div", error || validateConfig(config).join(" "), "cs-debug-notice"); return null; }
         if (global.document && global.document.body) { global.document.body.classList.add("csq-game-active"); }
+        blocker = appendText(root, "div", "This task needs a wider browser window. Please widen the window or use a computer with at least 1280 pixels of browser width. Your progress is preserved and the inactivity timer is paused.", "csq-all-wide-blocker");
+        blocker.hidden = true; blocker.setAttribute("role", "alert");
         gameLayout = element("div", "csq-game-layout");
         shell = element("div", "cs-task"); shell.style.setProperty("--cs-screen-motion-ms", config.screenMotionMs + "ms");
         var status = element("div", "cs-status"); statusLeft = element("div", "cs-status-left"); statusRight = element("div", "cs-status-right");
         status.appendChild(statusLeft); status.appendChild(statusRight); shell.appendChild(status);
         cue = element("div", "cs-cue"); shell.appendChild(cue); cards = element("div", "cs-card-row"); shell.appendChild(cards);
         rulesPanel = element("aside", "csq-rules-panel"); rulesPanel.setAttribute("aria-label", "Card payoff reminder");
+        rulesPanel.setAttribute("data-csq-payoff-key", "");
         renderRulesPanel(rulesPanel, bank.profile, environment, true);
         gameLayout.appendChild(shell); gameLayout.appendChild(rulesPanel); root.appendChild(gameLayout);
         state = {
@@ -1134,12 +1228,14 @@
             decisions: [], startedAtWall: Date.now(), roundStartedAt: nowMonotonic(),
             lastActivityAt: Date.now(), activityEventCount: 0, lastActivitySource: "game_start",
             waiting: false, finished: false, treatmentMode: "sequential", zoom: "",
+            narrow: false, narrowStartedAt: null,
             selections: Array(config.profile.rounds).fill(null),
             selectionElapsedMs: Array(config.profile.rounds).fill(""),
             responseTimes: Array(config.profile.rounds).fill("")
         };
         setEmbeddedData("cs_sequence_id", environment.sequenceId);
         setEmbeddedData("cs_seed", environment.seed);
+        persistLayoutMetadata(environment);
         if (isLikelyVisible(root)) { authority = claimOwner(token, "game_start_visible"); }
 
         function addListener(target, type, callback, options) {
@@ -1148,7 +1244,7 @@
         }
 
         function markActivity(source) {
-            if (state.finished) { return; }
+            if (state.finished || state.narrow) { return; }
             authority = claimOwner(token, source) || authority;
             if (!authority) { return; }
             state.lastActivityAt = Date.now(); state.activityEventCount += 1; state.lastActivitySource = source;
@@ -1162,18 +1258,18 @@
             );
             var minutes = Math.floor(remaining / 60);
             var seconds = remaining % 60;
-            return "Inactive in " + minutes + ":" + String(seconds).padStart(2, "0");
+            return state.narrow ? "Inactivity paused" : "Inactive in " + minutes + ":" + String(seconds).padStart(2, "0");
         }
 
         function refreshInactivityClock() {
             var remainingSeconds;
             if (!inactivityClock) { return; }
             inactivityClock.textContent = inactivityClockText();
-            remainingSeconds = Math.max(
+            remainingSeconds = state.narrow ? config.inactivitySeconds : Math.max(
                 0,
                 Math.ceil((config.inactivitySeconds * 1000 - (Date.now() - state.lastActivityAt)) / 1000)
             );
-            inactivityClock.className = "cs-inactivity-clock" + (remainingSeconds <= 10 ? " cs-inactivity-warning" : "");
+            inactivityClock.className = "cs-inactivity-clock" + (!state.narrow && remainingSeconds <= 10 ? " cs-inactivity-warning" : "");
         }
 
         function counters() {
@@ -1199,7 +1295,7 @@
 
         function choose(round, card, button) {
             var reward; var delay; var evaluation; var chosenIndex = state.roundIndex;
-            if (state.finished || state.waiting || state.environment.rounds[state.roundIndex] !== round) { return; }
+            if (state.finished || state.waiting || state.narrow || !card.active || state.environment.rounds[state.roundIndex] !== round) { return; }
             markActivity("card_click"); if (!authority) { return; }
             state.waiting = true;
             state.selections[chosenIndex] = card.taskId;
@@ -1232,26 +1328,42 @@
             var round = environment.rounds[state.roundIndex];
             clearElement(cards); clearElement(cue); cue.className = "cs-cue"; counters();
             cards.className = "cs-card-row cs-card-row-new";
-            shell.setAttribute("data-card-count", round.cards.length);
+            shell.setAttribute("data-card-count", environment.slotOrder.length);
             state.roundStartedAt = nowMonotonic();
-            round.cards.forEach(function (card) {
+            fixedSlotsForRound(environment, round).forEach(function (card) {
                 cards.appendChild(createCardButton(bank.profile, environment, round, card, state.task, config, false, choose, markActivity));
             });
         }
 
+        function currentViewportWidth() {
+            var view = root.ownerDocument && root.ownerDocument.defaultView;
+            return view && view.innerWidth ? view.innerWidth : global.innerWidth;
+        }
+
+        function setNarrowMode() {
+            var narrow = viewportIsTooNarrow(currentViewportWidth());
+            state.narrow = narrow; blocker.hidden = !narrow; gameLayout.hidden = narrow;
+            if (narrow && state.narrowStartedAt === null) { state.narrowStartedAt = Date.now(); }
+            if (!narrow && state.narrowStartedAt !== null) {
+                state.narrowStartedAt = null; state.lastActivityAt = Date.now(); state.lastActivitySource = "wide_view_resumed";
+            }
+            refreshInactivityClock();
+        }
+
         ["pointerdown", "mousedown", "touchstart", "keydown"].forEach(function (type) {
-            addListener(root, type, function () { markActivity("root_" + type); }, true);
-            addListener(global.document, type, function () { markActivity("document_" + type); }, true);
-            addListener(global, type, function () { markActivity("window_" + type); }, true);
+            addListener(root, type, function (event) { if (!eventTargetsInactiveCard(event)) { markActivity("root_" + type); } }, true);
+            addListener(global.document, type, function (event) { if (!eventTargetsInactiveCard(event)) { markActivity("document_" + type); } }, true);
+            addListener(global, type, function (event) { if (!eventTargetsInactiveCard(event)) { markActivity("window_" + type); } }, true);
         });
         addListener(global, "focus", function () { markActivity("window_focus"); }, true);
-        addListener(global, "resize", function () { compactGameTopGap(root); }, false);
+        addListener(global, "resize", function () { setNarrowMode(); compactGameTopGap(root); }, false);
         var inactivityTimer = global.setInterval(function () {
             refreshInactivityClock();
-            if (!state.finished && authority && Date.now() - state.lastActivityAt >= config.inactivitySeconds * 1000) { finish("inactive"); }
+            if (!state.finished && !state.narrow && authority && Date.now() - state.lastActivityAt >= config.inactivitySeconds * 1000) { finish("inactive"); }
         }, 250);
         timers.push(inactivityTimer);
         renderRound();
+        setNarrowMode();
         timers.push(global.setTimeout(function () { compactGameTopGap(root); }, 0));
         timers.push(global.setTimeout(function () { compactGameTopGap(root); }, 250));
         var controller = {
@@ -1304,9 +1416,6 @@
         var jumpButton;
         var nextUnanswered;
         var doneButton;
-        var keyToggle;
-        var keyCloseButton;
-        var keyOpen = false;
         var helper;
         var blocker;
         var layout;
@@ -1349,10 +1458,6 @@
         zoomValue = element("span", "csq-all-zoom-value", config.allAtOnceDefaultZoom + "%");
         zoomLabel.appendChild(zoomInput); zoomLabel.appendChild(zoomValue); controls.appendChild(zoomLabel);
 
-        keyToggle = element("button", "csq-all-nav-button csq-key-toggle", "Payoff key");
-        keyToggle.type = "button"; keyToggle.setAttribute("data-csq", "all-key-toggle");
-        keyToggle.setAttribute("aria-expanded", "false"); controls.appendChild(keyToggle);
-
         var jumpLabel = element("label", "csq-all-jump");
         jumpLabel.appendChild(global.document.createTextNode("Round "));
         jumpInput = element("input", "csq-all-round-input"); jumpInput.type = "number";
@@ -1376,11 +1481,9 @@
         scrollPane.setAttribute("aria-label", "All card-choice rounds");
         list = element("div", "csq-all-list"); scrollPane.appendChild(list);
         rulesPanel = element("aside", "csq-rules-panel"); rulesPanel.setAttribute("aria-label", "Card payoff reminder");
+        rulesPanel.setAttribute("data-csq-payoff-key", "");
         rulesPanel.id = "csq-all-payoff-key"; rulesPanel.hidden = true;
-        keyToggle.setAttribute("aria-controls", rulesPanel.id);
         renderRulesPanel(rulesPanel, bank.profile, environment, true);
-        keyCloseButton = element("button", "csq-key-close", "Close"); keyCloseButton.type = "button";
-        keyCloseButton.setAttribute("aria-label", "Close payoff key"); rulesPanel.insertBefore(keyCloseButton, rulesPanel.firstChild);
         layout.appendChild(scrollPane); root.appendChild(layout); root.appendChild(rulesPanel);
 
         state = {
@@ -1409,6 +1512,7 @@
         state.task = state.evaluation.task; state.decisions = state.evaluation.decisions;
         setEmbeddedData("cs_sequence_id", environment.sequenceId);
         setEmbeddedData("cs_seed", environment.seed);
+        persistLayoutMetadata(environment);
         if (isLikelyVisible(root)) { authority = claimOwner(token, "game_start_visible"); }
 
         function addListener(target, type, callback, options) {
@@ -1426,12 +1530,10 @@
 
         function syncFloatingChrome() {
             var rootRect;
-            var toolbarRect;
             var viewportWidth;
             var viewportHeight;
             var left;
             var right;
-            var panelWidth;
             if (!root || !toolbar || !toolbarSpacer || !root.getBoundingClientRect) { return; }
             rootRect = root.getBoundingClientRect();
             viewportWidth = currentViewportWidth();
@@ -1444,22 +1546,6 @@
             toolbar.style.top = Math.round(Math.max(8, Math.min(rootRect.top, viewportHeight - toolbar.offsetHeight - 8))) + "px";
             toolbarSpacer.style.height = Math.ceil(toolbar.offsetHeight) + "px";
             root.style.setProperty("--csq-toolbar-height", Math.ceil(toolbar.offsetHeight) + "px");
-            if (!rulesPanel.hidden) {
-                toolbarRect = toolbar.getBoundingClientRect();
-                panelWidth = Math.min(400, Math.max(280, right - left));
-                rulesPanel.style.left = Math.round(right - panelWidth) + "px";
-                rulesPanel.style.width = Math.round(panelWidth) + "px";
-                rulesPanel.style.top = Math.round(Math.min(viewportHeight - 120, toolbarRect.bottom + 8)) + "px";
-                rulesPanel.style.bottom = "8px";
-            }
-        }
-
-        function setKeyOpen(open) {
-            keyOpen = !!open && !state.narrow;
-            rulesPanel.hidden = !keyOpen;
-            keyToggle.textContent = keyOpen ? "Hide payoff key" : "Payoff key";
-            keyToggle.setAttribute("aria-expanded", keyOpen ? "true" : "false");
-            if (keyOpen) { syncFloatingChrome(); }
         }
 
         function inactivityClockText() {
@@ -1502,7 +1588,7 @@
             ref.status.textContent = selectedTaskId ? "Answered" : "Not answered";
             ref.outer.setAttribute("data-selected-task", selectedTaskId || "");
             ref.outer.setAttribute("data-answered", selectedTaskId ? "1" : "0");
-            trace.round.cards.forEach(function (card) {
+            fixedSlotsForRound(environment, trace.round).forEach(function (card) {
                 updateCardButton(ref.buttons[card.taskId], bank.profile, environment, trace.round, card, trace.before, config, selectedTaskId === card.taskId);
             });
         }
@@ -1528,7 +1614,7 @@
 
         function choose(round, card) {
             var index = round.number - 1;
-            if (state.finished || state.narrow || state.selections[index] === card.taskId) { return; }
+            if (state.finished || state.narrow || !card.active || state.selections[index] === card.taskId) { return; }
             markActivity("card_click"); if (!authority) { return; }
             state.selections[index] = card.taskId;
             state.selectionElapsedMs[index] = Math.max(0, Date.now() - state.startedAtWall);
@@ -1546,7 +1632,7 @@
             heading.appendChild(element("span", "", "Round " + round.number + " of " + config.profile.rounds));
             heading.appendChild(status); scale.appendChild(heading);
             cardRow.setAttribute("role", "radiogroup"); cardRow.setAttribute("aria-label", "Round " + round.number);
-            round.cards.forEach(function (card) {
+            fixedSlotsForRound(environment, round).forEach(function (card) {
                 var button = createCardButton(bank.profile, environment, round, card, state.evaluation.trace[index].before, config, false, choose, markActivity);
                 buttons[card.taskId] = button; cardRow.appendChild(button);
             });
@@ -1631,10 +1717,12 @@
         function setNarrowMode() {
             var narrow = viewportIsTooNarrow(currentViewportWidth());
             var changed = narrow !== state.narrow;
-            state.narrow = narrow; blocker.hidden = !narrow; layout.hidden = narrow;
-            zoomInput.disabled = narrow; jumpInput.disabled = narrow; jumpButton.disabled = narrow; keyToggle.disabled = narrow;
-            if (narrow && keyOpen) { setKeyOpen(false); }
-            Array.prototype.forEach.call(list.querySelectorAll("button"), function (button) { button.disabled = narrow; });
+            state.narrow = narrow; blocker.hidden = !narrow; layout.hidden = narrow; rulesPanel.hidden = narrow;
+            zoomInput.disabled = narrow; jumpInput.disabled = narrow; jumpButton.disabled = narrow;
+            Array.prototype.forEach.call(list.querySelectorAll("button.cs-card"), function (button) {
+                button.disabled = narrow || button.getAttribute("data-active") === "0";
+                button.tabIndex = button.disabled ? -1 : 0;
+            });
             if (narrow && state.narrowStartedAt === null) { state.narrowStartedAt = Date.now(); }
             if (!narrow && state.narrowStartedAt !== null) {
                 state.narrowStartedAt = null; state.lastActivityAt = Date.now(); state.lastActivitySource = "wide_view_resumed";
@@ -1657,16 +1745,13 @@
         }
 
         addListener(scrollPane, "scroll", function () { markActivity("decision_scroll"); scheduleVisibleRange(); }, { passive: true });
-        addListener(rulesPanel, "scroll", function () { markActivity("payoff_key_scroll"); }, { passive: true });
         addListener(zoomInput, "input", function () { markActivity("zoom_change"); setZoom(zoomInput.value); });
-        addListener(keyToggle, "click", function () { markActivity("payoff_key_toggle"); setKeyOpen(!keyOpen); });
-        addListener(keyCloseButton, "click", function () { markActivity("payoff_key_close"); setKeyOpen(false); keyToggle.focus(); });
         addListener(jumpButton, "click", function () { markActivity("round_jump"); scrollToRound(integerValue(jumpInput.value, 1) - 1); });
         addListener(jumpInput, "keydown", function (event) { if (event.key === "Enter") { event.preventDefault(); markActivity("round_jump_enter"); scrollToRound(integerValue(jumpInput.value, 1) - 1); } });
         addListener(nextUnanswered, "click", function () { markActivity("next_unanswered"); goToNextUnanswered(); });
         addListener(doneButton, "click", function () { markActivity("done"); finish("completed"); });
         ["pointerdown", "mousedown", "touchstart", "keydown", "wheel"].forEach(function (type) {
-            addListener(root, type, function () { markActivity("root_" + type); }, true);
+            addListener(root, type, function (event) { if (!eventTargetsInactiveCard(event)) { markActivity("root_" + type); } }, true);
         });
         addListener(global, "focus", function () { markActivity("window_focus"); }, true);
         addListener(global, "scroll", function () { syncFloatingChrome(); markActivity("window_scroll"); }, { passive: true });
@@ -1678,7 +1763,7 @@
         }, 250);
         timers.push(inactivityTimer);
         rowRefs.forEach(function (_ref, index) { updateRound(index); });
-        setKeyOpen(false); setZoom(config.allAtOnceDefaultZoom); setNarrowMode(); syncFloatingChrome(); refreshCounters(); refreshVisibleRange();
+        setZoom(config.allAtOnceDefaultZoom); setNarrowMode(); syncFloatingChrome(); refreshCounters(); refreshVisibleRange();
         timers.push(global.setTimeout(function () { compactGameTopGap(root); resizeScaledRounds(); syncFloatingChrome(); refreshVisibleRange(); }, 0));
         timers.push(global.setTimeout(function () { compactGameTopGap(root); resizeScaledRounds(); syncFloatingChrome(); refreshVisibleRange(); }, 250));
         var controller = {
@@ -1761,6 +1846,7 @@
         [
             ["Task status", status], ["Treatment", getEmbeddedData("cs_treatment_mode")],
             ["Sequence ID", getEmbeddedData("cs_sequence_id")], ["Seed", getEmbeddedData("cs_seed")],
+            ["Layout version", getEmbeddedData("cs_layout_version")], ["Permanent slot order", getEmbeddedData("cs_slot_order")],
             ["Profile version", getEmbeddedData("cs_profile_version")], ["Bank hash", getEmbeddedData("cs_bank_hash")],
             ["Task-to-color map", getEmbeddedData("cs_task_color_map")],
             ["Answered rounds", getEmbeddedData("cs_answered_at_end") || getEmbeddedData("cs_decision_count")],
@@ -1797,6 +1883,7 @@
             parseBoolean: parseBoolean, readBootstrap: readBootstrap, validateBootstrap: validateBootstrap,
             profileValues: profileValues, readConfig: readConfig, validateConfig: validateConfig,
             decodeEnvironment: decodeEnvironment, selectEnvironment: selectEnvironment,
+            slotOrderForSeed: slotOrderForSeed, fixedSlotsForRound: fixedSlotsForRound,
             initialTaskState: initialTaskState, applyChoice: applyChoice,
             evaluateAllocation: evaluateAllocation, viewportIsTooNarrow: viewportIsTooNarrow,
             currentCardPayoff: currentCardPayoff, cardPayoffText: cardPayoffText,
@@ -1810,6 +1897,7 @@
             utf8ByteLength: utf8ByteLength,
             csvValue: csvValue, decisionToCsvRow: decisionToCsvRow,
             packRecords: packRecords, packDecisionRows: packDecisionRows,
+            environmentRecord: environmentRecord, layoutVersion: LAYOUT_VERSION,
             parseCsvBody: parseCsvBody, getEmbeddedData: getEmbeddedData,
             setEmbeddedData: setEmbeddedData, packedDecisionsFromEmbeddedData: packedDecisionsFromEmbeddedData
         }

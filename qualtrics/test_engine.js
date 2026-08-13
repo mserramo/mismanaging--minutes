@@ -42,6 +42,8 @@ assert.equal(engine.defaults.inactivitySeconds, 120);
 assert.equal(engine.defaults.treatmentMode, "sequential");
 assert.equal(engine.defaults.allAtOnceDefaultZoom, 100);
 assert.equal(engine.defaults.allAtOnceMinZoom, 75);
+assert.equal(engine.layoutVersion, "fixed-slots-v1");
+assert.ok(engine.decisionColumns.includes("generated_position"));
 assert.equal(Object.hasOwn(engine.defaults, "showSidePoints"), false);
 const firstRuleEnvironment = engine.decodeEnvironment(bank, bank.sequences[0]);
 const preMovieRuleGroups = engine.ruleGroupsForEnvironment(profile, firstRuleEnvironment, false);
@@ -194,13 +196,26 @@ if (!process.env.CSQ_BANK_PATH) {
     assert.equal(bank.sequences.length, 2048);
 }
 
+const observedSlotOrders = new Set();
 for (const packed of bank.sequences) {
     const environment = engine.decodeEnvironment(bank, packed);
     let expectedInfiniteRunId = 0;
     assert.equal(environment.rounds.length, 100);
     assert.equal(environment.sequenceId, packed.sequence_id);
+    assert.deepEqual(environment.slotOrder.slice(-2), ["main", "movie"]);
+    assert.deepEqual(new Set(environment.slotOrder.slice(0, 8)), sideIds);
+    assert.deepEqual(environment.slotOrder, engine.slotOrderForSeed(packed.seed));
+    observedSlotOrders.add(environment.slotOrder.join(","));
     for (const round of environment.rounds) {
         const ids = round.cards.map((card) => card.taskId);
+        const slots = engine.fixedSlotsForRound(environment, round);
+        assert.equal(slots.length, 10);
+        assert.deepEqual(slots.map((slot) => slot.taskId), environment.slotOrder);
+        assert.deepEqual(slots.map((slot) => slot.slotPosition), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+        assert.equal(new Set(slots.map((slot) => slot.taskId)).size, 10);
+        assert.equal(slots[8].taskId, "main");
+        assert.equal(slots[8].active, true);
+        assert.equal(slots[9].taskId, "movie");
         assert.equal(ids.filter((id) => id === "main").length, 1);
         assert.equal(new Set(ids).size, ids.length);
         const sideCount = ids.filter((id) => sideIds.has(id)).length;
@@ -209,15 +224,23 @@ for (const packed of bank.sequences) {
             assert.equal(ids.includes("movie"), false);
             assert.equal(ids.length, profile.side_cards_per_round + 1);
             assert.equal(ids.at(-1), "main");
+            assert.equal(slots.filter((slot) => slot.active).length, 5);
+            assert.equal(slots[9].active, false);
         } else {
             assert.equal(ids.filter((id) => id === "movie").length, 1);
             assert.equal(ids.length, profile.side_cards_per_round + 2);
             assert.equal(ids.at(-2), "main");
             assert.equal(ids.at(-1), "movie");
+            assert.equal(slots.filter((slot) => slot.active).length, 6);
+            assert.equal(slots[9].active, true);
         }
         for (const card of round.cards) {
             assert.ok(environment.colorMap[card.taskId] >= 0 && environment.colorMap[card.taskId] < 10);
+            const slot = slots.find((candidate) => candidate.taskId === card.taskId);
+            assert.equal(slot.active, true);
+            assert.equal(slot.generatedPosition, card.position);
         }
+        slots.filter((slot) => !slot.active).forEach((slot) => assert.equal(slot.generatedPosition, null));
     }
     for (let index = 0; index < environment.rounds.length;) {
         const hasInfinite = environment.rounds[index].cards.some((card) => card.taskId === "infinite_scroll");
@@ -241,6 +264,7 @@ for (const packed of bank.sequences) {
         index += 1;
     }
 }
+assert.ok(observedSlotOrders.size > 1900, `expected substantial slot-order variation, saw ${observedSlotOrders.size}`);
 
 const definitions = Object.fromEntries(profile.side_tasks.map((task) => [task.id, task]));
 function round(taskId, simplePayoff, runId = null) {
@@ -347,6 +371,27 @@ assert.equal(completeEvaluation.decisions.length, 100);
 assert.ok(completeEvaluation.decisions.every((decision) => decision.response_time_ms === ""));
 assert.equal(completeEvaluation.decisions[99].task_elapsed_ms, 25000);
 assert.deepEqual(completeEvaluation.task, completeEvaluation.trace[99].after);
+for (const decision of completeEvaluation.decisions) {
+    const round = sampleEnvironment.rounds[decision.round - 1];
+    const original = round.cards.find((card) => card.taskId === decision.chosen_task_id);
+    assert.equal(decision.generated_position, original.position);
+    assert.equal(decision.chosen_position, sampleEnvironment.slotOrder.indexOf(decision.chosen_task_id) + 1);
+    const displayed = JSON.parse(decision.displayed_choice_set_json);
+    assert.equal(displayed.length, 10);
+    assert.deepEqual(displayed.map((card) => card.slot_position), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+    assert.equal(displayed.filter((card) => card.active).length, decision.round <= 80 ? 5 : 6);
+    displayed.filter((card) => !card.active).forEach((card) => {
+        assert.equal(card.generated_position, null);
+        assert.equal(card.marginal_points, null);
+        assert.equal(card.payoff_text, "");
+        assert.equal(card.footer_text, "");
+    });
+}
+const fixedSlotPacked = engine.packDecisionRows(completeEvaluation.decisions, 64, 18000);
+assert.equal(fixedSlotPacked.overflow, false);
+assert.equal(fixedSlotPacked.overflowRows, 0);
+assert.ok(fixedSlotPacked.chunks.length <= 64);
+assert.ok(fixedSlotPacked.chunks.every((chunk) => Buffer.byteLength(chunk, "utf8") <= 18000));
 
 const partialAllocation = completeAllocation.slice();
 partialAllocation[17] = null;
@@ -389,6 +434,7 @@ const sampleDecisions = Array.from({ length: 100 }, (_, index) => ({
     chosen_task_id: index < 60 ? "main" : index < 80 ? "simple_a" : "movie",
     chosen_task_label: "Synthetic",
     chosen_position: 1,
+    generated_position: 1,
     chosen_is_main: index < 60 ? 1 : 0,
     chosen_is_movie: index >= 80 ? 1 : 0,
     chosen_is_side: index >= 60 && index < 80 ? 1 : 0,
@@ -419,9 +465,7 @@ assert.equal(rows.length, 100);
 assert.ok(rows.every((row) => row.length === engine.decisionColumns.length));
 assert.ok(rows[99][engine.decisionColumns.indexOf("displayed_choice_set_json")].includes("movie"));
 
-const environmentRecords = sampleEnvironment.rounds.map((item) =>
-    [item.number, item.phase, JSON.stringify(item.cards), item.infiniteRunId || ""].map(engine.csvValue).join(",") + "\r\n"
-);
+const environmentRecords = sampleEnvironment.rounds.map((item) => engine.environmentRecord(sampleEnvironment, item));
 const environmentPacked = engine.packRecords(environmentRecords, 64, 18000);
 assert.equal(environmentPacked.overflow, false);
 assert.ok(environmentPacked.chunks.every((chunk) => Buffer.byteLength(chunk, "utf8") <= 18000));
@@ -433,11 +477,11 @@ if (process.argv[2]) {
         ...Array.from({ length: 64 }, (_, index) => `cs_log_chunk_${String(index + 1).padStart(3, "0")}`)
     ];
     const values = [
-        "R_SYNTHETIC_V2", engine.decisionColumns.join(","), String(packed.chunks.length),
-        "csv-v2", "0", "0", ...Array.from({ length: 64 }, (_, index) => packed.chunks[index] || "")
+        "R_SYNTHETIC_V3", engine.decisionColumns.join(","), String(packed.chunks.length),
+        "csv-v3", "0", "0", ...Array.from({ length: 64 }, (_, index) => packed.chunks[index] || "")
     ];
     const exportCell = (value) => /[",\r\n]/.test(String(value)) ? `"${String(value).replace(/"/g, '""')}"` : String(value);
     fs.writeFileSync(process.argv[2], `${fields.map(exportCell).join(",")}\r\n${values.map(exportCell).join(",")}\r\n`, "utf8");
 }
 
-console.log(`OK: ${bank.sequences.length} certified environments decoded; csv-v2 used ${packed.chunks.length} chunks`);
+console.log(`OK: ${bank.sequences.length} certified environments decoded; ${observedSlotOrders.size} fixed slot orders; csv-v3 used ${packed.chunks.length} chunks`);

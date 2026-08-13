@@ -11,9 +11,9 @@ treatment without changing the oTree implementation.
   calibration uses R0=100, RM=20, q=.60, Q=60, S=20, B=3,000, M=3,000,
   delta=10, and exactly four side cards on every round. Change the versioned
   `side_cards_per_round` profile value to use any fixed count from one through
-  four in a future calibration. Side cards occupy fixed left-hand slots, Main
-  follows them, and Movie is appended at the right edge in the final 20
-  rounds. The two convex Cumulative tasks are each capped at 16 pre-movie
+  four in a future calibration. Four side tasks are economically available on
+  each round; the UI separately maintains permanent slots for all tasks. The
+  two convex Cumulative tasks are each capped at 16 pre-movie
   appearances so neither can fill the entire 20-choice optimal side bundle.
   In v4, selecting Infinite Scrolling advances its within-run streak, while
   selecting any other card during an Infinite Scrolling availability run
@@ -27,10 +27,10 @@ treatment without changing the oTree implementation.
 - `build_qsf.py`: deterministic builder based on the known-good Stanford QSF
   scaffold.
 - `card_stacking_qualtrics.js`: treatment-aware instructions, setup, sequential
-  and all-at-once games, inactivity handling, `csv-v2` logging, and outcome
+  and all-at-once games, inactivity handling, `csv-v3` logging, and outcome
   engine.
-- `reconstruct_decisions.py`: backward-compatible `csv-v1`/`csv-v2` export
-  decoder.
+- `reconstruct_decisions.py`: backward-compatible `csv-v1`/`csv-v2`/`csv-v3`
+  export decoder.
 - `browser_harness.html`: local runtime harness.
 
 ## Calibration and rebuild
@@ -65,39 +65,38 @@ same four-block Setup → Instructions → Game → Outcome scaffold.
 Sequential mode presents one round at a time and writes each decision when it
 is made. All-at-once mode presents all 100 pre-drawn choice sets in a scrolling
 decision pane. Its control bar is fixed to the browser viewport, and the payoff
-key opens as a floating drawer from the always-visible `Payoff key` control
-rather than permanently reducing the decision pane. A participant can review
-and revise one selection per round before finishing. The choice sets never
-wrap, and a zoom control starts at 100%, may be reduced to the configured 75%
-minimum, and records its final value. A minimum-width blocker prevents the
-treatment from running in a viewport that cannot safely show the task.
+key appears beneath the decision pane. A participant can review and revise one
+selection per round before finishing. The choice sets never wrap, and a zoom
+control starts at 100%, may be reduced to the configured 75% minimum, and
+records its final value. A minimum-width blocker prevents either treatment
+from running in a viewport that cannot safely show all ten permanent slots.
 
 All-at-once decision logs are final-only: a completed response writes the 100
 final selections, while inactivity writes only the rounds answered at the end.
 Those rows retain a per-row `task_elapsed_ms` and leave `response_time_ms`
 blank because the treatment has no sequential per-round response interval.
 Response-level fields record `cs_treatment_mode`, `cs_answered_at_end`, and
-`cs_all_at_once_final_zoom`. `reconstruct_decisions.py` repeats the treatment
-on every decoded row as `treatment_mode` while remaining compatible with older
-exports that lack the field.
+`cs_all_at_once_final_zoom`. They also record the seeded `cs_slot_order` and
+`cs_layout_version=fixed-slots-v1`. `reconstruct_decisions.py` repeats these
+fields and the treatment on every decoded row while remaining compatible with
+older exports that lack them.
 
-The participant UI keeps all cards in one left-anchored row and uses horizontal
-overflow on narrow screens rather than moving existing slots. A compact payoff
-key remains to the right of the game box and is reusable by later treatments;
-it groups related participant-specific mappings into six rows before the Movie
-phase and seven rows from round 81 onward. Trio, Cumulative, and Simple variants
-share rows while retaining separate color badges and payoffs. The group order
-is deterministic for the selected game seed, paired variants remain A then B,
-and the Movie mapping is hidden until its card first appears. Cards themselves
-display their color, with a fixed centered payoff slot and a single-line gray
-footer. Simple cards always show their realized `+X pts.` payoff. Main and
-Movie payoff text default off, while non-Simple side-card payoff text defaults
-on; the three display modes remain independently configurable. Trio and Fives
-footers use two lines—`X cards left` / `for +Y pts.`—and Infinite Scrolling
-uses `X cards left` / `in this run`. No card reports prior selections or
-previews a later marginal payoff. On the Game page only, Qualtrics wrapper
-spacing is removed and any remaining oversized Stanford-header gap is measured
-and compactly corrected at runtime.
+Every round renders ten permanent positions: the eight side tasks are shuffled
+once from the sequence seed, Main is slot 9, and Movie is slot 10. Active cards
+retain their existing labels and dynamic values. Inactive tasks remain in place
+as disabled gray cards labeled `Unavailable`, so no task changes position
+between rounds. The original certified position is retained separately as
+`generated_position`; `chosen_position` is the visible fixed slot. A compact,
+two-column payoff key appears below the game in both treatments and preserves
+the existing participant-specific colors, badges, wording, and seeded group
+order. Cards use a fixed centered payoff slot. Simple cards always show their
+realized `+X pts.` payoff. Main and Movie payoff text default off, while
+non-Simple side-card payoff text defaults on; the three display modes remain
+independently configurable. Trio and Fives footers use two lines—`X cards left`
+/ `for +Y pts.`—and Infinite Scrolling uses `X cards left` / `in this run`.
+No card reports prior selections or previews a later marginal payoff. On the
+Game page only, Qualtrics wrapper spacing is removed and any remaining oversized
+Stanford-header gap is measured and compactly corrected at runtime.
 The Main and Movie counters are optional and default off; the round and awarded-
 total-points counters default on. The total includes side-task pay plus the Main
 and Movie bonuses once their thresholds are met. The inactivity countdown is
@@ -110,8 +109,8 @@ python3 qualtrics/test_environment.py
 node --check qualtrics/card_stacking_qualtrics.js
 node qualtrics/test_engine.js
 python3 qualtrics/reconstruct_decisions.py --self-test
-node qualtrics/test_engine.js /tmp/csq-v2-export.csv
-python3 qualtrics/reconstruct_decisions.py /tmp/csq-v2-export.csv -o /tmp/csq-v2-decisions.csv
+node qualtrics/test_engine.js /tmp/csq-v3-export.csv
+python3 qualtrics/reconstruct_decisions.py /tmp/csq-v3-export.csv -o /tmp/csq-v3-decisions.csv
 python3 /tmp/qsf-validate.py qualtrics/Mismanaging_Minutes_Card_Stacking.qsf
 git diff --check
 ```

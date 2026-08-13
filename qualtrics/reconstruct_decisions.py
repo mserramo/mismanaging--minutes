@@ -3,9 +3,13 @@
 
 The card-stacking survey stores complete RFC 4180 decision rows in embedded-
 data fields named ``cs_log_chunk_001`` through ``cs_log_chunk_064``. This
-utility supports both legacy ``csv-v1`` and certified-environment ``csv-v2``
-rows. It repeats response-level columns and appends the decision columns
-declared in ``cs_log_columns`` without duplicating environment chunk payloads.
+utility supports legacy ``csv-v1`` and ``csv-v2`` rows plus fixed-slot
+``csv-v3`` rows. It repeats response-level columns, including fixed-slot
+metadata such as ``cs_slot_order`` and ``cs_layout_version``, and appends the
+decision columns declared in ``cs_log_columns`` without duplicating environment
+chunk payloads. In ``csv-v3``, ``generated_position`` retains the pre-layout
+position while ``chosen_position`` is the participant-visible fixed slot;
+``displayed_choice_set_json`` is preserved verbatim.
 When a response includes ``cs_treatment_mode``, it also emits the normalized
 analysis column ``treatment_mode`` on each reconstructed decision row.
 """
@@ -15,6 +19,7 @@ from __future__ import annotations
 import argparse
 import csv
 import io
+import json
 import re
 import sys
 import tempfile
@@ -31,7 +36,7 @@ OVERFLOW_COLUMN = "cs_log_overflow"
 OVERFLOW_ROWS_COLUMN = "cs_log_overflow_rows"
 SOURCE_TREATMENT_COLUMN = "cs_treatment_mode"
 ANALYSIS_TREATMENT_COLUMN = "treatment_mode"
-SUPPORTED_FORMATS = frozenset({"csv-v1", "csv-v2"})
+SUPPORTED_FORMATS = frozenset({"csv-v1", "csv-v2", "csv-v3"})
 DEFAULT_TEST_FORMAT = "csv-v1"
 MAX_CHUNKS = 64
 CHUNK_COLUMNS = tuple(
@@ -403,12 +408,12 @@ class _SelfTests(unittest.TestCase):
         path: Path,
         responses: Sequence[Sequence[str]],
         *,
-        include_treatment_mode: bool = False,
+        response_metadata_fields: Sequence[str] = (),
     ) -> None:
         header = [
             "ResponseId",
             "cs_task_status",
-            *([SOURCE_TREATMENT_COLUMN] if include_treatment_mode else []),
+            *response_metadata_fields,
             COUNT_COLUMN,
             COLUMNS_COLUMN,
             FORMAT_COLUMN,
@@ -438,13 +443,14 @@ class _SelfTests(unittest.TestCase):
         overflow: str = "0",
         overflow_rows: str = "0",
         format_version: str = DEFAULT_TEST_FORMAT,
-        treatment_mode: str | None = None,
+        response_metadata_values: Sequence[str] = (),
     ) -> list[str]:
         encoded_columns = _csv_record(decision_columns).removesuffix("\r\n")
         chunk_values = list(chunks) + [""] * (MAX_CHUNKS - len(chunks))
         response = [
             response_id,
             status,
+            *response_metadata_values,
             str(len(chunks) if count is None else count),
             encoded_columns,
             format_version,
@@ -452,8 +458,6 @@ class _SelfTests(unittest.TestCase):
             overflow_rows,
             *chunk_values,
         ]
-        if treatment_mode is not None:
-            response.insert(2, treatment_mode)
         return response
 
     def test_multichunk_round_trip_quotes_and_zero_decisions(self) -> None:
@@ -525,7 +529,7 @@ class _SelfTests(unittest.TestCase):
                         columns,
                         completed_chunks,
                         format_version="csv-v2",
-                        treatment_mode="all_at_once",
+                        response_metadata_values=["all_at_once"],
                     ),
                     self._response(
                         "R_partial",
@@ -533,10 +537,10 @@ class _SelfTests(unittest.TestCase):
                         columns,
                         partial_chunks,
                         format_version="csv-v2",
-                        treatment_mode="all_at_once",
+                        response_metadata_values=["all_at_once"],
                     ),
                 ],
-                include_treatment_mode=True,
+                response_metadata_fields=[SOURCE_TREATMENT_COLUMN],
             )
 
             decoded = decode_file(input_path, output_path)
@@ -609,6 +613,75 @@ class _SelfTests(unittest.TestCase):
             self.assertEqual(row["chosen_task_id"], "movie")
             self.assertIn('"task_id":"movie"', row["displayed_choice_set_json"])
             self.assertNotIn(ANALYSIS_TREATMENT_COLUMN, decoded.output_header)
+
+    def test_csv_v3_fixed_slots_and_response_metadata_round_trip(self) -> None:
+        columns = [
+            "round",
+            "generated_position",
+            "chosen_position",
+            "chosen_task_id",
+            "displayed_choice_set_json",
+            "response_time_ms",
+            "task_elapsed_ms",
+        ]
+        slot_order = (
+            '["side_1","side_2","side_3","side_4","main","movie"]'
+        )
+        layout_version = "fixed-slots-v1"
+        displayed = (
+            '[{"generated_position":2,"slot_position":1,"task_id":"simple_a",'
+            '"active":true},{"generated_position":1,"slot_position":2,'
+            '"task_id":"trio_a","active":true},{"generated_position":null,'
+            '"slot_position":6,"task_id":null,"active":false}]'
+        )
+        decisions = [
+            ["1", "2", "1", "simple_a", displayed, "425", "425"],
+            ["2", "1", "2", "trio_a", displayed, "610", "1035"],
+        ]
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            input_path = Path(temporary_directory) / "csv-v3.csv"
+            output_path = Path(temporary_directory) / "decoded.csv"
+            self._write_export(
+                input_path,
+                [
+                    self._response(
+                        "R_v3",
+                        "completed",
+                        columns,
+                        ["".join(_csv_record(row) for row in decisions)],
+                        format_version="csv-v3",
+                        response_metadata_values=[slot_order, layout_version],
+                    )
+                ],
+                response_metadata_fields=["cs_slot_order", "cs_layout_version"],
+            )
+
+            decoded = decode_file(input_path, output_path)
+
+            self.assertEqual(decoded.response_count, 1)
+            self.assertEqual(len(decoded.output_rows), 2)
+            self.assertIn("generated_position", decoded.output_header)
+            self.assertIn("chosen_position", decoded.output_header)
+            self.assertIn("cs_slot_order", decoded.output_header)
+            self.assertIn("cs_layout_version", decoded.output_header)
+            with output_path.open("r", encoding="utf-8", newline="") as stream:
+                rows = list(csv.DictReader(stream))
+            self.assertEqual(
+                [(row["generated_position"], row["chosen_position"]) for row in rows],
+                [("2", "1"), ("1", "2")],
+            )
+            self.assertTrue(all(row["cs_slot_order"] == slot_order for row in rows))
+            self.assertTrue(
+                all(row["cs_layout_version"] == layout_version for row in rows)
+            )
+            self.assertTrue(
+                all(row["displayed_choice_set_json"] == displayed for row in rows)
+            )
+            parsed_choice_set = json.loads(rows[0]["displayed_choice_set_json"])
+            self.assertEqual(parsed_choice_set[0]["slot_position"], 1)
+            self.assertIs(parsed_choice_set[0]["active"], True)
+            self.assertEqual(parsed_choice_set[2]["slot_position"], 6)
+            self.assertIs(parsed_choice_set[2]["active"], False)
 
     def test_chunk_count_mismatch_and_overflow_fail(self) -> None:
         columns = ["screen_number"]

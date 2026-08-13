@@ -33,9 +33,9 @@
         .harness-assertion-skip { border-color: #a16207; background: #fffbeb; }
         .harness-assertion strong { display: block; }
         .harness-assertion span { color: #475569; }
-        #csq-game-root { max-width: 100%; overflow-x: auto; padding: 2px 2px 10px; }
-        .csq-game-layout { display: flex; align-items: flex-start; justify-content: flex-start; gap: 16px; width: max-content; min-width: 100%; }
-        .cs-task { box-sizing: border-box; flex: 0 0 auto; width: max-content; max-width: none; margin: 0; }
+        #csq-game-root { box-sizing: border-box; max-width: 100%; overflow-x: hidden; padding: 2px 2px 10px; }
+        .csq-game-layout { display: flex; flex-direction: column; align-items: flex-start; justify-content: flex-start; gap: 12px; width: 100%; min-width: 100%; }
+        .cs-task { box-sizing: border-box; flex: 0 0 auto; width: 100%; max-width: none; margin: 0; padding: 14px 16px 16px; }
         .csq-field { display: grid; grid-template-columns: minmax(240px, 1fr) minmax(150px, 220px); gap: 8px 20px; align-items: center; margin: 10px 0; }
         .csq-checkbox-field { display: block; }
         .csq-checkbox-label { position: relative; display: flex; align-items: center; gap: 8px; width: fit-content; cursor: pointer; }
@@ -49,20 +49,24 @@
         .csq-input:disabled { background: #f1f5f9; color: #64748b; }
         .csq-validation-errors { color: #991b1b; font-weight: 700; margin-top: 12px; }
         .csq-debug-table-wrap { overflow-x: auto; }
-        .cs-card-row { display: flex !important; flex-flow: row nowrap; align-items: stretch; gap: 12px; width: max-content; }
-        .cs-card { box-sizing: border-box; position: relative; display: block; flex: 0 0 140px; width: 140px; min-width: 140px; min-height: 218px; padding: 13px 8px; }
-        .cs-card-heading { position: absolute; top: 13px; left: 8px; right: 8px; display: flex; min-height: 25px; align-items: flex-start; justify-content: center; }
-        .cs-card-color-label { color: var(--card-color); font-weight: 800; }
+        .cs-card-row { display: grid !important; grid-template-columns: repeat(10, minmax(0, 1fr)) !important; align-items: stretch; gap: 6px; width: 100%; }
+        .cs-card { box-sizing: border-box; position: relative; display: block; flex: 0 0 auto; width: 100%; min-width: 0; min-height: 184px; padding: 11px 5px; }
+        .cs-card-heading { position: absolute; top: 11px; left: 4px; right: 4px; display: flex; min-height: 25px; align-items: flex-start; justify-content: center; }
+        .cs-card-color-label { color: var(--card-color); font-size: 14px; font-weight: 800; }
         .cs-card-payoff-slot { position: absolute; top: 50%; left: 8px; right: 8px; display: flex; min-height: 24px; align-items: center; justify-content: center; transform: translateY(-50%); text-align: center; }
-        .cs-card-payoff { font-size: 15px; font-weight: 800; line-height: 1.2; white-space: nowrap; }
-        .cs-card-footer { position: absolute; right: 4px; bottom: 10px; left: 4px; display: flex; min-height: 25px; flex-direction: column; align-items: center; justify-content: flex-end; overflow: hidden; color: #64748b; font-size: 11.5px; font-weight: 650; line-height: 1.05; text-align: center; }
+        .cs-card-payoff { font-size: 14px; font-weight: 800; line-height: 1.2; white-space: nowrap; }
+        .cs-card-footer { position: absolute; right: 4px; bottom: 10px; left: 4px; display: flex; min-height: 25px; flex-direction: column; align-items: center; justify-content: flex-end; overflow: hidden; color: #64748b; font-size: 11px; font-weight: 650; line-height: 1.05; text-align: center; }
         .cs-card-footer-line { display: block; max-width: 100%; white-space: nowrap; }
+        .cs-card-inactive { border-color: #94a3b8 !important; background: #e2e8f0 !important; color: #64748b !important; box-shadow: none !important; cursor: not-allowed !important; opacity: 0.82; transform: none !important; }
+        .cs-card-inactive:hover, .cs-card-inactive:focus { outline: none !important; box-shadow: none !important; }
+        .cs-card-inactive .cs-card-color-label { color: #64748b !important; }
+        .cs-card-inactive .cs-card-payoff { color: #64748b; font-size: 11.5px; font-weight: 700; }
         .cs-inactivity-clock { color: #475569; font-variant-numeric: tabular-nums; white-space: nowrap; }
         .cs-inactivity-warning { color: #b91c1c; }
-        .csq-rules-panel { box-sizing: border-box; flex: 0 0 540px; width: 540px; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; background: #f8fafc; color: #1f2937; overflow: visible; }
-        .csq-rules-panel h3 { margin: 0 0 3px; color: #111827; font-size: 16px; line-height: 1.25; }
-        .csq-rule-note { margin: 0 0 4px; color: #334155; font-size: 12.5px; line-height: 1.3; }
-        .csq-rule-row { padding: 4px 0 5px; border-top: 1px solid #d8e0ea; }
+        .csq-rules-panel { box-sizing: border-box; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); flex: none; width: 100%; max-width: none; gap: 0 18px; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; background: #f8fafc; color: #1f2937; overflow: visible; }
+        .csq-rules-panel h3 { grid-column: 1 / -1; margin: 0 0 3px; color: #111827; font-size: 16px; line-height: 1.25; }
+        .csq-rule-note { grid-column: 1 / -1; margin: 0 0 4px; color: #334155; font-size: 12.5px; line-height: 1.3; }
+        .csq-rule-row { min-width: 0; padding: 4px 0 5px; border-top: 1px solid #d8e0ea; }
         .csq-rule-heading { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; }
         .csq-rule-mapping { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
         .csq-rule-separator { color: #64748b; font-weight: 750; }
@@ -77,14 +81,14 @@
         .csq-all-toolbar-primary { font-size: 14px; }
         .csq-all-toolbar-controls { margin-left: auto; }
         .csq-all-layout { display: block; width: 100%; min-width: 0; margin-top: 10px; }
-        .csq-all-scroll { box-sizing: border-box; width: 100%; min-width: 0; height: calc(100vh - var(--csq-toolbar-height) - 44px); min-height: 420px; overflow: auto; overscroll-behavior: contain; scrollbar-gutter: stable; border: 1px solid #cbd5e1; border-radius: 8px; background: #f8fafc; }
+        .csq-all-scroll { box-sizing: border-box; width: 100%; min-width: 0; height: calc(100vh - var(--csq-toolbar-height) - 44px); min-height: 420px; overflow: auto; overscroll-behavior: auto; scrollbar-gutter: stable; border: 1px solid #cbd5e1; border-radius: 8px; background: #f8fafc; }
         .csq-all-list { box-sizing: border-box; display: flex; width: 100%; min-width: 100%; flex-direction: column; gap: 10px; padding: 8px; }
         .csq-all-round { box-sizing: border-box; width: max-content; min-width: 100%; padding: 10px 8px 12px; border: 1px solid #d8e0ea; border-radius: 7px; background: #fff; scroll-margin: 12px; }
         .csq-all-round-scale { box-sizing: border-box; width: max-content; transform: scale(var(--csq-choice-scale)); transform-origin: top left; }
         .csq-all-round-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 24px; margin: 0 0 8px; color: #334155; font-size: 14px; font-weight: 750; }
-        .csq-all-card-row { display: flex !important; flex-flow: row nowrap !important; align-items: stretch; gap: 8px; width: max-content; min-width: max-content; }
+        .csq-all-card-row { display: flex !important; flex-flow: row nowrap !important; align-items: stretch; gap: 6px; width: max-content; min-width: max-content; }
         .csq-all-round-input { box-sizing: border-box; width: 58px; min-height: 34px; margin: 0; padding: 4px 6px; border: 1px solid #94a3b8; border-radius: 5px; background: #fff; color: #0f172a; font: inherit; font-variant-numeric: tabular-nums; }
-        .csq-all-at-once .cs-card { flex-basis: 108px; width: 108px; min-width: 108px; min-height: 190px; }
+        .csq-all-at-once .cs-card { flex-basis: 104px; width: 104px; min-width: 104px; min-height: 184px; }
         .csq-all-helper { margin: 0; color: #475569; font-size: 13px; line-height: 1.35; }
         .csq-all-done { padding: 7px 10px; border: 1px solid #86efac; border-radius: 6px; background: #f0fdf4; color: #166534; font-size: 13px; font-weight: 750; }
         .csq-all-nav-button { min-height: 34px; padding: 6px 12px; border: 0; border-radius: 6px; background: #0f4c81; color: #fff; cursor: pointer; font-family: inherit; font-size: 13px; line-height: 1.2; font-weight: 750; }
@@ -95,14 +99,11 @@
         .csq-all-zoom-value { display: inline-block; min-width: 42px; color: #0f172a; font-variant-numeric: tabular-nums; text-align: right; }
         .csq-all-wide-blocker { box-sizing: border-box; max-width: 760px; margin: 16px auto; padding: 18px 20px; border: 2px solid #b45309; border-radius: 8px; background: #fffbeb; color: #78350f; font-weight: 700; line-height: 1.45; }
         .csq-all-wide-blocker[hidden] { display: none !important; }
-        .csq-key-toggle { border: 1px solid #94a3b8; background: #fff; color: #334155; }
-        .csq-key-toggle:hover, .csq-key-toggle:focus { background: #f1f5f9; color: #0f172a; }
-        .csq-all-at-once > .csq-rules-panel { position: fixed !important; top: 120px; right: 8px; bottom: 8px; left: auto; z-index: 9999; flex: none; width: min(400px, calc(100vw - 24px)); max-height: none; padding-top: 38px; overflow: auto; box-shadow: 0 10px 28px rgba(15, 23, 42, 0.2); }
+        .csq-all-at-once > .csq-rules-panel { position: static !important; flex: none; width: 100%; max-height: none; margin-top: 12px; overflow: visible; box-shadow: none; }
         .csq-all-at-once > .csq-rules-panel[hidden] { display: none !important; }
-        .csq-key-close { position: sticky; top: 0; z-index: 2; float: right; min-height: 26px; padding: 3px 8px; border: 1px solid #94a3b8; border-radius: 5px; background: #fff; color: #334155; cursor: pointer; font-family: inherit; font-size: 12px; font-weight: 750; }
         @media (min-width: 1280px) and (max-width: 1369px) {
-            .csq-all-card-row { gap: 2px; }
-            .csq-all-at-once .cs-card { flex-basis: 93px; width: 93px; min-width: 93px; }
+            .csq-all-card-row { gap: 4px; }
+            .csq-all-at-once .cs-card { flex-basis: 100px; width: 100px; min-width: 100px; }
         }
         @media (max-width: 680px) { .csq-field { grid-template-columns: 1fr; } }
     </style>
@@ -121,7 +122,8 @@
                 <option value="all_at_once">All at once</option>
             </select>
         </label>
-        <button type="button" id="open-reference-viewport" title="Open a fresh all-at-once harness window at the reference size">Open 1370×768</button>
+        <button type="button" id="open-1280-viewport" title="Open the selected treatment at the minimum supported width">Open selected at 1280×768</button>
+        <button type="button" id="open-reference-viewport" title="Open the selected treatment at the reference width">Open selected at 1370×768</button>
     </div>
     <section class="harness-page">
         <div id="csq-setup-root" class="cs-setup"></div>
@@ -132,9 +134,10 @@
         <p id="harness-status" class="harness-status" aria-live="polite"></p>
     </section>
     <details class="harness-diagnostics" id="harness-diagnostics">
-        <summary>All-at-once development checks</summary>
+        <summary>Fixed-slot treatment checks</summary>
         <div class="harness-diagnostic-actions">
-            <button type="button" id="run-all-at-once-checks">Run DOM/layout checks</button>
+            <button type="button" id="run-treatment-checks">Run treatment checks</button>
+            <button type="button" id="advance-sequential-movie">Sequential: verify through round 81</button>
             <button type="button" id="run-radio-check">Test round 1 replacement</button>
             <button type="button" id="answer-all-rounds">Answer every unfinished round</button>
             <button type="button" id="set-zoom-100">Zoom 100%</button>
@@ -281,6 +284,19 @@
         return Array.prototype.slice.call(row.querySelectorAll("button.cs-card, button[data-task-id]"));
     }
 
+    function activeCards(row) {
+        return roundCards(row).filter(function (card) { return card.getAttribute("data-active") === "1"; });
+    }
+
+    function inactiveCards(row) {
+        return roundCards(row).filter(function (card) { return card.getAttribute("data-active") === "0"; });
+    }
+
+    function roundNumber(row) {
+        var card = roundCards(row)[0];
+        return Number(row.getAttribute("data-round") || (card && card.getAttribute("data-round")) || 0);
+    }
+
     function roundRows() {
         var selectors = [
             "[data-csq-round]", ".csq-all-at-once-round", ".csq-all-round",
@@ -320,7 +336,6 @@
         var selectors = {
             toolbar: ["[data-csq-toolbar]", ".csq-all-at-once-toolbar", ".csq-all-toolbar", ".csq-fixed-toolbar"],
             key: ["[data-csq-payoff-key]", ".csq-rules-panel"],
-            keyToggle: ["button[data-csq='all-key-toggle']", "button.csq-key-toggle"],
             scroll: ["[data-csq-round-scroll]", ".csq-all-at-once-scroll", ".csq-all-scroll", ".csq-round-scroll"],
             zoom: ["input[data-csq='all-zoom']", "input[data-csq-zoom]", ".csq-all-zoom input[type='range']", "input.csq-all-at-once-zoom", "input.csq-all-zoom", "#csq-all-zoom"],
             done: ["button[data-csq='all-done']", "button[data-csq-done]", "button.csq-all-at-once-done", "button.csq-all-done", "#csq-done"],
@@ -364,11 +379,13 @@
         return results;
     }
 
-    function runAllAtOnceChecks() {
+    function runTreatmentChecks() {
         var rows = roundRows();
+        var mode = embeddedData.cs_treatment_mode;
+        var expectedRows = mode === "all_at_once" ? 100 : 1;
+        var expectedTasks = ["main", "movie", "trio_a", "trio_b", "fives", "cumulative_a", "cumulative_b", "infinite_scroll", "simple_a", "simple_b"];
         var toolbar = gameControl("toolbar");
         var key = gameControl("key");
-        var keyToggle = gameControl("keyToggle");
         var scroll = gameControl("scroll");
         var zoom = gameControl("zoom");
         var done = gameControl("done");
@@ -378,43 +395,107 @@
         var sampleCard;
         var countPattern = /Viewing rounds?\s+\d+\s*[–-]\s*\d+\s+of\s+100/i;
         var cardCounts = rows.map(function (row) { return roundCards(row).length; });
-        var noWrap = rows.length === 100 && rows.every(function (row) {
+        var noWrap = rows.length === expectedRows && rows.every(function (row) {
             var cards = roundCards(row);
             var firstTop = cards.length ? cards[0].getBoundingClientRect().top : 0;
             return cards.every(function (card) { return Math.abs(card.getBoundingClientRect().top - firstTop) <= 2; });
         });
+        var fixedSlots = rows.length === expectedRows && rows.every(function (row) {
+            var cards = roundCards(row);
+            var taskIds = cards.map(function (card) { return card.getAttribute("data-task-id"); });
+            return cards.length === 10 && new Set(taskIds).size === 10 && expectedTasks.every(function (taskId) { return taskIds.indexOf(taskId) >= 0; }) &&
+                cards.every(function (card, index) { return card.getAttribute("data-position") === String(index + 1) && card.getAttribute("data-slot-index") === String(index); });
+        });
+        var slotSignature = rows.length ? roundCards(rows[0]).map(function (card) { return card.getAttribute("data-task-id"); }).join("|") : "";
+        var stableSlots = rows.length === expectedRows && rows.every(function (row) {
+            return roundCards(row).map(function (card) { return card.getAttribute("data-task-id"); }).join("|") === slotSignature;
+        });
+        var activeCounts = rows.map(function (row) { return activeCards(row).length; });
+        var correctActiveCounts = rows.length === expectedRows && rows.every(function (row) {
+            return activeCards(row).length === (roundNumber(row) >= 81 ? 6 : 5);
+        });
+        var movieState = rows.length === expectedRows && rows.every(function (row) {
+            var movie = roundCards(row).filter(function (card) { return card.getAttribute("data-task-id") === "movie"; })[0];
+            return !!movie && (roundNumber(row) >= 81
+                ? movie.getAttribute("data-active") === "1" && (window.innerWidth < 1280 || !movie.disabled)
+                : movie.getAttribute("data-active") === "0");
+        });
+        var inactiveAccessible = rows.length === expectedRows && rows.every(function (row) {
+            return inactiveCards(row).every(function (card) {
+                return card.disabled && card.getAttribute("aria-disabled") === "true" && card.tabIndex === -1 && card.getAttribute("aria-checked") !== "true" && selectedCards(row).indexOf(card) < 0;
+            });
+        });
+        var inactiveFocusPass = true;
+        var inactiveSelectionPass = true;
+        var firstInactive = rows.length ? inactiveCards(rows[0])[0] : null;
+        if (firstInactive) {
+            var selectedBeforeInactiveClick = selectedCards(rows[0]).length;
+            firstInactive.focus(); inactiveFocusPass = document.activeElement !== firstInactive;
+            firstInactive.click(); inactiveSelectionPass = selectedCards(rows[0]).length === selectedBeforeInactiveClick && firstInactive.getAttribute("aria-checked") !== "true";
+        }
         var answered = rows.reduce(function (sum, row) { return sum + (selectedCards(row).length === 1 ? 1 : 0); }, 0);
-        sampleCard = rows.length && roundCards(rows[0]).length ? roundCards(rows[0])[0] : null;
+        sampleCard = rows.length && activeCards(rows[0]).length ? activeCards(rows[0])[0] : null;
         var viewing = roots.game.querySelector("[data-csq='all-viewing']");
         var answeredCounter = roots.game.querySelector("[data-csq='all-answered']");
         var pointsCounter = roots.game.querySelector("[data-csq='all-points']");
         var inactivityCounter = roots.game.querySelector("[data-csq='all-inactivity']");
+        var anchor = mode === "all_at_once" ? scroll : roots.game.querySelector(".cs-task");
+        var keyBelow = !!key && !!anchor && !!(anchor.compareDocumentPosition(key) & Node.DOCUMENT_POSITION_FOLLOWING) && key.getBoundingClientRect().top >= anchor.getBoundingClientRect().bottom - 2;
+        var keyPosition = key ? window.getComputedStyle(key).position : "";
+        var rowFits = window.innerWidth < 1280 || rows.every(function (row) {
+            var rowRect = row.getBoundingClientRect();
+            var containerRect = (mode === "all_at_once" && scroll ? scroll : roots.game).getBoundingClientRect();
+            return rowRect.left >= containerRect.left - 2 && rowRect.right <= containerRect.right + 2;
+        });
+        var toolbarFixedAfterScroll = true;
+        var toolbarScrollDetail = "not applicable";
+        if (mode === "all_at_once" && toolbar && scroll) {
+            var toolbarBefore = toolbar.getBoundingClientRect();
+            var savedScroll = scroll.scrollTop;
+            scroll.scrollTop = Math.min(scroll.scrollHeight - scroll.clientHeight, savedScroll + 300);
+            scroll.dispatchEvent(new Event("scroll", {bubbles: true}));
+            var toolbarAfter = toolbar.getBoundingClientRect();
+            toolbarFixedAfterScroll = Math.abs(toolbarBefore.top - toolbarAfter.top) <= 1 && Math.abs(toolbarBefore.left - toolbarAfter.left) <= 1 && Math.abs(toolbarBefore.width - toolbarAfter.width) <= 1;
+            toolbarScrollDetail = toolbarBefore.top.toFixed(1) + "px before / " + toolbarAfter.top.toFixed(1) + "px after";
+            scroll.scrollTop = savedScroll;
+        }
         var result = [
-            assertion("100 rendered rounds", rows.length === 100, rows.length + " round containers found"),
-            assertion("Five/six cards per round", cardCounts.length === 100 && cardCounts.slice(0, 80).every(function (count) { return count === 5; }) && cardCounts.slice(80).every(function (count) { return count === 6; }), cardCounts.length ? "counts " + cardCounts.slice(0, 3).join("/") + " … " + cardCounts.slice(-3).join("/") : "no round cards found"),
+            assertion(expectedRows + " rendered round" + (expectedRows === 1 ? "" : "s"), rows.length === expectedRows, rows.length + " round containers found"),
+            assertion("Ten stable task slots per round", fixedSlots && stableSlots, cardCounts.length ? "counts " + cardCounts.slice(0, 3).join("/") + (cardCounts.length > 3 ? " … " + cardCounts.slice(-3).join("/") : "") : "no round cards found"),
+            assertion("Five/six active cards per round", correctActiveCounts, activeCounts.length ? "active counts " + activeCounts.slice(0, 3).join("/") + (activeCounts.length > 3 ? " … " + activeCounts.slice(-3).join("/") : "") : "no round cards found"),
+            assertion("Movie activation follows round 81", movieState, "inactive through round 80; active from round 81"),
+            assertion("Inactive slots are inaccessible", inactiveAccessible && inactiveFocusPass && inactiveSelectionPass, firstInactive ? "disabled, aria-disabled, tabIndex -1, click does not select, not focusable" : "no inactive slot found"),
             assertion("Cards stay on one row", noWrap, noWrap ? "all card tops align" : "at least one choice set wraps or is missing"),
-            assertion("Viewport-fixed control toolbar", !!toolbar && window.getComputedStyle(toolbar).position === "fixed", toolbar ? "position: " + window.getComputedStyle(toolbar).position : "toolbar selector not found"),
-            assertion("Payoff-key control", !!keyToggle && keyToggle.getAttribute("aria-controls") === (key && key.id), keyToggle ? "expanded=" + keyToggle.getAttribute("aria-expanded") : "toggle not found"),
-            assertion("Floating payoff-key drawer", !!key && (!visible(key) || window.getComputedStyle(key).position === "fixed"), key ? (visible(key) ? "open and fixed" : "collapsed by default") : "payoff key not found"),
-            assertion("Decision list uses full width", !!scroll && scroll.clientWidth >= roots.game.clientWidth - 24, scroll ? scroll.clientWidth + "px list / " + roots.game.clientWidth + "px root" : "scroll container not found"),
+            assertion("Choice rows fit supported viewport", rowFits, window.innerWidth + "px viewport; no card-row overflow"),
+            assertion("Payoff key is visible and static below game", window.innerWidth < 1280 || !!key && visible(key) && keyPosition !== "fixed" && keyPosition !== "sticky" && keyBelow, window.innerWidth < 1280 ? "hidden with the width safeguard" : key ? "position=" + keyPosition + "; below=" + keyBelow : "payoff key not found", window.innerWidth < 1280),
+            assertion("Viewport-fixed control toolbar", mode !== "all_at_once" || !!toolbar && window.getComputedStyle(toolbar).position === "fixed", mode === "all_at_once" ? (toolbar ? "position: " + window.getComputedStyle(toolbar).position : "toolbar selector not found") : "sequential mode", mode !== "all_at_once"),
+            assertion("Toolbar stays fixed after decision-pane scroll", mode !== "all_at_once" || toolbarFixedAfterScroll, toolbarScrollDetail, mode !== "all_at_once"),
+            assertion("Decision list uses full width", mode !== "all_at_once" || !!scroll && scroll.clientWidth >= roots.game.clientWidth - 24, mode === "all_at_once" ? (scroll ? scroll.clientWidth + "px list / " + roots.game.clientWidth + "px root" : "scroll container not found") : "sequential mode", mode !== "all_at_once"),
             assertion("Visible-range counter", !!viewing ? countPattern.test(viewing.textContent) : !!toolbar && countPattern.test(toolbar.textContent), viewing ? viewing.textContent.trim() : toolbar ? toolbar.textContent.replace(/\s+/g, " ").trim().slice(0, 120) : "toolbar not found"),
             assertion("Answered counter", !!answeredCounter && /Answered\s+\d+\s+of\s+100/i.test(answeredCounter.textContent), answeredCounter ? answeredCounter.textContent.trim() : "counter not found"),
             assertion("Points counter", !!pointsCounter && /Points\s*:\s*\d+/i.test(pointsCounter.textContent), pointsCounter ? pointsCounter.textContent.trim() : "counter not found"),
-            assertion("Inactivity counter", !!inactivityCounter && /Inactive in\s+\d+:\d\d/i.test(inactivityCounter.textContent), inactivityCounter ? inactivityCounter.textContent.trim() : "counter not found"),
-            assertion("Scrollable 100-round list", !!scroll && scroll.scrollHeight > scroll.clientHeight, scroll ? scroll.clientHeight + "px visible / " + scroll.scrollHeight + "px total" : "scroll container not found"),
-            assertion("Exactly one or zero choices per round", rows.length === 100 && rows.every(function (row) { return selectedCards(row).length <= 1; }), answered + " answered"),
+            assertion("Inactivity counter", !!inactivityCounter && (window.innerWidth < 1280 ? /Inactivity paused/i.test(inactivityCounter.textContent) : /Inactive in\s+\d+:\d\d/i.test(inactivityCounter.textContent)), inactivityCounter ? inactivityCounter.textContent.trim() : "counter not found"),
+            assertion("Scrollable 100-round list", mode !== "all_at_once" || !!scroll && scroll.scrollHeight > scroll.clientHeight, mode === "all_at_once" && scroll ? scroll.clientHeight + "px visible / " + scroll.scrollHeight + "px total" : "sequential mode", mode !== "all_at_once"),
+            assertion("Exactly one or zero choices per round", rows.length === expectedRows && rows.every(function (row) { return selectedCards(row).length <= 1; }), answered + " answered"),
             assertion("Done gating", !!done && (answered === 100 ? !done.disabled : done.disabled), done ? "answered " + answered + "; disabled=" + done.disabled : "Done button not found"),
             assertion("Zoom range includes 75–100", !!zoom && Number(zoom.min) <= 75 && Number(zoom.max) >= 100, zoom ? "min=" + zoom.min + ", max=" + zoom.max + ", value=" + zoom.value : "zoom control not found"),
             assertion("Next unanswered control", !!next, next ? "control found" : "control not found"),
             assertion("Round jump control", !!jumpInput, jumpInput ? "current value " + jumpInput.value : "input not found"),
             assertion("Narrow-width blocker state", !!blocker && (window.innerWidth < 1280 ? visible(blocker) : !visible(blocker)), blocker ? (visible(blocker) ? "visible at " : "hidden at ") + window.innerWidth + "px" : "blocker element not found"),
-            assertion("Narrow-width interaction lock", window.innerWidth >= 1280 || !!sampleCard && (sampleCard.disabled || sampleCard.getAttribute("aria-disabled") === "true"), window.innerWidth >= 1280 ? "not applicable at this width" : sampleCard ? "disabled=" + sampleCard.disabled + ", aria-disabled=" + sampleCard.getAttribute("aria-disabled") : "no card found", window.innerWidth >= 1280),
-            assertion("No horizontal choice scrolling", window.innerWidth < 1280 || !!scroll && scroll.scrollWidth <= scroll.clientWidth + 2, scroll ? scroll.scrollWidth + "px content / " + scroll.clientWidth + "px viewport" : "scroll container not found", window.innerWidth < 1280),
+            assertion("Narrow-width interaction lock", window.innerWidth >= 1280 || !!sampleCard && (sampleCard.disabled || sampleCard.getAttribute("aria-disabled") === "true") || !!roots.game.querySelector(".csq-game-layout") && roots.game.querySelector(".csq-game-layout").hidden, window.innerWidth >= 1280 ? "not applicable at this width" : roots.game.querySelector(".csq-game-layout") && roots.game.querySelector(".csq-game-layout").hidden ? "game surface hidden" : sampleCard ? "disabled=" + sampleCard.disabled + ", aria-disabled=" + sampleCard.getAttribute("aria-disabled") : "no card found", window.innerWidth >= 1280),
+            assertion("No horizontal choice scrolling", window.innerWidth < 1280 || mode !== "all_at_once" || !!scroll && scroll.scrollWidth <= scroll.clientWidth + 2, mode === "all_at_once" && scroll ? scroll.scrollWidth + "px content / " + scroll.clientWidth + "px viewport" : "sequential mode", window.innerWidth < 1280 || mode !== "all_at_once"),
             assertion("No page-level horizontal scroll", document.documentElement.scrollWidth <= window.innerWidth + 2, document.documentElement.scrollWidth + "px document / " + window.innerWidth + "px viewport")
         ];
-        status.textContent = "All-at-once checks: " + result.filter(function (item) { return item.pass; }).length + " of " + result.length + " passed.";
+        if (mode !== "all_at_once") {
+            result = result.filter(function (item) {
+                return ["Visible-range counter", "Answered counter", "Points counter", "Inactivity counter", "Done gating", "Zoom range includes 75–100", "Next unanswered control", "Round jump control"].indexOf(item.name) < 0;
+            });
+        }
+        status.textContent = (mode === "all_at_once" ? "All-at-once" : "Sequential") + " checks: " + result.filter(function (item) { return item.pass || item.skipped; }).length + " of " + result.length + " passed or skipped.";
         return renderAssertions(result, true);
     }
+
+    function runAllAtOnceChecks() { return runTreatmentChecks(); }
 
     function afterPaint(callback) {
         window.requestAnimationFrame(function () { window.requestAnimationFrame(callback); });
@@ -423,7 +504,7 @@
     function runRadioCheck() {
         var rows = roundRows();
         var row = rows[0];
-        var cards = row ? roundCards(row) : [];
+        var cards = row ? activeCards(row) : [];
         var scroll = gameControl("scroll");
         var beforeScroll = scroll ? scroll.scrollTop : window.scrollY;
         if (cards.length < 2) {
@@ -457,7 +538,7 @@
             var stop = Math.min(index + 10, rows.length);
             for (; index < stop; index += 1) {
                 if (!selectedCards(rows[index]).length) {
-                    var cards = roundCards(rows[index]);
+                    var cards = activeCards(rows[index]);
                     if (cards.length && !cards[0].disabled) {
                         cards[0].click();
                         if (!selectedCards(rows[index]).length) {
@@ -528,12 +609,12 @@
         status.textContent = "Requested task round " + number + ".";
     }
 
-    function freshHarnessUrl(width, inactivitySeconds) {
+    function freshHarnessUrl(width, treatment, inactivitySeconds) {
         var url = new URL(window.location.href);
         url.search = "";
         url.searchParams.set("autoGame", "1");
         url.searchParams.set("fast", "1");
-        url.searchParams.set("treatment", "all_at_once");
+        url.searchParams.set("treatment", treatment || treatmentSelect.value);
         url.searchParams.set("stanford", "1");
         url.searchParams.set("checks", "1");
         if (inactivitySeconds) { url.searchParams.set("inactivitySeconds", String(inactivitySeconds)); }
@@ -541,7 +622,7 @@
     }
 
     function openViewport(width) {
-        var target = freshHarnessUrl(width);
+        var target = freshHarnessUrl(width, treatmentSelect.value);
         var popup = window.open(target.url, "csq_harness_" + width + "_" + Date.now(), target.features);
         if (!popup) { status.textContent = "The test window was blocked by the browser. Allow popups and try again."; }
     }
@@ -560,7 +641,7 @@
         showPage("game");
         window.setTimeout(function () {
             var rows = roundRows();
-            var cards = rows.length ? roundCards(rows[0]) : [];
+            var cards = rows.length ? activeCards(rows[0]) : [];
             if (cards.length) { cards[0].click(); }
             status.textContent = "Waiting for the 2-second inactivity cutoff after one provisional choice…";
         }, 100);
@@ -569,6 +650,71 @@
             renderAssertions([assertion("Partial inactivity finish", pass, "status=" + (embeddedData.cs_task_status || "blank") + ", rows=" + (embeddedData.cs_decision_count || "blank"))], false);
             embeddedData.cs_inactivity_seconds = prior;
         }, 3100);
+    }
+
+    function verifySequentialThroughMovie() {
+        var original = {
+            treatment: embeddedData.cs_treatment_mode,
+            feedback: embeddedData.cs_show_click_feedback,
+            feedbackMs: embeddedData.cs_feedback_message_ms,
+            delay: embeddedData.cs_use_post_click_delay,
+            delayMs: embeddedData.cs_post_click_delay_ms,
+            motionMs: embeddedData.cs_screen_motion_ms
+        };
+        var signature = "";
+        var stable = true;
+        var preMovie = true;
+        var steps = 0;
+        embeddedData.cs_treatment_mode = "sequential";
+        embeddedData.cs_show_click_feedback = "0";
+        embeddedData.cs_feedback_message_ms = "0";
+        embeddedData.cs_use_post_click_delay = "0";
+        embeddedData.cs_post_click_delay_ms = "0";
+        embeddedData.cs_screen_motion_ms = "0";
+        treatmentSelect.value = "sequential";
+        showPage("game");
+
+        function restore() {
+            embeddedData.cs_show_click_feedback = original.feedback;
+            embeddedData.cs_feedback_message_ms = original.feedbackMs;
+            embeddedData.cs_use_post_click_delay = original.delay;
+            embeddedData.cs_post_click_delay_ms = original.delayMs;
+            embeddedData.cs_screen_motion_ms = original.motionMs;
+        }
+
+        function step() {
+            var row = roundRows()[0];
+            var cards = row ? roundCards(row) : [];
+            var currentRound = row ? roundNumber(row) : 0;
+            var currentSignature = cards.map(function (card) { return card.getAttribute("data-task-id"); }).join("|");
+            var movie = cards.filter(function (card) { return card.getAttribute("data-task-id") === "movie"; })[0];
+            var choices = row ? activeCards(row) : [];
+            if (!row || cards.length !== 10 || currentRound < 1 || steps > 82) {
+                restore();
+                renderAssertions([assertion("Sequential reaches round 81", false, "stopped at round " + currentRound + " after " + steps + " choices")], true);
+                return;
+            }
+            if (!signature) { signature = currentSignature; }
+            stable = stable && currentSignature === signature;
+            if (currentRound <= 80) {
+                preMovie = preMovie && choices.length === 5 && !!movie && movie.getAttribute("data-active") === "0" && movie.disabled && movie.tabIndex === -1;
+            }
+            if (currentRound >= 81) {
+                runTreatmentChecks();
+                renderAssertions([
+                    assertion("Sequential slot identity is stable through round 81", stable, "ten slots retain the same task order"),
+                    assertion("Movie is inactive through round 80", preMovie, "five active cards and an inaccessible Movie slot in rounds 1–80"),
+                    assertion("Movie activates at round 81", choices.length === 6 && !!movie && movie.getAttribute("data-active") === "1" && !movie.disabled, choices.length + " active cards; Movie active=" + (!!movie && movie.getAttribute("data-active")))
+                ], false);
+                status.textContent = "Sequential fixed-slot verification reached round 81.";
+                restore();
+                return;
+            }
+            steps += 1;
+            choices[0].click();
+            window.setTimeout(step, 0);
+        }
+        window.setTimeout(step, 0);
     }
 
     function loadEngine() {
@@ -610,7 +756,7 @@
                         embeddedData.cs_inactivity_seconds = query.get("inactivitySeconds");
                     }
                     showPage("game");
-                    if (query.get("checks") === "1") { window.setTimeout(runAllAtOnceChecks, 250); }
+                    if (query.get("checks") === "1") { window.setTimeout(runTreatmentChecks, 250); }
                 } else {
                     showPage("setup");
                 }
@@ -635,8 +781,10 @@
         status.textContent = "Treatment set to " + (treatmentSelect.value === "all_at_once" ? "all at once" : "sequential") + ". Open Setup, Intro, or Game to inspect that page.";
     });
     document.getElementById("open-reference-viewport").addEventListener("click", function () { openViewport(1370); });
+    document.getElementById("open-1280-viewport").addEventListener("click", function () { openViewport(1280); });
     document.getElementById("open-narrow-viewport").addEventListener("click", function () { openViewport(1279); });
-    document.getElementById("run-all-at-once-checks").addEventListener("click", runAllAtOnceChecks);
+    document.getElementById("run-treatment-checks").addEventListener("click", runTreatmentChecks);
+    document.getElementById("advance-sequential-movie").addEventListener("click", verifySequentialThroughMovie);
     document.getElementById("run-radio-check").addEventListener("click", runRadioCheck);
     document.getElementById("answer-all-rounds").addEventListener("click", answerAllRounds);
     document.getElementById("set-zoom-100").addEventListener("click", function () { setTaskZoom(100); });
@@ -666,6 +814,7 @@
         setTreatment: function (mode) { this.set("cs_treatment_mode", mode); },
         roundRows: roundRows,
         controls: gameControl,
+        runTreatmentChecks: runTreatmentChecks,
         runAllAtOnceChecks: runAllAtOnceChecks,
         runRadioCheck: runRadioCheck,
         answerAllRounds: answerAllRounds,
@@ -673,6 +822,7 @@
         nextUnanswered: clickNextUnanswered,
         jumpToRound: jumpToRound,
         runInactivityTest: runInactivityTest,
+        verifySequentialThroughMovie: verifySequentialThroughMovie,
         openViewport: openViewport
     };
     window.harness.ready = loadEngine().catch(function (error) {
