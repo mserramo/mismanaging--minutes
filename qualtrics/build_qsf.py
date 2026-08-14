@@ -70,7 +70,8 @@ LOG_COLUMNS = [
 CONFIG_FIELDS = {
     "cs_treatment_mode": "sequential",
     "cs_all_at_once_default_zoom": "100",
-    "cs_all_at_once_min_zoom": "75",
+    "cs_all_at_once_min_zoom": "100",
+    "cs_payoff_key_mode": "overlay",
     "cs_show_round": "1",
     "cs_show_main_cards": "0",
     "cs_show_movie_cards": "0",
@@ -275,8 +276,16 @@ def build_header(bank: dict[str, Any]) -> str:
   margin-right: 12px !important;
 }
 .csq-game-active #HeaderContainer { margin-bottom: 0 !important; padding-bottom: 0 !important; }
-.csq-game-active .SkinInner { padding-top: 0 !important; margin-top: 0 !important; }
+.csq-game-active .SkinInner {
+  width: calc(100vw - 24px) !important;
+  max-width: none !important;
+  padding-top: 0 !important;
+  margin-top: 0 !important;
+}
 .csq-game-active #SkinContent {
+  box-sizing: border-box;
+  width: 100% !important;
+  max-width: none !important;
   padding-top: 0 !important;
   margin-top: 0 !important;
 }
@@ -294,10 +303,25 @@ def build_header(bank: dict[str, Any]) -> str:
 .csq-game-active #QID3.QuestionOuter,
 .csq-game-active #QID3 .QuestionBody,
 .csq-game-active #QID3 .QuestionText {
+  box-sizing: border-box;
+  width: 100% !important;
+  max-width: none !important;
   padding-top: 0 !important;
   margin-top: 0 !important;
 }
-#csq-game-root { box-sizing: border-box; max-width: 100%; overflow-x: hidden; padding: 2px 2px 10px; }
+#csq-game-root {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+  overflow-x: hidden;
+  padding: 2px 2px 10px;
+}
+.csq-game-active #csq-game-root {
+  width: min(100%, 1144px);
+  margin-left: auto;
+  margin-right: auto;
+}
 .csq-game-layout {
   display: flex;
   flex-direction: column;
@@ -314,6 +338,21 @@ def build_header(bank: dict[str, Any]) -> str:
   max-width: none;
   margin: 0;
   padding: 14px 16px 16px;
+}
+.csq-sequential-stage {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+.csq-sequential-stage > .cs-task {
+  width: 100%;
+  padding: 10px 8px 12px;
+  border: 1px solid #d8e0ea;
+  border-radius: 7px;
+  background: #fff;
 }
 .csq-field {
   display: grid;
@@ -570,14 +609,17 @@ def build_header(bank: dict[str, Any]) -> str:
   font-size: 13.25px;
   line-height: 1.3;
 }
+.csq-sequential,
 .csq-all-at-once {
   --csq-choice-scale: 1;
-  --csq-toolbar-height: 96px;
+  --csq-toolbar-height: 58px;
   box-sizing: border-box;
   width: 100%;
   min-width: 0;
+  margin-left: auto;
+  margin-right: auto;
 }
-.csq-all-toolbar {
+.csq-game-toolbar {
   position: fixed !important;
   top: 8px;
   left: 8px;
@@ -585,28 +627,100 @@ def build_header(bank: dict[str, Any]) -> str:
   box-sizing: border-box;
   width: calc(100vw - 16px);
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   justify-content: space-between;
-  gap: 10px 18px;
-  padding: 10px 12px;
+  gap: 8px 16px;
+  padding: 9px 12px;
   border: 1px solid #cbd5e1;
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.97);
   box-shadow: 0 2px 8px rgba(15, 23, 42, 0.09);
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.25;
+  height: 54px;
+  min-height: 54px;
 }
-.csq-all-toolbar-spacer { height: var(--csq-toolbar-height); }
-.csq-all-toolbar-primary,
-.csq-all-toolbar-controls {
+.csq-game-toolbar-spacer { height: var(--csq-toolbar-height); }
+.csq-game-toolbar-primary,
+.csq-game-toolbar-controls {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   gap: 8px 12px;
 }
-.csq-all-toolbar-primary { font-size: 14px; }
-.csq-all-toolbar-controls { margin-left: auto; }
+.csq-game-toolbar-primary > span,
+.csq-game-toolbar-controls > span { white-space: nowrap; }
+.csq-game-toolbar-primary { font-weight: 700; }
+.csq-game-toolbar-controls { margin-left: auto; }
+.csq-toolbar-feedback {
+  display: inline-block;
+  min-width: 88px;
+  color: #475569;
+  font-weight: 750;
+  text-align: center;
+  white-space: nowrap;
+}
+.csq-toolbar-feedback-visible { color: #0f172a; }
+.csq-game-nav-button {
+  min-height: 34px;
+  padding: 6px 12px;
+  border: 0;
+  border-radius: 6px;
+  background: #0f4c81;
+  color: #fff;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.2;
+  font-weight: 750;
+  white-space: nowrap;
+}
+.csq-game-nav-button:hover,
+.csq-game-nav-button:focus { background: #0b365b; }
+.csq-game-nav-button:disabled { background: #94a3b8; cursor: not-allowed; }
+.csq-payoff-key-open { overflow: hidden !important; }
+.csq-rules-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10020;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(15, 23, 42, 0.58);
+}
+.csq-rules-overlay[hidden] { display: none !important; }
+.csq-rules-dialog {
+  position: relative;
+  box-sizing: border-box;
+  width: min(1040px, calc(100vw - 48px));
+  max-height: calc(100vh - 48px);
+  overflow: auto;
+  padding: 14px;
+  border: 1px solid #94a3b8;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 18px 48px rgba(15, 23, 42, 0.3);
+}
+.csq-rules-dialog .csq-rules-panel { width: 100%; margin: 0; }
+.csq-rules-close {
+  display: block;
+  min-height: 34px;
+  margin: 0 0 8px auto;
+  padding: 6px 12px;
+  border: 1px solid #64748b;
+  border-radius: 6px;
+  background: #fff;
+  color: #0f172a;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 750;
+}
+.csq-rules-close:hover,
+.csq-rules-close:focus { background: #f1f5f9; }
 .csq-all-layout {
   display: block;
   width: 100%;
@@ -621,7 +735,7 @@ def build_header(bank: dict[str, Any]) -> str:
   min-height: 420px;
   overflow: auto;
   overscroll-behavior: auto;
-  scrollbar-gutter: stable;
+  scrollbar-gutter: auto;
   border: 1px solid #cbd5e1;
   border-radius: 8px;
   background: #f8fafc;
@@ -637,8 +751,8 @@ def build_header(bank: dict[str, Any]) -> str:
 }
 .csq-all-round {
   box-sizing: border-box;
-  width: max-content;
-  min-width: 100%;
+  width: 100%;
+  min-width: 0;
   padding: 10px 8px 12px;
   border: 1px solid #d8e0ea;
   border-radius: 7px;
@@ -647,9 +761,7 @@ def build_header(bank: dict[str, Any]) -> str:
 }
 .csq-all-round-scale {
   box-sizing: border-box;
-  width: max-content;
-  transform: scale(var(--csq-choice-scale));
-  transform-origin: top left;
+  width: 100%;
 }
 .csq-all-round-heading {
   display: flex;
@@ -663,30 +775,17 @@ def build_header(bank: dict[str, Any]) -> str:
   font-weight: 750;
 }
 .csq-all-card-row {
-  display: flex !important;
-  flex-flow: row nowrap !important;
+  display: grid !important;
+  grid-template-columns: repeat(10, minmax(0, 1fr)) !important;
   align-items: stretch;
   gap: 6px;
-  width: max-content;
-  min-width: max-content;
-}
-.csq-all-round-input {
-  box-sizing: border-box;
-  width: 58px;
-  min-height: 34px;
-  margin: 0;
-  padding: 4px 6px;
-  border: 1px solid #94a3b8;
-  border-radius: 5px;
-  background: #fff;
-  color: #0f172a;
-  font: inherit;
-  font-variant-numeric: tabular-nums;
+  width: 100%;
+  min-width: 0;
 }
 .csq-all-at-once .cs-card {
-  flex-basis: 104px;
-  width: 104px;
-  min-width: 104px;
+  flex-basis: auto;
+  width: 100%;
+  min-width: 0;
   min-height: 184px;
 }
 .csq-all-helper {
@@ -694,6 +793,18 @@ def build_header(bank: dict[str, Any]) -> str:
   color: #475569;
   font-size: 13px;
   line-height: 1.35;
+}
+.csq-all-completion {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
+  padding: 14px 16px;
+  border: 1px solid #cbd5e1;
+  border-radius: 7px;
+  background: #fff;
 }
 .csq-all-done {
   padding: 7px 10px;
@@ -723,23 +834,6 @@ def build_header(bank: dict[str, Any]) -> str:
   background: #94a3b8;
   cursor: not-allowed;
 }
-.csq-all-zoom {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  color: #334155;
-  font-size: 13px;
-  font-weight: 700;
-  white-space: nowrap;
-}
-.csq-all-zoom input[type="range"] { width: 120px; }
-.csq-all-zoom-value {
-  display: inline-block;
-  min-width: 42px;
-  color: #0f172a;
-  font-variant-numeric: tabular-nums;
-  text-align: right;
-}
 .csq-all-wide-blocker {
   box-sizing: border-box;
   max-width: 760px;
@@ -763,14 +857,6 @@ def build_header(bank: dict[str, Any]) -> str:
   box-shadow: none;
 }
 .csq-all-at-once > .csq-rules-panel[hidden] { display: none !important; }
-@media (min-width: 1280px) and (max-width: 1369px) {
-  .csq-all-card-row { gap: 4px; }
-  .csq-all-at-once .cs-card {
-    flex-basis: 100px;
-    width: 100px;
-    min-width: 100px;
-  }
-}
 @media (max-width: 680px) {
   .csq-field { grid-template-columns: 1fr; gap: 5px; }
 }
@@ -1058,7 +1144,8 @@ def validate_generated_qsf(qsf: dict[str, Any]) -> None:
     expected_defaults = {
         "cs_treatment_mode": "sequential",
         "cs_all_at_once_default_zoom": "100",
-        "cs_all_at_once_min_zoom": "75",
+        "cs_all_at_once_min_zoom": "100",
+        "cs_payoff_key_mode": "overlay",
         "cs_show_main_cards": "0",
         "cs_show_movie_cards": "0",
         "cs_show_total_points": "1",

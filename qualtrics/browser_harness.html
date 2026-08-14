@@ -33,9 +33,18 @@
         .harness-assertion-skip { border-color: #a16207; background: #fffbeb; }
         .harness-assertion strong { display: block; }
         .harness-assertion span { color: #475569; }
-        #csq-game-root { box-sizing: border-box; max-width: 100%; overflow-x: hidden; padding: 2px 2px 10px; }
+        /* Simulate Stanford's constrained question-text column, then verify the
+           game-page override opens it to the same width in both treatments. */
+        #QID3 .QuestionText { box-sizing: border-box; width: 100%; max-width: 760px; margin: 0 auto; }
+        .csq-game-active #QID3,
+        .csq-game-active #QID3 .QuestionBody,
+        .csq-game-active #QID3 .QuestionText { box-sizing: border-box; width: 100% !important; max-width: none !important; margin-left: 0 !important; margin-right: 0 !important; padding-top: 0 !important; }
+        #csq-game-root { box-sizing: border-box; width: 100%; min-width: 0; max-width: none; overflow-x: hidden; padding: 2px 2px 10px; }
+        .csq-game-active #csq-game-root { width: min(100%, 1144px); margin-left: auto; margin-right: auto; }
         .csq-game-layout { display: flex; flex-direction: column; align-items: flex-start; justify-content: flex-start; gap: 12px; width: 100%; min-width: 100%; }
         .cs-task { box-sizing: border-box; flex: 0 0 auto; width: 100%; max-width: none; margin: 0; padding: 14px 16px 16px; }
+        .csq-sequential-stage { box-sizing: border-box; width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 8px; background: #f8fafc; }
+        .csq-sequential-stage > .cs-task { width: 100%; padding: 10px 8px 12px; border: 1px solid #d8e0ea; border-radius: 7px; background: #fff; }
         .csq-field { display: grid; grid-template-columns: minmax(240px, 1fr) minmax(150px, 220px); gap: 8px 20px; align-items: center; margin: 10px 0; }
         .csq-checkbox-field { display: block; }
         .csq-checkbox-label { position: relative; display: flex; align-items: center; gap: 8px; width: fit-content; cursor: pointer; }
@@ -74,37 +83,43 @@
         .csq-rule-task-badge { padding: 1px 6px; border-radius: 999px; background: #e5e7eb; color: #374151; font-size: 11.5px; font-weight: 800; line-height: 1.25; }
         .csq-rule-payoff { margin: 3px 0 0; color: #1f2937; font-size: 13.25px; line-height: 1.3; }
         /* Kept in lockstep with the generated QSF so the local harness is layout-faithful. */
-        .csq-all-at-once { --csq-choice-scale: 1; --csq-toolbar-height: 96px; box-sizing: border-box; width: 100%; min-width: 0; }
-        .csq-all-toolbar { position: fixed !important; top: 8px; left: 8px; z-index: 10000; box-sizing: border-box; width: calc(100vw - 16px); display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 18px; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; background: rgba(255, 255, 255, 0.97); box-shadow: 0 2px 8px rgba(15, 23, 42, 0.09); font-size: 13px; line-height: 1.25; }
-        .csq-all-toolbar-spacer { height: var(--csq-toolbar-height); }
-        .csq-all-toolbar-primary, .csq-all-toolbar-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
-        .csq-all-toolbar-primary { font-size: 14px; }
-        .csq-all-toolbar-controls { margin-left: auto; }
+        .csq-sequential, .csq-all-at-once { --csq-choice-scale: 1; --csq-toolbar-height: 58px; box-sizing: border-box; width: 100%; min-width: 0; margin-left: auto; margin-right: auto; }
+        .csq-game-toolbar { position: fixed !important; top: 8px; left: 8px; z-index: 10000; box-sizing: border-box; width: calc(100vw - 16px); height: 54px; min-height: 54px; display: flex; flex-wrap: nowrap; align-items: center; justify-content: space-between; gap: 8px 16px; padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 8px; background: rgba(255, 255, 255, 0.97); box-shadow: 0 2px 8px rgba(15, 23, 42, 0.09); font-size: 14px; line-height: 1.25; }
+        .csq-game-toolbar-spacer { height: var(--csq-toolbar-height); }
+        .csq-game-toolbar-primary, .csq-game-toolbar-controls { display: flex; flex-wrap: nowrap; align-items: center; gap: 8px 12px; }
+        .csq-game-toolbar-primary > span, .csq-game-toolbar-controls > span { white-space: nowrap; }
+        .csq-game-toolbar-primary { font-weight: 700; }
+        .csq-game-toolbar-controls { margin-left: auto; }
+        .csq-toolbar-feedback { display: inline-block; min-width: 88px; color: #475569; font-weight: 750; text-align: center; white-space: nowrap; }
+        .csq-toolbar-feedback-visible { color: #0f172a; }
+        .csq-game-nav-button { min-height: 34px; padding: 6px 12px; border: 0; border-radius: 6px; background: #0f4c81; color: #fff; cursor: pointer; font-family: inherit; font-size: 13px; line-height: 1.2; font-weight: 750; white-space: nowrap; }
+        .csq-game-nav-button:hover, .csq-game-nav-button:focus { background: #0b365b; }
+        .csq-game-nav-button:disabled { background: #94a3b8; cursor: not-allowed; }
+        .csq-payoff-key-open { overflow: hidden !important; }
+        .csq-rules-overlay { position: fixed; inset: 0; z-index: 10020; box-sizing: border-box; display: flex; align-items: center; justify-content: center; padding: 24px; background: rgba(15, 23, 42, 0.58); }
+        .csq-rules-overlay[hidden] { display: none !important; }
+        .csq-rules-dialog { position: relative; box-sizing: border-box; width: min(1040px, calc(100vw - 48px)); max-height: calc(100vh - 48px); overflow: auto; padding: 14px; border: 1px solid #94a3b8; border-radius: 10px; background: #fff; box-shadow: 0 18px 48px rgba(15, 23, 42, 0.3); }
+        .csq-rules-dialog .csq-rules-panel { width: 100%; margin: 0; }
+        .csq-rules-close { display: block; min-height: 34px; margin: 0 0 8px auto; padding: 6px 12px; border: 1px solid #64748b; border-radius: 6px; background: #fff; color: #0f172a; cursor: pointer; font: inherit; font-size: 13px; font-weight: 750; }
+        .csq-rules-close:hover, .csq-rules-close:focus { background: #f1f5f9; }
         .csq-all-layout { display: block; width: 100%; min-width: 0; margin-top: 10px; }
-        .csq-all-scroll { box-sizing: border-box; width: 100%; min-width: 0; height: calc(100vh - var(--csq-toolbar-height) - 44px); min-height: 420px; overflow: auto; overscroll-behavior: auto; scrollbar-gutter: stable; border: 1px solid #cbd5e1; border-radius: 8px; background: #f8fafc; }
+        .csq-all-scroll { box-sizing: border-box; width: 100%; min-width: 0; height: calc(100vh - var(--csq-toolbar-height) - 44px); min-height: 420px; overflow: auto; overscroll-behavior: auto; scrollbar-gutter: auto; border: 1px solid #cbd5e1; border-radius: 8px; background: #f8fafc; }
         .csq-all-list { box-sizing: border-box; display: flex; width: 100%; min-width: 100%; flex-direction: column; gap: 10px; padding: 8px; }
-        .csq-all-round { box-sizing: border-box; width: max-content; min-width: 100%; padding: 10px 8px 12px; border: 1px solid #d8e0ea; border-radius: 7px; background: #fff; scroll-margin: 12px; }
-        .csq-all-round-scale { box-sizing: border-box; width: max-content; transform: scale(var(--csq-choice-scale)); transform-origin: top left; }
+        .csq-all-round { box-sizing: border-box; width: 100%; min-width: 0; padding: 10px 8px 12px; border: 1px solid #d8e0ea; border-radius: 7px; background: #fff; scroll-margin: 12px; }
+        .csq-all-round-scale { box-sizing: border-box; width: 100%; }
         .csq-all-round-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 24px; margin: 0 0 8px; color: #334155; font-size: 14px; font-weight: 750; }
-        .csq-all-card-row { display: flex !important; flex-flow: row nowrap !important; align-items: stretch; gap: 6px; width: max-content; min-width: max-content; }
-        .csq-all-round-input { box-sizing: border-box; width: 58px; min-height: 34px; margin: 0; padding: 4px 6px; border: 1px solid #94a3b8; border-radius: 5px; background: #fff; color: #0f172a; font: inherit; font-variant-numeric: tabular-nums; }
-        .csq-all-at-once .cs-card { flex-basis: 104px; width: 104px; min-width: 104px; min-height: 184px; }
+        .csq-all-card-row { display: grid !important; grid-template-columns: repeat(10, minmax(0, 1fr)) !important; align-items: stretch; gap: 6px; width: 100%; min-width: 0; }
+        .csq-all-at-once .cs-card { flex-basis: auto; width: 100%; min-width: 0; min-height: 184px; }
         .csq-all-helper { margin: 0; color: #475569; font-size: 13px; line-height: 1.35; }
+        .csq-all-completion { box-sizing: border-box; display: flex; align-items: center; justify-content: space-between; gap: 16px; width: 100%; padding: 14px 16px; border: 1px solid #cbd5e1; border-radius: 7px; background: #fff; }
         .csq-all-done { padding: 7px 10px; border: 1px solid #86efac; border-radius: 6px; background: #f0fdf4; color: #166534; font-size: 13px; font-weight: 750; }
         .csq-all-nav-button { min-height: 34px; padding: 6px 12px; border: 0; border-radius: 6px; background: #0f4c81; color: #fff; cursor: pointer; font-family: inherit; font-size: 13px; line-height: 1.2; font-weight: 750; }
         .csq-all-nav-button:hover, .csq-all-nav-button:focus { background: #0b365b; }
         .csq-all-nav-button:disabled { background: #94a3b8; cursor: not-allowed; }
-        .csq-all-zoom { display: inline-flex; align-items: center; gap: 8px; color: #334155; font-size: 13px; font-weight: 700; white-space: nowrap; }
-        .csq-all-zoom input[type="range"] { width: 120px; }
-        .csq-all-zoom-value { display: inline-block; min-width: 42px; color: #0f172a; font-variant-numeric: tabular-nums; text-align: right; }
         .csq-all-wide-blocker { box-sizing: border-box; max-width: 760px; margin: 16px auto; padding: 18px 20px; border: 2px solid #b45309; border-radius: 8px; background: #fffbeb; color: #78350f; font-weight: 700; line-height: 1.45; }
         .csq-all-wide-blocker[hidden] { display: none !important; }
         .csq-all-at-once > .csq-rules-panel { position: static !important; flex: none; width: 100%; max-height: none; margin-top: 12px; overflow: visible; box-shadow: none; }
         .csq-all-at-once > .csq-rules-panel[hidden] { display: none !important; }
-        @media (min-width: 1280px) and (max-width: 1369px) {
-            .csq-all-card-row { gap: 4px; }
-            .csq-all-at-once .cs-card { flex-basis: 100px; width: 100px; min-width: 100px; }
-        }
         @media (max-width: 680px) { .csq-field { grid-template-columns: 1fr; } }
     </style>
 </head>
@@ -128,7 +143,11 @@
     <section class="harness-page">
         <div id="csq-setup-root" class="cs-setup"></div>
         <div id="csq-instructions-root" class="cs-shell" hidden></div>
-        <div id="csq-game-root" hidden></div>
+        <div id="QID3" class="QuestionOuter">
+            <div class="QuestionBody">
+                <div class="QuestionText"><div id="csq-game-root" hidden></div></div>
+            </div>
+        </div>
         <div id="csq-outcome-root" hidden></div>
         <button type="button" id="NextButton">Next</button>
         <p id="harness-status" class="harness-status" aria-live="polite"></p>
@@ -140,12 +159,6 @@
             <button type="button" id="advance-sequential-movie">Sequential: verify through round 81</button>
             <button type="button" id="run-radio-check">Test round 1 replacement</button>
             <button type="button" id="answer-all-rounds">Answer every unfinished round</button>
-            <button type="button" id="set-zoom-100">Zoom 100%</button>
-            <button type="button" id="set-zoom-75">Zoom 75%</button>
-            <button type="button" id="go-next-unanswered">Next unanswered</button>
-            <label for="harness-round-jump">Round</label>
-            <input type="number" id="harness-round-jump" min="1" max="100" value="81">
-            <button type="button" id="jump-to-round">Jump</button>
             <button type="button" id="open-narrow-viewport">Open 1279px blocker test</button>
             <button type="button" id="run-inactivity-test">Run 2-second partial-inactivity test</button>
         </div>
@@ -168,7 +181,8 @@
     var defaults = {
         cs_treatment_mode: query.get("treatment") === "all_at_once" || query.get("treatment") === "all-at-once" ? "all_at_once" : "sequential",
         cs_all_at_once_default_zoom: "100",
-        cs_all_at_once_min_zoom: "75",
+        cs_all_at_once_min_zoom: "100",
+        cs_payoff_key_mode: query.get("payoffKeyMode") === "below" ? "below" : "overlay",
         cs_show_round: "1",
         cs_show_main_cards: "0",
         cs_show_movie_cards: "0",
@@ -334,14 +348,13 @@
 
     function gameControl(kind) {
         var selectors = {
-            toolbar: ["[data-csq-toolbar]", ".csq-all-at-once-toolbar", ".csq-all-toolbar", ".csq-fixed-toolbar"],
+            toolbar: ["[data-csq-toolbar]", ".csq-game-toolbar"],
             key: ["[data-csq-payoff-key]", ".csq-rules-panel"],
             scroll: ["[data-csq-round-scroll]", ".csq-all-at-once-scroll", ".csq-all-scroll", ".csq-round-scroll"],
-            zoom: ["input[data-csq='all-zoom']", "input[data-csq-zoom]", ".csq-all-zoom input[type='range']", "input.csq-all-at-once-zoom", "input.csq-all-zoom", "#csq-all-zoom"],
             done: ["button[data-csq='all-done']", "button[data-csq-done]", "button.csq-all-at-once-done", "button.csq-all-done", "#csq-done"],
-            next: ["button[data-csq='all-next-unanswered']", "button[data-csq-next-unanswered]", "button.csq-next-unanswered", "#csq-next-unanswered"],
-            jumpInput: ["input[data-csq='all-round-jump-input']", "input[data-csq-round-jump]", "input.csq-round-jump", "#csq-round-jump"],
-            jumpButton: ["button[data-csq='all-round-jump-button']", "button[data-csq-round-jump-button]", "button.csq-round-jump-button", "#csq-round-jump-button"],
+            payoffButton: ["button[data-csq='payoff-key-button']", "button.csq-payoff-key-button"],
+            rulesOverlay: [".csq-rules-overlay"],
+            rulesClose: ["button.csq-rules-close"],
             blocker: ["[data-csq-width-blocker]", ".csq-all-wide-blocker", ".csq-width-blocker", ".csq-all-narrow-blocker"]
         };
         return queryFirst(roots.game, selectors[kind]);
@@ -382,18 +395,22 @@
     function runTreatmentChecks() {
         var rows = roundRows();
         var mode = embeddedData.cs_treatment_mode;
+        var allAtOnce = mode === "all_at_once";
         var expectedRows = mode === "all_at_once" ? 100 : 1;
         var expectedTasks = ["main", "movie", "trio_a", "trio_b", "fives", "cumulative_a", "cumulative_b", "infinite_scroll", "simple_a", "simple_b"];
         var toolbar = gameControl("toolbar");
         var key = gameControl("key");
         var scroll = gameControl("scroll");
-        var zoom = gameControl("zoom");
         var done = gameControl("done");
-        var next = gameControl("next");
-        var jumpInput = gameControl("jumpInput");
+        var payoffButton = gameControl("payoffButton");
+        var rulesOverlay = gameControl("rulesOverlay");
+        var rulesClose = gameControl("rulesClose");
         var blocker = gameControl("blocker");
+        var completion = roots.game.querySelector("[data-csq='all-completion']");
+        var zoomControl = roots.game.querySelector("input[data-csq='all-zoom'], input[data-csq-zoom], .csq-all-zoom input[type='range'], input.csq-all-at-once-zoom, input.csq-all-zoom, #csq-all-zoom");
         var sampleCard;
-        var countPattern = /Viewing rounds?\s+\d+\s*[–-]\s*\d+\s+of\s+100/i;
+        var countPattern = /Rounds?\s+\d+\s*[–-]\s*\d+\s+of\s+100/i;
+        var roundPattern = /Round\s+\d+\s+of\s+100/i;
         var cardCounts = rows.map(function (row) { return roundCards(row).length; });
         var noWrap = rows.length === expectedRows && rows.every(function (row) {
             var cards = roundCards(row);
@@ -437,19 +454,43 @@
         sampleCard = rows.length && activeCards(rows[0]).length ? activeCards(rows[0])[0] : null;
         var viewing = roots.game.querySelector("[data-csq='all-viewing']");
         var answeredCounter = roots.game.querySelector("[data-csq='all-answered']");
-        var pointsCounter = roots.game.querySelector("[data-csq='all-points']");
-        var inactivityCounter = roots.game.querySelector("[data-csq='all-inactivity']");
+        var roundCounter = roots.game.querySelector("[data-csq='sequential-round']");
+        var pointsCounter = roots.game.querySelector(allAtOnce ? "[data-csq='all-points']" : "[data-csq='game-points']");
+        var inactivityCounter = roots.game.querySelector(allAtOnce ? "[data-csq='all-inactivity']" : "[data-csq='game-inactivity']");
         var anchor = mode === "all_at_once" ? scroll : roots.game.querySelector(".cs-task");
         var keyBelow = !!key && !!anchor && !!(anchor.compareDocumentPosition(key) & Node.DOCUMENT_POSITION_FOLLOWING) && key.getBoundingClientRect().top >= anchor.getBoundingClientRect().bottom - 2;
         var keyPosition = key ? window.getComputedStyle(key).position : "";
+        var payoffKeyMode = embeddedData.cs_payoff_key_mode || "overlay";
+        var overlayOpenPass = true;
+        var overlayClosePass = true;
+        if (payoffKeyMode === "overlay" && window.innerWidth >= 1280 && payoffButton && rulesOverlay && rulesClose) {
+            payoffButton.click(); overlayOpenPass = visible(rulesOverlay) && visible(key);
+            rulesClose.click(); overlayClosePass = !visible(rulesOverlay);
+        }
+        var payoffKeyPresentation = payoffKeyMode === "overlay"
+            ? !!payoffButton && !!rulesOverlay && !!rulesClose && rulesOverlay.contains(key) && overlayOpenPass && overlayClosePass
+            : !payoffButton && !rulesOverlay && !!key && keyBelow && visible(key);
         var rowFits = window.innerWidth < 1280 || rows.every(function (row) {
             var rowRect = row.getBoundingClientRect();
             var containerRect = (mode === "all_at_once" && scroll ? scroll : roots.game).getBoundingClientRect();
             return rowRect.left >= containerRect.left - 2 && rowRect.right <= containerRect.right + 2;
         });
+        var surface = allAtOnce ? scroll : roots.game.querySelector(".cs-task");
+        var surfaceFullWidth = !!surface && surface.clientWidth >= roots.game.clientWidth - 24;
+        var firstRowCards = rows.length ? roundCards(rows[0]) : [];
+        var surfaceRect = surface ? surface.getBoundingClientRect() : null;
+        var firstCardRect = firstRowCards.length ? firstRowCards[0].getBoundingClientRect() : null;
+        var lastCardRect = firstRowCards.length ? firstRowCards[firstRowCards.length - 1].getBoundingClientRect() : null;
+        var leftCardGap = surfaceRect && firstCardRect ? firstCardRect.left - surfaceRect.left : Infinity;
+        var rightCardGap = surfaceRect && lastCardRect ? surfaceRect.right - lastCardRect.right : Infinity;
+        var balancedCardMargins = window.innerWidth < 1280 || leftCardGap >= 0 && rightCardGap >= 0 && rightCardGap <= 40 && Math.abs(leftCardGap - rightCardGap) <= 8;
+        var rootRect = roots.game.getBoundingClientRect();
+        var commonFrameWidth = window.innerWidth < 1280 || rootRect.width <= 1146 && Math.abs((rootRect.left + rootRect.right) / 2 - window.innerWidth / 2) <= 4;
+        var toolbarPosition = toolbar ? window.getComputedStyle(toolbar).position : "";
+        var toolbarAligned = window.innerWidth < 1280 || !!toolbar && Math.abs(toolbar.getBoundingClientRect().left - roots.game.getBoundingClientRect().left) <= 2 && Math.abs(toolbar.getBoundingClientRect().right - roots.game.getBoundingClientRect().right) <= 2;
         var toolbarFixedAfterScroll = true;
         var toolbarScrollDetail = "not applicable";
-        if (mode === "all_at_once" && toolbar && scroll) {
+        if (allAtOnce && toolbar && scroll) {
             var toolbarBefore = toolbar.getBoundingClientRect();
             var savedScroll = scroll.scrollTop;
             scroll.scrollTop = Math.min(scroll.scrollHeight - scroll.clientHeight, savedScroll + 300);
@@ -459,6 +500,22 @@
             toolbarScrollDetail = toolbarBefore.top.toFixed(1) + "px before / " + toolbarAfter.top.toFixed(1) + "px after";
             scroll.scrollTop = savedScroll;
         }
+        var fixedScale = !allAtOnce || rows.every(function (row) {
+            var scale = row.querySelector(".csq-all-round-scale");
+            return !scale || window.getComputedStyle(scale).transform === "none";
+        });
+        var lastRound = rows.length ? rows[rows.length - 1] : null;
+        var completionAfterLastRound = !allAtOnce || !!completion && !!lastRound && !!(lastRound.compareDocumentPosition(completion) & Node.DOCUMENT_POSITION_FOLLOWING);
+        var doneBelowRounds = !allAtOnce || !!done && !!completion && completion.contains(done) && (!toolbar || !toolbar.contains(done)) && completionAfterLastRound;
+        var legacyJumpInput = roots.game.querySelector("input[data-csq='all-round-jump-input'], input[data-csq-round-jump], input.csq-round-jump, #csq-round-jump");
+        var legacyJumpButton = roots.game.querySelector("button[data-csq='all-round-jump-button'], button[data-csq-round-jump-button], button.csq-round-jump-button, #csq-round-jump-button");
+        var legacyNext = roots.game.querySelector("button[data-csq='all-next-unanswered'], button[data-csq-next-unanswered], button.csq-next-unanswered, #csq-next-unanswered");
+        var allAtOnceControls = !!viewing && !!answeredCounter && !legacyNext && !legacyJumpInput && !legacyJumpButton;
+        var sequentialControls = !!roundCounter && !viewing && !answeredCounter && !legacyNext && !done && !legacyJumpInput && !legacyJumpButton;
+        var toolbarHeight = toolbar ? toolbar.getBoundingClientRect().height : 0;
+        var graySurface = allAtOnce ? scroll : roots.game.querySelector(".csq-sequential-stage");
+        var whiteSurface = allAtOnce ? roots.game.querySelector(".csq-all-round") : roots.game.querySelector(".csq-sequential-stage > .cs-task");
+        var sharedSurfaceChrome = !!graySurface && !!whiteSurface && window.getComputedStyle(graySurface).backgroundColor === "rgb(248, 250, 252)" && window.getComputedStyle(whiteSurface).backgroundColor === "rgb(255, 255, 255)";
         var result = [
             assertion(expectedRows + " rendered round" + (expectedRows === 1 ? "" : "s"), rows.length === expectedRows, rows.length + " round containers found"),
             assertion("Ten stable task slots per round", fixedSlots && stableSlots, cardCounts.length ? "counts " + cardCounts.slice(0, 3).join("/") + (cardCounts.length > 3 ? " … " + cardCounts.slice(-3).join("/") : "") : "no round cards found"),
@@ -467,29 +524,37 @@
             assertion("Inactive slots are inaccessible", inactiveAccessible && inactiveFocusPass && inactiveSelectionPass, firstInactive ? "disabled, aria-disabled, tabIndex -1, click does not select, not focusable" : "no inactive slot found"),
             assertion("Cards stay on one row", noWrap, noWrap ? "all card tops align" : "at least one choice set wraps or is missing"),
             assertion("Choice rows fit supported viewport", rowFits, window.innerWidth + "px viewport; no card-row overflow"),
-            assertion("Payoff key is visible and static below game", window.innerWidth < 1280 || !!key && visible(key) && keyPosition !== "fixed" && keyPosition !== "sticky" && keyBelow, window.innerWidth < 1280 ? "hidden with the width safeguard" : key ? "position=" + keyPosition + "; below=" + keyBelow : "payoff key not found", window.innerWidth < 1280),
-            assertion("Viewport-fixed control toolbar", mode !== "all_at_once" || !!toolbar && window.getComputedStyle(toolbar).position === "fixed", mode === "all_at_once" ? (toolbar ? "position: " + window.getComputedStyle(toolbar).position : "toolbar selector not found") : "sequential mode", mode !== "all_at_once"),
-            assertion("Toolbar stays fixed after decision-pane scroll", mode !== "all_at_once" || toolbarFixedAfterScroll, toolbarScrollDetail, mode !== "all_at_once"),
-            assertion("Decision list uses full width", mode !== "all_at_once" || !!scroll && scroll.clientWidth >= roots.game.clientWidth - 24, mode === "all_at_once" ? (scroll ? scroll.clientWidth + "px list / " + roots.game.clientWidth + "px root" : "scroll container not found") : "sequential mode", mode !== "all_at_once"),
-            assertion("Visible-range counter", !!viewing ? countPattern.test(viewing.textContent) : !!toolbar && countPattern.test(toolbar.textContent), viewing ? viewing.textContent.trim() : toolbar ? toolbar.textContent.replace(/\s+/g, " ").trim().slice(0, 120) : "toolbar not found"),
-            assertion("Answered counter", !!answeredCounter && /Answered\s+\d+\s+of\s+100/i.test(answeredCounter.textContent), answeredCounter ? answeredCounter.textContent.trim() : "counter not found"),
+            assertion("Configured payoff-key presentation", window.innerWidth < 1280 || payoffKeyPresentation, payoffKeyMode === "overlay" ? "toolbar button opens and closes the shared overlay" : "shared key is visible below the game", window.innerWidth < 1280),
+            assertion("Shared viewport-fixed toolbar", !!toolbar && toolbarPosition === "fixed", toolbar ? "position: " + toolbarPosition : "toolbar selector not found"),
+            assertion("Toolbar aligns to game width", toolbarAligned, toolbar ? Math.round(toolbar.getBoundingClientRect().width) + "px toolbar / " + Math.round(roots.game.getBoundingClientRect().width) + "px root" : "toolbar selector not found", window.innerWidth < 1280),
+            assertion("Shared toolbar height", Math.abs(toolbarHeight - 54) <= 1, toolbarHeight.toFixed(1) + "px"),
+            assertion("Shared gray/white game surfaces", sharedSurfaceChrome, graySurface && whiteSurface ? window.getComputedStyle(graySurface).backgroundColor + " / " + window.getComputedStyle(whiteSurface).backgroundColor : "surface pair not found"),
+            assertion("Game surface uses full width", surfaceFullWidth, surface ? surface.clientWidth + "px surface / " + roots.game.clientWidth + "px root" : "game surface not found"),
+            assertion("Shared content-width frame", commonFrameWidth, Math.round(rootRect.width) + "px centered game root", window.innerWidth < 1280),
+            assertion("No empty column after final card", balancedCardMargins, Math.round(leftCardGap) + "px before first card / " + Math.round(rightCardGap) + "px after final card", window.innerWidth < 1280),
             assertion("Points counter", !!pointsCounter && /Points\s*:\s*\d+/i.test(pointsCounter.textContent), pointsCounter ? pointsCounter.textContent.trim() : "counter not found"),
             assertion("Inactivity counter", !!inactivityCounter && (window.innerWidth < 1280 ? /Inactivity paused/i.test(inactivityCounter.textContent) : /Inactive in\s+\d+:\d\d/i.test(inactivityCounter.textContent)), inactivityCounter ? inactivityCounter.textContent.trim() : "counter not found"),
-            assertion("Scrollable 100-round list", mode !== "all_at_once" || !!scroll && scroll.scrollHeight > scroll.clientHeight, mode === "all_at_once" && scroll ? scroll.clientHeight + "px visible / " + scroll.scrollHeight + "px total" : "sequential mode", mode !== "all_at_once"),
+            assertion("Fixed 100% all-at-once scale", !zoomControl && fixedScale, zoomControl ? "zoom control still present" : fixedScale ? "no zoom control and no transformed round rows" : "a round row is scaled"),
             assertion("Exactly one or zero choices per round", rows.length === expectedRows && rows.every(function (row) { return selectedCards(row).length <= 1; }), answered + " answered"),
-            assertion("Done gating", !!done && (answered === 100 ? !done.disabled : done.disabled), done ? "answered " + answered + "; disabled=" + done.disabled : "Done button not found"),
-            assertion("Zoom range includes 75–100", !!zoom && Number(zoom.min) <= 75 && Number(zoom.max) >= 100, zoom ? "min=" + zoom.min + ", max=" + zoom.max + ", value=" + zoom.value : "zoom control not found"),
-            assertion("Next unanswered control", !!next, next ? "control found" : "control not found"),
-            assertion("Round jump control", !!jumpInput, jumpInput ? "current value " + jumpInput.value : "input not found"),
             assertion("Narrow-width blocker state", !!blocker && (window.innerWidth < 1280 ? visible(blocker) : !visible(blocker)), blocker ? (visible(blocker) ? "visible at " : "hidden at ") + window.innerWidth + "px" : "blocker element not found"),
             assertion("Narrow-width interaction lock", window.innerWidth >= 1280 || !!sampleCard && (sampleCard.disabled || sampleCard.getAttribute("aria-disabled") === "true") || !!roots.game.querySelector(".csq-game-layout") && roots.game.querySelector(".csq-game-layout").hidden, window.innerWidth >= 1280 ? "not applicable at this width" : roots.game.querySelector(".csq-game-layout") && roots.game.querySelector(".csq-game-layout").hidden ? "game surface hidden" : sampleCard ? "disabled=" + sampleCard.disabled + ", aria-disabled=" + sampleCard.getAttribute("aria-disabled") : "no card found", window.innerWidth >= 1280),
-            assertion("No horizontal choice scrolling", window.innerWidth < 1280 || mode !== "all_at_once" || !!scroll && scroll.scrollWidth <= scroll.clientWidth + 2, mode === "all_at_once" && scroll ? scroll.scrollWidth + "px content / " + scroll.clientWidth + "px viewport" : "sequential mode", window.innerWidth < 1280 || mode !== "all_at_once"),
+            assertion("No horizontal choice scrolling", window.innerWidth < 1280 || !!surface && surface.scrollWidth <= surface.clientWidth + 2, surface ? surface.scrollWidth + "px content / " + surface.clientWidth + "px viewport" : "game surface not found", window.innerWidth < 1280),
             assertion("No page-level horizontal scroll", document.documentElement.scrollWidth <= window.innerWidth + 2, document.documentElement.scrollWidth + "px document / " + window.innerWidth + "px viewport")
         ];
-        if (mode !== "all_at_once") {
-            result = result.filter(function (item) {
-                return ["Visible-range counter", "Answered counter", "Points counter", "Inactivity counter", "Done gating", "Zoom range includes 75–100", "Next unanswered control", "Round jump control"].indexOf(item.name) < 0;
-            });
+        if (allAtOnce) {
+            result.push(
+                assertion("All-at-once toolbar counters", allAtOnceControls && countPattern.test(viewing.textContent) && /Answered\s+\d+\s+of\s+100/i.test(answeredCounter.textContent), allAtOnceControls ? viewing.textContent.trim() + "; " + answeredCounter.textContent.trim() : "one or more all-at-once controls are missing"),
+                assertion("All-at-once toolbar omits navigation controls", !legacyNext && !legacyJumpInput && !legacyJumpButton, "Next unanswered present=" + !!legacyNext + "; round input present=" + !!legacyJumpInput + "; Go present=" + !!legacyJumpButton),
+                assertion("Scrollable 100-round list", !!scroll && scroll.scrollHeight > scroll.clientHeight, scroll ? scroll.clientHeight + "px visible / " + scroll.scrollHeight + "px total" : "scroll container not found"),
+                assertion("Toolbar stays fixed after decision-pane scroll", toolbarFixedAfterScroll, toolbarScrollDetail),
+                assertion("Done follows round 100 outside toolbar", doneBelowRounds, done ? "completion after round 100=" + completionAfterLastRound + "; inside toolbar=" + (!!toolbar && toolbar.contains(done)) : "Done button not found"),
+                assertion("Done gating", !!done && (answered === 100 ? !done.disabled : done.disabled), done ? "answered " + answered + "; disabled=" + done.disabled : "Done button not found")
+            );
+        } else {
+            result.push(
+                assertion("Sequential round counter", !!roundCounter && roundPattern.test(roundCounter.textContent), roundCounter ? roundCounter.textContent.trim() : "counter not found"),
+                assertion("Sequential toolbar omits all-at-once controls", sequentialControls, "viewing=" + !!viewing + ", answered=" + !!answeredCounter + ", next=" + !!legacyNext + ", done=" + !!done)
+            );
         }
         status.textContent = (mode === "all_at_once" ? "All-at-once" : "Sequential") + " checks: " + result.filter(function (item) { return item.pass || item.skipped; }).length + " of " + result.length + " passed or skipped.";
         return renderAssertions(result, true);
@@ -557,56 +622,11 @@
                         assertion("Answer-all helper completed 100 rounds", answered === 100, answered + " answered"),
                         assertion("Done enables after all answers", !!done && !done.disabled, done ? "disabled=" + done.disabled : "Done button not found")
                     ], false);
-                    status.textContent = "Answer-all helper finished. Review choices or select Done in the task toolbar.";
+                    status.textContent = "Answer-all helper finished. Review choices or select Done below round 100.";
                 });
             }
         }
         answerBatch();
-    }
-
-    function setTaskZoom(value) {
-        var zoom = gameControl("zoom");
-        var scroll = gameControl("scroll");
-        var visibleBefore = roots.game.querySelector("[data-csq='all-viewing']");
-        var startBefore = visibleBefore && visibleBefore.textContent.match(/rounds?\s+(\d+)/i);
-        if (!zoom) {
-            renderAssertions([assertion("Set zoom to " + value + "%", false, "zoom control not found")], false);
-            return;
-        }
-        zoom.value = String(value);
-        zoom.dispatchEvent(new Event("input", {bubbles: true}));
-        zoom.dispatchEvent(new Event("change", {bubbles: true}));
-        afterPaint(function () {
-            var paneRect = scroll ? scroll.getBoundingClientRect() : null;
-            var fullRows = paneRect ? roundRows().filter(function (row) {
-                var rect = row.getBoundingClientRect();
-                return rect.top >= paneRect.top - 1 && rect.bottom <= paneRect.bottom + 1;
-            }).length : 0;
-            var visibleAfter = roots.game.querySelector("[data-csq='all-viewing']");
-            var startAfter = visibleAfter && visibleAfter.textContent.match(/rounds?\s+(\d+)/i);
-            var expectedRows = value === 75 ? fullRows >= 3 && fullRows <= 4 : fullRows >= 2 && fullRows <= 3;
-            renderAssertions([
-                assertion("Set zoom to " + value + "%", Number(zoom.value) === value, "control value is " + zoom.value),
-                assertion(value + "% full-row density", expectedRows, fullRows + " complete rows visible; expected " + (value === 75 ? "3–4" : "2–3")),
-                assertion(value + "% preserves top round", !startBefore || !startAfter || startBefore[1] === startAfter[1], "round " + (startBefore ? startBefore[1] : "?") + " before / " + (startAfter ? startAfter[1] : "?") + " after")
-            ], false);
-        });
-    }
-
-    function clickNextUnanswered() {
-        var button = gameControl("next");
-        if (button) { button.click(); status.textContent = "Clicked the task's Next unanswered control."; }
-        else { renderAssertions([assertion("Next unanswered control", false, "control not found")], false); }
-    }
-
-    function jumpToRound(number) {
-        var input = gameControl("jumpInput");
-        var button = gameControl("jumpButton");
-        if (!input) { renderAssertions([assertion("Round jump", false, "task round-jump input not found")], false); return; }
-        input.value = String(number); input.dispatchEvent(new Event("input", {bubbles: true})); input.dispatchEvent(new Event("change", {bubbles: true}));
-        if (button) { button.click(); }
-        else { input.dispatchEvent(new KeyboardEvent("keydown", {key: "Enter", bubbles: true})); }
-        status.textContent = "Requested task round " + number + ".";
     }
 
     function freshHarnessUrl(width, treatment, inactivitySeconds) {
@@ -615,6 +635,7 @@
         url.searchParams.set("autoGame", "1");
         url.searchParams.set("fast", "1");
         url.searchParams.set("treatment", treatment || treatmentSelect.value);
+        url.searchParams.set("payoffKeyMode", embeddedData.cs_payoff_key_mode || "overlay");
         url.searchParams.set("stanford", "1");
         url.searchParams.set("checks", "1");
         if (inactivitySeconds) { url.searchParams.set("inactivitySeconds", String(inactivitySeconds)); }
@@ -787,10 +808,6 @@
     document.getElementById("advance-sequential-movie").addEventListener("click", verifySequentialThroughMovie);
     document.getElementById("run-radio-check").addEventListener("click", runRadioCheck);
     document.getElementById("answer-all-rounds").addEventListener("click", answerAllRounds);
-    document.getElementById("set-zoom-100").addEventListener("click", function () { setTaskZoom(100); });
-    document.getElementById("set-zoom-75").addEventListener("click", function () { setTaskZoom(75); });
-    document.getElementById("go-next-unanswered").addEventListener("click", clickNextUnanswered);
-    document.getElementById("jump-to-round").addEventListener("click", function () { jumpToRound(Number(document.getElementById("harness-round-jump").value)); });
     document.getElementById("run-inactivity-test").addEventListener("click", runInactivityTest);
 
     window.harness = {
@@ -818,9 +835,6 @@
         runAllAtOnceChecks: runAllAtOnceChecks,
         runRadioCheck: runRadioCheck,
         answerAllRounds: answerAllRounds,
-        setZoom: setTaskZoom,
-        nextUnanswered: clickNextUnanswered,
-        jumpToRound: jumpToRound,
         runInactivityTest: runInactivityTest,
         verifySequentialThroughMovie: verifySequentialThroughMovie,
         openViewport: openViewport

@@ -4,7 +4,8 @@
     var DEFAULTS = {
         treatmentMode: "sequential",
         allAtOnceDefaultZoom: 100,
-        allAtOnceMinZoom: 75,
+        allAtOnceMinZoom: 100,
+        payoffKeyMode: "overlay",
         showRound: true,
         showMain: false,
         showMovie: false,
@@ -250,8 +251,12 @@
         return {
             profile: profile,
             treatmentMode: treatmentMode,
-            allAtOnceDefaultZoom: numberValue(getEmbeddedData("cs_all_at_once_default_zoom"), DEFAULTS.allAtOnceDefaultZoom),
-            allAtOnceMinZoom: numberValue(getEmbeddedData("cs_all_at_once_min_zoom"), DEFAULTS.allAtOnceMinZoom),
+            // These legacy fields remain in Survey Flow and exports, but the
+            // participant display is now fixed. Normalize stale 75% values
+            // from older copies instead of blocking either treatment.
+            allAtOnceDefaultZoom: 100,
+            allAtOnceMinZoom: 100,
+            payoffKeyMode: String(getEmbeddedData("cs_payoff_key_mode") || DEFAULTS.payoffKeyMode).toLowerCase(),
             showRound: parseBoolean(getEmbeddedData("cs_show_round"), DEFAULTS.showRound),
             showMain: parseBoolean(getEmbeddedData("cs_show_main_cards"), DEFAULTS.showMain),
             showMovie: parseBoolean(getEmbeddedData("cs_show_movie_cards"), DEFAULTS.showMovie),
@@ -271,8 +276,7 @@
     function validateConfig(config) {
         var errors = [];
         if (["sequential", "all_at_once"].indexOf(config.treatmentMode) < 0) { errors.push("Treatment must be sequential or all-at-once."); }
-        if (config.allAtOnceMinZoom < 50 || config.allAtOnceMinZoom > 100) { errors.push("Minimum all-at-once zoom must be 50–100%."); }
-        if (config.allAtOnceDefaultZoom < config.allAtOnceMinZoom || config.allAtOnceDefaultZoom > 100) { errors.push("Default all-at-once zoom must be between its minimum and 100%."); }
+        if (["overlay", "below"].indexOf(config.payoffKeyMode) < 0) { errors.push("Payoff key mode must be overlay or below."); }
         if ([1, 2, 3, 4].indexOf(config.profile.sideCardsPerRound) < 0) { errors.push("The certified side-card count must be an integer from 1 through 4."); }
         if (config.feedbackMessageMs < 0 || config.feedbackMessageMs > 5000) { errors.push("Feedback duration must be 0–5,000 ms."); }
         if (config.postClickDelayMs < 0 || config.postClickDelayMs > 5000) { errors.push("Post-click delay must be 0–5,000 ms."); }
@@ -286,6 +290,7 @@
             cs_treatment_mode: config.treatmentMode,
             cs_all_at_once_default_zoom: config.allAtOnceDefaultZoom,
             cs_all_at_once_min_zoom: config.allAtOnceMinZoom,
+            cs_payoff_key_mode: config.payoffKeyMode,
             cs_show_round: config.showRound, cs_show_main_cards: config.showMain,
             cs_show_movie_cards: config.showMovie, cs_show_total_points: config.showPoints,
             cs_show_main_card_payoff: config.showMainCardPayoff,
@@ -378,8 +383,7 @@
             { value: "sequential", label: "Sequential" },
             { value: "all_at_once", label: "All at once" }
         ]);
-        readonlyField(treatment, "All-at-once starting zoom", config.allAtOnceDefaultZoom + "%");
-        readonlyField(treatment, "All-at-once minimum zoom", config.allAtOnceMinZoom + "%");
+        readonlyField(treatment, "All-at-once display scale", "100% (fixed)");
         economic = setupSection(root, "Certified economic environment");
         readonlyField(economic, "Profile version", bank.profile.profile_version);
         readonlyField(economic, "Rounds (R₀)", config.profile.rounds);
@@ -408,6 +412,10 @@
         inputs.showMovieCardPayoff = checkboxField(display, "Show movie-card +0/+M pts. text?", config.showMovieCardPayoff);
         inputs.showSideCardPayoff = checkboxField(display, "Show non-Simple side-card +0/+X pts. text?", config.showSideCardPayoff);
         inputs.showClickFeedback = checkboxField(display, "Show per-click point feedback?", config.showClickFeedback);
+        inputs.payoffKeyMode = selectField(display, "Payoff key placement", config.payoffKeyMode, [
+            { value: "overlay", label: "Open from toolbar button" },
+            { value: "below", label: "Always visible below game" }
+        ]);
         timing = setupSection(root, "Timing");
         inputs.feedbackMessageMs = numberField(timing, "Feedback message duration (ms)", config.feedbackMessageMs, 0, 5000);
         inputs.usePostClickDelay = checkboxField(timing, "Wait before the next round?", config.usePostClickDelay);
@@ -422,6 +430,7 @@
                 treatmentMode: inputs.treatmentMode.value,
                 allAtOnceDefaultZoom: config.allAtOnceDefaultZoom,
                 allAtOnceMinZoom: config.allAtOnceMinZoom,
+                payoffKeyMode: inputs.payoffKeyMode.value,
                 showRound: inputs.showRound.checked, showMain: inputs.showMain.checked,
                 showMovie: inputs.showMovie.checked, showPoints: inputs.showPoints.checked,
                 showMainCardPayoff: inputs.showMainCardPayoff.checked,
@@ -461,10 +470,12 @@
         appendText(root, "h2", "Card-choice task");
         if (config.treatmentMode === "all_at_once") {
             appendText(root, "p", "All " + profile.rounds + " choice sets will appear together in one scrollable list. Choose one card in every round. You may revisit any round and change its choice until you select Done.");
-            appendText(root, "p", "The fixed controls remain visible while you scroll and show which rounds are in view, how many are answered, and your current payoff. Use the zoom control, round jump, or Next unanswered button to navigate. The payoff key appears below the decision list. Done becomes available after all rounds are answered.");
+            appendText(root, "p", "The fixed status bar remains visible while you scroll and shows which rounds are in view, how many are answered, and your current payoff. Done appears below round " + profile.rounds + " and becomes available after all rounds are answered.");
         } else {
             appendText(root, "p", "You will make exactly " + profile.rounds + " choices, one round at a time. Each choice is final before the next round appears.");
+            appendText(root, "p", "The fixed status bar remains visible and shows the current round, your current payoff, and the inactivity countdown.");
         }
+        appendText(root, "p", config.payoffKeyMode === "overlay" ? "Use the Payoff key button in the fixed status bar whenever you want to review the task rules." : "The payoff key remains visible below the game.");
         appendText(root, "p", "Every round keeps every task in one permanent position. The main card and exactly " + profile.side_cards_per_round + " side-task cards are active; unavailable tasks are shown in gray and cannot be selected. The movie card becomes active for the final " + profile.movie_rounds + " rounds.");
         appendText(root, "p", "Choosing the main card at least " + profile.main_target + " times earns " + formatInteger(profile.main_bonus) + " pts. Choosing all " + profile.movie_rounds + " movie cards earns " + formatInteger(profile.movie_bonus) + " pts. Each bonus is received only if its requirement is met.");
         appendText(root, "h3", "Side-task rules");
@@ -740,6 +751,48 @@
         appendText(parent, "h3", "Payoff key");
         appendText(parent, "p", SHARED_ACCUMULATION_NOTE, "csq-rule-note");
         ruleGroupsForEnvironment(profile, environment, includeMovie).forEach(function (group) { addRuleGroup(parent, group); });
+    }
+
+    function createPayoffKeyPresentation(root, profile, environment, mode) {
+        var panel = element("aside", "csq-rules-panel");
+        var overlay = null;
+        var dialog = null;
+        var closeButton = null;
+        var heading;
+        panel.setAttribute("aria-label", "Card payoff reminder");
+        panel.setAttribute("data-csq-payoff-key", "");
+        renderRulesPanel(panel, profile, environment, true);
+        if (mode === "overlay") {
+            overlay = element("div", "csq-rules-overlay");
+            dialog = element("div", "csq-rules-dialog");
+            closeButton = element("button", "csq-rules-close", "Close");
+            closeButton.type = "button";
+            closeButton.setAttribute("aria-label", "Close payoff key");
+            heading = panel.querySelector("h3");
+            if (heading) { heading.id = "csq-payoff-key-title"; }
+            dialog.setAttribute("role", "dialog");
+            dialog.setAttribute("aria-modal", "true");
+            dialog.setAttribute("aria-labelledby", "csq-payoff-key-title");
+            dialog.appendChild(closeButton); dialog.appendChild(panel); overlay.appendChild(dialog);
+            overlay.hidden = true; overlay.setAttribute("aria-hidden", "true"); root.appendChild(overlay);
+        }
+        return { mode: mode, panel: panel, overlay: overlay, dialog: dialog, closeButton: closeButton, trigger: null };
+    }
+
+    function setPayoffKeyOpen(presentation, open) {
+        var wasOpen;
+        if (!presentation || presentation.mode !== "overlay" || !presentation.overlay) { return; }
+        wasOpen = !presentation.overlay.hidden;
+        presentation.overlay.hidden = !open;
+        presentation.overlay.setAttribute("aria-hidden", open ? "false" : "true");
+        if (global.document && global.document.body) {
+            global.document.body.classList.toggle("csq-payoff-key-open", open);
+        }
+        if (open && presentation.closeButton && presentation.closeButton.focus) {
+            presentation.closeButton.focus();
+        } else if (!open && wasOpen && presentation.trigger && presentation.trigger.focus) {
+            presentation.trigger.focus();
+        }
     }
 
     function initialTaskState() {
@@ -1198,6 +1251,39 @@
         return { headerFound: true, gap: gap, offset: offset };
     }
 
+    function createGameToolbar(root) {
+        var toolbar = element("div", "csq-game-toolbar");
+        var primary = element("div", "csq-game-toolbar-primary");
+        var controls = element("div", "csq-game-toolbar-controls");
+        var spacer = element("div", "csq-game-toolbar-spacer");
+        toolbar.setAttribute("data-csq-toolbar", "");
+        toolbar.appendChild(primary); toolbar.appendChild(controls); root.appendChild(toolbar);
+        spacer.setAttribute("aria-hidden", "true"); root.appendChild(spacer);
+        return { toolbar: toolbar, primary: primary, controls: controls, spacer: spacer };
+    }
+
+    function syncGameToolbar(root, toolbar, spacer) {
+        var rootRect;
+        var view;
+        var viewportWidth;
+        var viewportHeight;
+        var left;
+        var right;
+        if (!root || !toolbar || !spacer || !root.getBoundingClientRect) { return; }
+        view = root.ownerDocument && root.ownerDocument.defaultView ? root.ownerDocument.defaultView : global;
+        rootRect = root.getBoundingClientRect();
+        viewportWidth = view.innerWidth || (global.document && global.document.documentElement.clientWidth) || 1280;
+        viewportHeight = view.innerHeight || (global.document && global.document.documentElement.clientHeight) || 768;
+        left = Math.max(8, rootRect.left);
+        right = Math.min(viewportWidth - 8, rootRect.right);
+        if (right - left < 320) { left = 8; right = Math.max(328, viewportWidth - 8); }
+        toolbar.style.left = Math.round(left) + "px";
+        toolbar.style.width = Math.max(320, Math.round(right - left)) + "px";
+        toolbar.style.top = Math.round(Math.max(8, Math.min(rootRect.top, viewportHeight - toolbar.offsetHeight - 8))) + "px";
+        spacer.style.height = Math.ceil(toolbar.offsetHeight) + "px";
+        root.style.setProperty("--csq-toolbar-height", Math.ceil(toolbar.offsetHeight) + "px");
+    }
+
     function initSequentialGame(question) {
         var root = getRoot("csq-game-root", question);
         var bootstrap = readBootstrap(); var error = validateBootstrap(bootstrap);
@@ -1206,23 +1292,45 @@
         var token = "csq-" + Date.now() + "-" + Math.floor(Math.random() * 1e9);
         var timers = []; var listeners = []; var authority = false;
         var state;
-        var gameLayout; var shell; var rulesPanel; var statusLeft; var statusRight; var blocker;
-        var inactivityClock; var cue; var cards;
+        var gameLayout; var stage; var shell; var rulesPanel; var rulesPresentation; var blocker; var cards;
+        var toolbar; var toolbarSpacer; var statusLeft; var statusRight;
+        var roundCounter; var mainCounter; var movieCounter; var pointsCounter;
+        var inactivityClock; var feedback; var payoffButton;
         if (!root) { return null; }
         clearElement(root); hideNextButton(question);
         if (error || validateConfig(config).length) { appendText(root, "div", error || validateConfig(config).join(" "), "cs-debug-notice"); return null; }
         if (global.document && global.document.body) { global.document.body.classList.add("csq-game-active"); }
+        root.className = "csq-sequential";
+        var toolbarParts = createGameToolbar(root);
+        toolbar = toolbarParts.toolbar; toolbarSpacer = toolbarParts.spacer;
+        statusLeft = toolbarParts.primary; statusRight = toolbarParts.controls;
+        if (config.showRound) {
+            roundCounter = appendText(statusLeft, "span", "Round 1 of " + config.profile.rounds);
+            roundCounter.setAttribute("data-csq", "sequential-round");
+        }
+        if (config.showMain) { mainCounter = appendText(statusLeft, "span", ""); }
+        if (config.showMovie) { movieCounter = appendText(statusLeft, "span", ""); }
+        if (config.showPoints) {
+            pointsCounter = appendText(statusRight, "span", "Points: 0");
+            pointsCounter.setAttribute("data-csq", "game-points");
+        }
+        inactivityClock = appendText(statusRight, "span", "", "cs-inactivity-clock");
+        inactivityClock.setAttribute("data-csq", "game-inactivity");
+        feedback = appendText(statusRight, "span", "", "csq-toolbar-feedback");
+        if (config.payoffKeyMode === "overlay") {
+            payoffButton = element("button", "csq-game-nav-button", "Payoff key"); payoffButton.type = "button";
+            payoffButton.setAttribute("data-csq", "payoff-key-button"); statusRight.appendChild(payoffButton);
+        }
         blocker = appendText(root, "div", "This task needs a wider browser window. Please widen the window or use a computer with at least 1280 pixels of browser width. Your progress is preserved and the inactivity timer is paused.", "csq-all-wide-blocker");
         blocker.hidden = true; blocker.setAttribute("role", "alert");
         gameLayout = element("div", "csq-game-layout");
+        stage = element("div", "csq-sequential-stage");
         shell = element("div", "cs-task"); shell.style.setProperty("--cs-screen-motion-ms", config.screenMotionMs + "ms");
-        var status = element("div", "cs-status"); statusLeft = element("div", "cs-status-left"); statusRight = element("div", "cs-status-right");
-        status.appendChild(statusLeft); status.appendChild(statusRight); shell.appendChild(status);
-        cue = element("div", "cs-cue"); shell.appendChild(cue); cards = element("div", "cs-card-row"); shell.appendChild(cards);
-        rulesPanel = element("aside", "csq-rules-panel"); rulesPanel.setAttribute("aria-label", "Card payoff reminder");
-        rulesPanel.setAttribute("data-csq-payoff-key", "");
-        renderRulesPanel(rulesPanel, bank.profile, environment, true);
-        gameLayout.appendChild(shell); gameLayout.appendChild(rulesPanel); root.appendChild(gameLayout);
+        cards = element("div", "cs-card-row"); shell.appendChild(cards);
+        stage.appendChild(shell); gameLayout.appendChild(stage); root.appendChild(gameLayout);
+        rulesPresentation = createPayoffKeyPresentation(root, bank.profile, environment, config.payoffKeyMode);
+        rulesPanel = rulesPresentation.panel;
+        if (config.payoffKeyMode === "below") { gameLayout.appendChild(rulesPanel); }
         state = {
             environment: environment, task: initialTaskState(), roundIndex: 0,
             decisions: [], startedAtWall: Date.now(), roundStartedAt: nowMonotonic(),
@@ -1251,6 +1359,18 @@
             refreshInactivityClock();
         }
 
+        if (payoffButton && rulesPresentation.overlay) {
+            rulesPresentation.trigger = payoffButton;
+            addListener(payoffButton, "click", function () { markActivity("payoff_key_open"); setPayoffKeyOpen(rulesPresentation, true); });
+            addListener(rulesPresentation.closeButton, "click", function () { markActivity("payoff_key_close"); setPayoffKeyOpen(rulesPresentation, false); });
+            addListener(rulesPresentation.overlay, "click", function (event) {
+                if (event.target === rulesPresentation.overlay) { markActivity("payoff_key_backdrop"); setPayoffKeyOpen(rulesPresentation, false); }
+            });
+            addListener(global.document, "keydown", function (event) {
+                if (event.key === "Escape" && !rulesPresentation.overlay.hidden) { markActivity("payoff_key_escape"); setPayoffKeyOpen(rulesPresentation, false); }
+            });
+        }
+
         function inactivityClockText() {
             var remaining = Math.max(
                 0,
@@ -1274,12 +1394,10 @@
 
         function counters() {
             var profile = config.profile;
-            clearElement(statusLeft); clearElement(statusRight);
-            if (config.showRound) { appendText(statusLeft, "span", "Round " + (Math.min(state.roundIndex + 1, profile.rounds)) + " of " + profile.rounds); }
-            if (config.showMain) { appendText(statusLeft, "span", "Main: " + state.task.main + " / " + profile.mainTarget); }
-            if (config.showMovie) { appendText(statusLeft, "span", "Movie: " + state.task.movie + " / " + profile.movieRounds); }
-            if (config.showPoints) { appendText(statusRight, "span", "Points: " + awardedTotalPoints(profile, state.task)); }
-            inactivityClock = appendText(statusRight, "span", "", "cs-inactivity-clock");
+            if (roundCounter) { roundCounter.textContent = "Round " + (Math.min(state.roundIndex + 1, profile.rounds)) + " of " + profile.rounds; }
+            if (mainCounter) { mainCounter.textContent = "Main: " + state.task.main + " / " + profile.mainTarget; }
+            if (movieCounter) { movieCounter.textContent = "Movie: " + state.task.movie + " / " + profile.movieRounds; }
+            if (pointsCounter) { pointsCounter.textContent = "Points: " + awardedTotalPoints(profile, state.task); }
             refreshInactivityClock();
         }
 
@@ -1310,8 +1428,8 @@
             Array.prototype.forEach.call(cards.querySelectorAll("button"), function (node) { node.disabled = true; });
             button.className += " cs-card-selected";
             if (config.showClickFeedback) {
-                cue.textContent = card.taskId === "main" ? "Main task selected" : card.taskId === "movie" ? "Movie task selected" : "+" + reward + " pts.";
-                cue.className = "cs-cue cs-cue-visible " + (reward ? "cs-cue-points" : "");
+                feedback.textContent = card.taskId === "main" ? "Main selected" : card.taskId === "movie" ? "Movie selected" : "+" + reward + " pts.";
+                feedback.className = "csq-toolbar-feedback csq-toolbar-feedback-visible";
             }
             state.roundIndex += 1;
             state.task = state.roundIndex < config.profile.rounds ? cloneState(evaluation.trace[state.roundIndex].before) : evaluation.task;
@@ -1326,7 +1444,7 @@
 
         function renderRound() {
             var round = environment.rounds[state.roundIndex];
-            clearElement(cards); clearElement(cue); cue.className = "cs-cue"; counters();
+            clearElement(cards); feedback.textContent = ""; feedback.className = "csq-toolbar-feedback"; counters();
             cards.className = "cs-card-row cs-card-row-new";
             shell.setAttribute("data-card-count", environment.slotOrder.length);
             state.roundStartedAt = nowMonotonic();
@@ -1343,11 +1461,13 @@
         function setNarrowMode() {
             var narrow = viewportIsTooNarrow(currentViewportWidth());
             state.narrow = narrow; blocker.hidden = !narrow; gameLayout.hidden = narrow;
+            if (narrow) { setPayoffKeyOpen(rulesPresentation, false); }
             if (narrow && state.narrowStartedAt === null) { state.narrowStartedAt = Date.now(); }
             if (!narrow && state.narrowStartedAt !== null) {
                 state.narrowStartedAt = null; state.lastActivityAt = Date.now(); state.lastActivitySource = "wide_view_resumed";
             }
             refreshInactivityClock();
+            syncGameToolbar(root, toolbar, toolbarSpacer);
         }
 
         ["pointerdown", "mousedown", "touchstart", "keydown"].forEach(function (type) {
@@ -1356,16 +1476,17 @@
             addListener(global, type, function (event) { if (!eventTargetsInactiveCard(event)) { markActivity("window_" + type); } }, true);
         });
         addListener(global, "focus", function () { markActivity("window_focus"); }, true);
-        addListener(global, "resize", function () { setNarrowMode(); compactGameTopGap(root); }, false);
+        addListener(global, "scroll", function () { syncGameToolbar(root, toolbar, toolbarSpacer); markActivity("window_scroll"); }, { passive: true });
+        addListener(global, "resize", function () { setNarrowMode(); compactGameTopGap(root); syncGameToolbar(root, toolbar, toolbarSpacer); }, false);
         var inactivityTimer = global.setInterval(function () {
             refreshInactivityClock();
             if (!state.finished && !state.narrow && authority && Date.now() - state.lastActivityAt >= config.inactivitySeconds * 1000) { finish("inactive"); }
         }, 250);
         timers.push(inactivityTimer);
         renderRound();
-        setNarrowMode();
-        timers.push(global.setTimeout(function () { compactGameTopGap(root); }, 0));
-        timers.push(global.setTimeout(function () { compactGameTopGap(root); }, 250));
+        setNarrowMode(); syncGameToolbar(root, toolbar, toolbarSpacer);
+        timers.push(global.setTimeout(function () { compactGameTopGap(root); syncGameToolbar(root, toolbar, toolbarSpacer); }, 0));
+        timers.push(global.setTimeout(function () { compactGameTopGap(root); syncGameToolbar(root, toolbar, toolbarSpacer); }, 250));
         var controller = {
             state: state, finish: finish,
             cleanup: function () {
@@ -1373,7 +1494,9 @@
                 listeners.forEach(function (item) { item[0].removeEventListener(item[1], item[2], item[3]); }); listeners = [];
                 if (!state.finished) { clearOwner(token); }
                 if (global.document && global.document.body) { global.document.body.classList.remove("csq-game-active"); }
-                if (root && root.style) { root.style.removeProperty("margin-top"); }
+                if (toolbar && toolbar.style) { toolbar.style.display = "none"; }
+                setPayoffKeyOpen(rulesPresentation, false);
+                if (root && root.style) { root.style.removeProperty("margin-top"); root.style.removeProperty("--csq-toolbar-height"); }
                 root.__csqController = null;
             }
         };
@@ -1410,18 +1533,16 @@
         var pointsCounter;
         var inactivityClock;
         var feedback;
-        var zoomInput;
-        var zoomValue;
-        var jumpInput;
-        var jumpButton;
-        var nextUnanswered;
+        var payoffButton;
         var doneButton;
         var helper;
+        var completion;
         var blocker;
         var layout;
         var scrollPane;
         var list;
         var rulesPanel;
+        var rulesPresentation;
         if (!root) { return null; }
         clearElement(root); hideNextButton(question);
         if (error || validateConfig(config).length) {
@@ -1430,61 +1551,38 @@
         }
         if (global.document && global.document.body) { global.document.body.classList.add("csq-game-active", "csq-all-at-once-active"); }
         root.className = "csq-all-at-once";
-        root.style.setProperty("--csq-choice-scale", String(config.allAtOnceDefaultZoom / 100));
+        root.style.setProperty("--csq-choice-scale", "1");
 
-        toolbar = element("div", "csq-all-toolbar");
-        primary = element("div", "csq-all-toolbar-primary");
-        controls = element("div", "csq-all-toolbar-controls");
-        viewingCounter = appendText(primary, "span", "Viewing rounds 1–1 of " + config.profile.rounds);
+        var toolbarParts = createGameToolbar(root);
+        toolbar = toolbarParts.toolbar; toolbarSpacer = toolbarParts.spacer;
+        primary = toolbarParts.primary; controls = toolbarParts.controls;
+        viewingCounter = appendText(primary, "span", "Rounds 1–1 of " + config.profile.rounds);
         viewingCounter.setAttribute("data-csq", "all-viewing");
         answeredCounter = appendText(primary, "span", "Answered 0 of " + config.profile.rounds);
         answeredCounter.setAttribute("data-csq", "all-answered");
         if (config.showMain) { mainCounter = appendText(primary, "span", ""); }
         if (config.showMovie) { movieCounter = appendText(primary, "span", ""); }
         if (config.showPoints) {
-            pointsCounter = appendText(primary, "span", "Points: 0");
+            pointsCounter = appendText(controls, "span", "Points: 0");
             pointsCounter.setAttribute("data-csq", "all-points");
         }
-        inactivityClock = appendText(primary, "span", "", "cs-inactivity-clock");
+        inactivityClock = appendText(controls, "span", "", "cs-inactivity-clock");
         inactivityClock.setAttribute("data-csq", "all-inactivity");
-        feedback = appendText(primary, "span", "", "csq-all-feedback");
-        toolbar.appendChild(primary);
-
-        var zoomLabel = element("label", "csq-all-zoom");
-        zoomLabel.appendChild(global.document.createTextNode("View "));
-        zoomInput = element("input"); zoomInput.type = "range";
-        zoomInput.min = config.allAtOnceMinZoom; zoomInput.max = 100; zoomInput.step = 1;
-        zoomInput.value = config.allAtOnceDefaultZoom; zoomInput.setAttribute("data-csq", "all-zoom");
-        zoomValue = element("span", "csq-all-zoom-value", config.allAtOnceDefaultZoom + "%");
-        zoomLabel.appendChild(zoomInput); zoomLabel.appendChild(zoomValue); controls.appendChild(zoomLabel);
-
-        var jumpLabel = element("label", "csq-all-jump");
-        jumpLabel.appendChild(global.document.createTextNode("Round "));
-        jumpInput = element("input", "csq-all-round-input"); jumpInput.type = "number";
-        jumpInput.min = 1; jumpInput.max = config.profile.rounds; jumpInput.value = 1;
-        jumpInput.setAttribute("data-csq", "all-round-jump-input"); jumpLabel.appendChild(jumpInput);
-        controls.appendChild(jumpLabel);
-        jumpButton = element("button", "csq-all-nav-button", "Go"); jumpButton.type = "button";
-        jumpButton.setAttribute("data-csq", "all-round-jump-button"); controls.appendChild(jumpButton);
-        nextUnanswered = element("button", "csq-all-nav-button", "Next unanswered"); nextUnanswered.type = "button";
-        nextUnanswered.setAttribute("data-csq", "all-next-unanswered"); controls.appendChild(nextUnanswered);
-        doneButton = element("button", "csq-all-nav-button csq-all-done", "Done"); doneButton.type = "button"; doneButton.disabled = true;
-        doneButton.setAttribute("data-csq", "all-done"); controls.appendChild(doneButton);
-        toolbar.appendChild(controls); root.appendChild(toolbar);
-        toolbarSpacer = element("div", "csq-all-toolbar-spacer");
-        toolbarSpacer.setAttribute("aria-hidden", "true"); root.appendChild(toolbarSpacer);
-        helper = appendText(root, "p", "Answer every round to enable Done.", "csq-all-helper");
+        feedback = appendText(controls, "span", "", "csq-toolbar-feedback");
+        if (config.payoffKeyMode === "overlay") {
+            payoffButton = element("button", "csq-game-nav-button", "Payoff key"); payoffButton.type = "button";
+            payoffButton.setAttribute("data-csq", "payoff-key-button"); controls.appendChild(payoffButton);
+        }
         blocker = appendText(root, "div", "This task needs a wider browser window. Please widen the window or use a computer with at least 1280 pixels of browser width. Your choices are preserved and the inactivity timer is paused.", "csq-all-wide-blocker");
         blocker.hidden = true; blocker.setAttribute("role", "alert");
         layout = element("div", "csq-all-layout");
         scrollPane = element("div", "csq-all-scroll"); scrollPane.tabIndex = 0;
         scrollPane.setAttribute("aria-label", "All card-choice rounds");
         list = element("div", "csq-all-list"); scrollPane.appendChild(list);
-        rulesPanel = element("aside", "csq-rules-panel"); rulesPanel.setAttribute("aria-label", "Card payoff reminder");
-        rulesPanel.setAttribute("data-csq-payoff-key", "");
-        rulesPanel.id = "csq-all-payoff-key"; rulesPanel.hidden = true;
-        renderRulesPanel(rulesPanel, bank.profile, environment, true);
-        layout.appendChild(scrollPane); root.appendChild(layout); root.appendChild(rulesPanel);
+        layout.appendChild(scrollPane); root.appendChild(layout);
+        rulesPresentation = createPayoffKeyPresentation(root, bank.profile, environment, config.payoffKeyMode);
+        rulesPanel = rulesPresentation.panel; rulesPanel.id = "csq-all-payoff-key";
+        if (config.payoffKeyMode === "below") { root.appendChild(rulesPanel); }
 
         state = {
             environment: environment,
@@ -1501,7 +1599,7 @@
             finished: false,
             narrow: false,
             narrowStartedAt: null,
-            zoom: config.allAtOnceDefaultZoom,
+            zoom: 100,
             treatmentMode: "all_at_once",
             visibleStart: 0,
             visibleEnd: 0
@@ -1528,24 +1626,16 @@
             refreshInactivityClock();
         }
 
-        function syncFloatingChrome() {
-            var rootRect;
-            var viewportWidth;
-            var viewportHeight;
-            var left;
-            var right;
-            if (!root || !toolbar || !toolbarSpacer || !root.getBoundingClientRect) { return; }
-            rootRect = root.getBoundingClientRect();
-            viewportWidth = currentViewportWidth();
-            viewportHeight = global.innerHeight || (global.document && global.document.documentElement.clientHeight) || 768;
-            left = Math.max(8, rootRect.left);
-            right = Math.min(viewportWidth - 8, rootRect.right);
-            if (right - left < 320) { left = 8; right = Math.max(328, viewportWidth - 8); }
-            toolbar.style.left = Math.round(left) + "px";
-            toolbar.style.width = Math.max(320, Math.round(right - left)) + "px";
-            toolbar.style.top = Math.round(Math.max(8, Math.min(rootRect.top, viewportHeight - toolbar.offsetHeight - 8))) + "px";
-            toolbarSpacer.style.height = Math.ceil(toolbar.offsetHeight) + "px";
-            root.style.setProperty("--csq-toolbar-height", Math.ceil(toolbar.offsetHeight) + "px");
+        if (payoffButton && rulesPresentation.overlay) {
+            rulesPresentation.trigger = payoffButton;
+            addListener(payoffButton, "click", function () { markActivity("payoff_key_open"); setPayoffKeyOpen(rulesPresentation, true); });
+            addListener(rulesPresentation.closeButton, "click", function () { markActivity("payoff_key_close"); setPayoffKeyOpen(rulesPresentation, false); });
+            addListener(rulesPresentation.overlay, "click", function (event) {
+                if (event.target === rulesPresentation.overlay) { markActivity("payoff_key_backdrop"); setPayoffKeyOpen(rulesPresentation, false); }
+            });
+            addListener(global.document, "keydown", function (event) {
+                if (event.key === "Escape" && !rulesPresentation.overlay.hidden) { markActivity("payoff_key_escape"); setPayoffKeyOpen(rulesPresentation, false); }
+            });
         }
 
         function inactivityClockText() {
@@ -1572,7 +1662,6 @@
             if (movieCounter) { movieCounter.textContent = "Movie: " + state.task.movie + " / " + config.profile.movieRounds; }
             if (pointsCounter) { pointsCounter.textContent = "Points: " + awardedTotalPoints(config.profile, state.task); }
             doneButton.disabled = state.narrow || answered !== config.profile.rounds;
-            nextUnanswered.disabled = state.narrow || answered === config.profile.rounds;
             if (answered === config.profile.rounds) {
                 helper.textContent = "All rounds are answered. You may review and change any choice before selecting Done.";
             } else {
@@ -1607,8 +1696,11 @@
             var taskId = state.selections[index];
             if (!config.showClickFeedback) { return; }
             if (feedbackTimer) { global.clearTimeout(feedbackTimer); }
-            feedback.textContent = taskId === "main" ? "Main task selected" : taskId === "movie" ? "Movie task selected" : "+" + trace.reward + " pts.";
-            feedbackTimer = global.setTimeout(function () { feedback.textContent = ""; }, config.feedbackMessageMs);
+            feedback.textContent = taskId === "main" ? "Main selected" : taskId === "movie" ? "Movie selected" : "+" + trace.reward + " pts.";
+            feedback.className = "csq-toolbar-feedback csq-toolbar-feedback-visible";
+            feedbackTimer = global.setTimeout(function () {
+                feedback.textContent = ""; feedback.className = "csq-toolbar-feedback";
+            }, config.feedbackMessageMs);
             timers.push(feedbackTimer);
         }
 
@@ -1639,6 +1731,13 @@
             scale.appendChild(cardRow); outer.appendChild(scale); list.appendChild(outer);
             rowRefs.push({ outer: outer, scale: scale, status: status, cardRow: cardRow, buttons: buttons });
         });
+        completion = element("div", "csq-all-completion");
+        completion.setAttribute("data-csq", "all-completion");
+        helper = appendText(completion, "p", "Answer every round to enable Done. " + config.profile.rounds + " remaining.", "csq-all-helper");
+        doneButton = element("button", "csq-all-nav-button csq-all-done", "Done");
+        doneButton.type = "button"; doneButton.disabled = true;
+        doneButton.setAttribute("data-csq", "all-done"); completion.appendChild(doneButton);
+        list.appendChild(completion);
 
         function visibleRange() {
             var paneRect = scrollPane.getBoundingClientRect();
@@ -1658,8 +1757,7 @@
         function refreshVisibleRange() {
             var range = visibleRange();
             state.visibleStart = range.first; state.visibleEnd = range.last;
-            viewingCounter.textContent = "Viewing rounds " + (range.first + 1) + "–" + (range.last + 1) + " of " + config.profile.rounds;
-            jumpInput.value = range.first + 1;
+            viewingCounter.textContent = "Rounds " + (range.first + 1) + "–" + (range.last + 1) + " of " + config.profile.rounds;
             visibleFrame = null;
         }
 
@@ -1667,46 +1765,6 @@
             if (visibleFrame !== null) { return; }
             if (global.requestAnimationFrame) { visibleFrame = global.requestAnimationFrame(refreshVisibleRange); }
             else { visibleFrame = global.setTimeout(refreshVisibleRange, 16); }
-        }
-
-        function resizeScaledRounds() {
-            var scale = state.zoom / 100;
-            rowRefs.forEach(function (ref) {
-                var naturalHeight;
-                var scaledPaddingAndBorder = 22 * scale;
-                ref.outer.style.removeProperty("height");
-                naturalHeight = ref.scale.scrollHeight || Math.max(1, ref.scale.getBoundingClientRect().height / scale);
-                ref.outer.style.height = Math.ceil(naturalHeight * scale + scaledPaddingAndBorder) + "px";
-            });
-        }
-
-        function setZoom(value) {
-            var range = visibleRange();
-            var anchor = rowRefs[range.first];
-            var beforeTop = anchor ? anchor.outer.getBoundingClientRect().top - scrollPane.getBoundingClientRect().top : 0;
-            state.zoom = Math.max(config.allAtOnceMinZoom, Math.min(100, integerValue(value, config.allAtOnceDefaultZoom)));
-            zoomInput.value = state.zoom; zoomValue.textContent = state.zoom + "%";
-            root.style.setProperty("--csq-choice-scale", String(state.zoom / 100));
-            resizeScaledRounds();
-            if (anchor) { scrollPane.scrollTop += anchor.outer.getBoundingClientRect().top - scrollPane.getBoundingClientRect().top - beforeTop; }
-            scheduleVisibleRange();
-        }
-
-        function scrollToRound(index) {
-            var ref = rowRefs[Math.max(0, Math.min(config.profile.rounds - 1, index))];
-            if (!ref || state.narrow) { return; }
-            scrollPane.scrollTo({ top: Math.max(0, ref.outer.offsetTop - list.offsetTop - 8), behavior: "smooth" });
-            scheduleVisibleRange();
-        }
-
-        function goToNextUnanswered() {
-            var start = state.visibleEnd;
-            var offset;
-            var index;
-            for (offset = 1; offset <= config.profile.rounds; offset += 1) {
-                index = (start + offset) % config.profile.rounds;
-                if (!state.selections[index]) { scrollToRound(index); return; }
-            }
         }
 
         function currentViewportWidth() {
@@ -1717,8 +1775,9 @@
         function setNarrowMode() {
             var narrow = viewportIsTooNarrow(currentViewportWidth());
             var changed = narrow !== state.narrow;
-            state.narrow = narrow; blocker.hidden = !narrow; layout.hidden = narrow; rulesPanel.hidden = narrow;
-            zoomInput.disabled = narrow; jumpInput.disabled = narrow; jumpButton.disabled = narrow;
+            state.narrow = narrow; blocker.hidden = !narrow; layout.hidden = narrow;
+            if (config.payoffKeyMode === "below") { rulesPanel.hidden = narrow; }
+            else if (narrow) { setPayoffKeyOpen(rulesPresentation, false); }
             Array.prototype.forEach.call(list.querySelectorAll("button.cs-card"), function (button) {
                 button.disabled = narrow || button.getAttribute("data-active") === "0";
                 button.tabIndex = button.disabled ? -1 : 0;
@@ -1726,11 +1785,11 @@
             if (narrow && state.narrowStartedAt === null) { state.narrowStartedAt = Date.now(); }
             if (!narrow && state.narrowStartedAt !== null) {
                 state.narrowStartedAt = null; state.lastActivityAt = Date.now(); state.lastActivitySource = "wide_view_resumed";
-                resizeScaledRounds(); scheduleVisibleRange();
+                scheduleVisibleRange();
             }
             refreshCounters();
             if (changed) { compactGameTopGap(root); }
-            syncFloatingChrome();
+            syncGameToolbar(root, toolbar, toolbarSpacer);
         }
 
         function finish(statusName) {
@@ -1745,17 +1804,13 @@
         }
 
         addListener(scrollPane, "scroll", function () { markActivity("decision_scroll"); scheduleVisibleRange(); }, { passive: true });
-        addListener(zoomInput, "input", function () { markActivity("zoom_change"); setZoom(zoomInput.value); });
-        addListener(jumpButton, "click", function () { markActivity("round_jump"); scrollToRound(integerValue(jumpInput.value, 1) - 1); });
-        addListener(jumpInput, "keydown", function (event) { if (event.key === "Enter") { event.preventDefault(); markActivity("round_jump_enter"); scrollToRound(integerValue(jumpInput.value, 1) - 1); } });
-        addListener(nextUnanswered, "click", function () { markActivity("next_unanswered"); goToNextUnanswered(); });
         addListener(doneButton, "click", function () { markActivity("done"); finish("completed"); });
         ["pointerdown", "mousedown", "touchstart", "keydown", "wheel"].forEach(function (type) {
             addListener(root, type, function (event) { if (!eventTargetsInactiveCard(event)) { markActivity("root_" + type); } }, true);
         });
         addListener(global, "focus", function () { markActivity("window_focus"); }, true);
-        addListener(global, "scroll", function () { syncFloatingChrome(); markActivity("window_scroll"); }, { passive: true });
-        addListener(global, "resize", function () { setNarrowMode(); compactGameTopGap(root); syncFloatingChrome(); scheduleVisibleRange(); }, false);
+        addListener(global, "scroll", function () { syncGameToolbar(root, toolbar, toolbarSpacer); markActivity("window_scroll"); }, { passive: true });
+        addListener(global, "resize", function () { setNarrowMode(); compactGameTopGap(root); syncGameToolbar(root, toolbar, toolbarSpacer); scheduleVisibleRange(); }, false);
 
         var inactivityTimer = global.setInterval(function () {
             refreshInactivityClock();
@@ -1763,15 +1818,13 @@
         }, 250);
         timers.push(inactivityTimer);
         rowRefs.forEach(function (_ref, index) { updateRound(index); });
-        setZoom(config.allAtOnceDefaultZoom); setNarrowMode(); syncFloatingChrome(); refreshCounters(); refreshVisibleRange();
-        timers.push(global.setTimeout(function () { compactGameTopGap(root); resizeScaledRounds(); syncFloatingChrome(); refreshVisibleRange(); }, 0));
-        timers.push(global.setTimeout(function () { compactGameTopGap(root); resizeScaledRounds(); syncFloatingChrome(); refreshVisibleRange(); }, 250));
+        setNarrowMode(); syncGameToolbar(root, toolbar, toolbarSpacer); refreshCounters(); refreshVisibleRange();
+        timers.push(global.setTimeout(function () { compactGameTopGap(root); syncGameToolbar(root, toolbar, toolbarSpacer); refreshVisibleRange(); }, 0));
+        timers.push(global.setTimeout(function () { compactGameTopGap(root); syncGameToolbar(root, toolbar, toolbarSpacer); refreshVisibleRange(); }, 250));
         var controller = {
             state: state,
             finish: finish,
             recompute: function () { recomputeFrom(0); },
-            setZoom: setZoom,
-            scrollToRound: scrollToRound,
             cleanup: function () {
                 timers.forEach(function (timer) { global.clearTimeout(timer); global.clearInterval(timer); }); timers = [];
                 listeners.forEach(function (item) { item[0].removeEventListener(item[1], item[2], item[3]); }); listeners = [];
@@ -1781,6 +1834,7 @@
                 if (!state.finished) { clearOwner(token); }
                 if (global.document && global.document.body) { global.document.body.classList.remove("csq-game-active", "csq-all-at-once-active"); }
                 if (toolbar && toolbar.style) { toolbar.style.display = "none"; }
+                setPayoffKeyOpen(rulesPresentation, false);
                 if (rulesPanel) { rulesPanel.hidden = true; }
                 if (root && root.style) { root.style.removeProperty("margin-top"); root.style.removeProperty("--csq-choice-scale"); root.style.removeProperty("--csq-toolbar-height"); }
                 root.__csqController = null;
@@ -1850,7 +1904,7 @@
             ["Profile version", getEmbeddedData("cs_profile_version")], ["Bank hash", getEmbeddedData("cs_bank_hash")],
             ["Task-to-color map", getEmbeddedData("cs_task_color_map")],
             ["Answered rounds", getEmbeddedData("cs_answered_at_end") || getEmbeddedData("cs_decision_count")],
-            ["Final all-at-once zoom", getEmbeddedData("cs_all_at_once_final_zoom")],
+            ["All-at-once display scale", getEmbeddedData("cs_all_at_once_final_zoom")],
             ["Main choices", getEmbeddedData("cs_main_cards_collected")],
             ["Movie choices", getEmbeddedData("cs_movie_cards_collected")], ["Main completed", yesNo(getEmbeddedData("cs_main_complete"))],
             ["Movie completed", yesNo(getEmbeddedData("cs_movie_complete"))], ["Side-task points", getEmbeddedData("cs_side_points")],

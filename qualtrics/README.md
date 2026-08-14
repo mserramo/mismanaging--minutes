@@ -63,20 +63,32 @@ treatment-aware JavaScript instructions container, so both modes retain the
 same four-block Setup → Instructions → Game → Outcome scaffold.
 
 Sequential mode presents one round at a time and writes each decision when it
-is made. All-at-once mode presents all 100 pre-drawn choice sets in a scrolling
-decision pane. Its control bar is fixed to the browser viewport, and the payoff
-key appears beneath the decision pane. A participant can review and revise one
-selection per round before finishing. The choice sets never wrap, and a zoom
-control starts at 100%, may be reduced to the configured 75% minimum, and
-records its final value. A minimum-width blocker prevents either treatment
-from running in a viewport that cannot safely show all ten permanent slots.
+is made. Both treatments use the same wide, fixed control bar so round or
+visible-range information, configured counters, click feedback, and the
+inactivity clock remain visible while the participant moves through the task.
+The sequential bar contains no all-at-once navigation or completion controls.
+Both treatments use the same centered 1,144px game frame and the same fluid
+ten-column card grid, so each all-at-once row matches the sequential row without
+leaving an unused horizontal column after the final card.
+
+All-at-once mode presents all 100 pre-drawn choice sets in a scrolling decision
+pane. Its bar retains the `Rounds X–Y of 100` visible-range display, answered
+count, points, inactivity clock, and the same payoff-key control used in
+sequential mode. It contains no round-jump or Next unanswered navigation. The
+choice sets use one fixed 100% scale with no participant zoom control. A participant can review and revise one
+selection per round before finishing. The Done control appears beneath round
+100 and becomes available only after all rounds are answered. The choice sets
+never wrap. A
+minimum-width blocker prevents either treatment from running in a viewport
+that cannot safely show all ten permanent slots.
 
 All-at-once decision logs are final-only: a completed response writes the 100
 final selections, while inactivity writes only the rounds answered at the end.
 Those rows retain a per-row `task_elapsed_ms` and leave `response_time_ms`
 blank because the treatment has no sequential per-round response interval.
 Response-level fields record `cs_treatment_mode`, `cs_answered_at_end`, and
-`cs_all_at_once_final_zoom`. They also record the seeded `cs_slot_order` and
+`cs_all_at_once_final_zoom` (fixed at 100 for all-at-once responses). They also
+record the seeded `cs_slot_order` and
 `cs_layout_version=fixed-slots-v1`. `reconstruct_decisions.py` repeats these
 fields and the treatment on every decoded row while remaining compatible with
 older exports that lack them.
@@ -87,9 +99,11 @@ retain their existing labels and dynamic values. Inactive tasks remain in place
 as disabled gray cards labeled `Unavailable`, so no task changes position
 between rounds. The original certified position is retained separately as
 `generated_position`; `chosen_position` is the visible fixed slot. A compact,
-two-column payoff key appears below the game in both treatments and preserves
-the existing participant-specific colors, badges, wording, and seeded group
-order. Cards use a fixed centered payoff slot. Simple cards always show their
+two-column payoff key preserves the existing participant-specific colors,
+badges, wording, and seeded group order. `cs_payoff_key_mode=overlay` is the
+default and opens it from the identical toolbar button in either treatment;
+`cs_payoff_key_mode=below` keeps it always visible under the game. Cards use a
+fixed centered payoff slot. Simple cards always show their
 realized `+X pts.` payoff. Main and Movie payoff text default off, while
 non-Simple side-card payoff text defaults on; the three display modes remain
 independently configurable. Trio and Fives footers use two lines—`X cards left`
