@@ -4,7 +4,7 @@ Use a research-development TikTok account/profile. Record date, Chrome version, 
 
 ## 1. Clean installation and consent
 
-- [ ] Load this directory from `chrome://extensions` and confirm version 0.2.0.
+- [ ] Load this directory from `chrome://extensions` and confirm version 0.3.0.
 - [ ] Confirm required permissions are `alarms`, `storage`, and `scripting`; confirm only TikTok access is optional.
 - [ ] Before consent, open TikTok and confirm there is no injected overlay or collector.
 - [ ] Leave consent unchecked and confirm Start is disabled.
@@ -24,10 +24,10 @@ Use a research-development TikTok account/profile. Record date, Chrome version, 
 
 ## 3. Locked settings and migration
 
-- [ ] Set a short validation target, for example timeout 30 seconds and `K = 2`, before starting.
-- [ ] Change settings after Start and confirm the active session retains its original timeout and `K`.
+- [ ] Set a 30-second harvest window before starting.
+- [ ] Change settings after Start and confirm the active session retains its original locked window.
 - [ ] Reload the bound TikTok tab and confirm phase, confirmed count, classifications, and tombstones restore.
-- [ ] If schema-1 fixture data is available, confirm completed sessions show as `legacy_manual` and collecting sessions stop with `legacy_mode_replaced`.
+- [ ] If old fixture data is available, confirm completed schema-1/manual and schema-2/background sessions remain readable and an old collecting session stops with `collection_rule_replaced`.
 
 ## 4. Automated harvesting safety
 
@@ -44,10 +44,11 @@ Use a research-development TikTok account/profile. Record date, Chrome version, 
 
 ## 5. Background behavior and bounded failure
 
-- [ ] Leave the TikTok tab hidden and confirm it either reaches `K` or fails explicitly before the locked deadline.
+- [ ] Leave the TikTok tab hidden and confirm it continues collecting until the locked deadline rather than stopping at five videos.
 - [ ] Repeat the hidden-tab run several times; record success rate and timer/hydration delays rather than treating one success as a guarantee.
 - [ ] Force a hydration stall and confirm no more than three advancement attempts occur for an eight-second stage.
-- [ ] Confirm timeout/stall invalidates every partial reservation and opens no partial viewer.
+- [ ] Confirm the deadline opens a viewer containing every confirmed reservation, even when the count is below five.
+- [ ] Confirm a zero-video window or explicit stall opens no viewer; an explicit failure invalidates its partial reservation set.
 - [ ] Confirm failure focuses the still-covered TikTok tab and shows retry plus uncover controls.
 - [ ] Select **Try a fresh session** and confirm a new session ID, seed, deadline, and empty bank are created.
 - [ ] While logged out or at a login/CAPTCHA/rate-limit/unsupported page, confirm the extension fails without attempting to bypass it.
@@ -55,14 +56,17 @@ Use a research-development TikTok account/profile. Record date, Chrome version, 
 
 ## 6. Success and viewer
 
-- [ ] Confirm reaching exactly `K` confirmed reservations focuses one viewer tab.
+- [ ] Confirm the deadline focuses one viewer tab when at least one reservation was confirmed.
 - [ ] Confirm no additional harvesting occurs after success.
 - [ ] Confirm only confirmed `reserved` IDs appear, once each, in interception order.
 - [ ] Confirm one iframe is created at a time using `https://www.tiktok.com/player/v1/{numeric_id}`.
-- [ ] Confirm description, music information, progress UI, native controls, and autoplay are disabled as configured.
-- [ ] Confirm the participant must select **Play video**.
-- [ ] Confirm an early `ended` event before Play does not unlock Next.
-- [ ] Confirm a genuine end unlocks Next.
+- [ ] Confirm the video is centered and the status/transport interface is a compact bar immediately below it.
+- [ ] Confirm description, music information, progress UI, and native controls are hidden.
+- [ ] Confirm the participant must select **Play** once; subsequent videos attempt autoplay and expose Play again if autoplay is blocked.
+- [ ] Confirm **Pause/Resume** and Space work without changing videos.
+- [ ] Confirm a genuine end advances automatically to the next video.
+- [ ] Confirm previous/next buttons, arrow keys, up/down keys, Page Up/Page Down, and mouse-wheel directions move backward and forward.
+- [ ] Confirm navigating away early records `participant_skip`, and returning backward replays without adding the video to the queue twice.
 - [ ] Confirm an unavailable/private/deleted embed records a local error or bounded timeout and allows Next.
 - [ ] Confirm a copied second viewer cannot claim or mutate the session.
 - [ ] Confirm viewer progress and terminal events survive reload.

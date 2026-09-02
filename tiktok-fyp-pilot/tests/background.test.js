@@ -298,7 +298,7 @@ function viewerSender(sessionId, tabId) {
 
 function collectingState() {
     const state = Core.createDefaultState();
-    const session = Core.createSession({ harvestTimeoutSeconds: 90, targetUnseenCount: 5 }, {
+    const session = Core.createSession({ harvestDurationSeconds: 30 }, {
         id: 'session-background-test',
         seed: 123,
         startedAt: Date.now(),
@@ -333,14 +333,15 @@ function reserveOne(session, videoId = '7311111111111111111') {
 
 function completeState() {
     const state = Core.createDefaultState();
-    const session = Core.createSession({ harvestTimeoutSeconds: 90, targetUnseenCount: 1 }, {
+    const startedAt = Date.now() - 16000;
+    const session = Core.createSession({ harvestDurationSeconds: 15 }, {
         id: 'session-viewer-test',
         seed: 456,
-        startedAt: Date.now(),
+        startedAt,
         targetTabId: 42,
     });
     reserveOne(session);
-    Core.evaluateCompletion(session, Date.now());
+    Core.finalizeHarvestWindow(session, Date.now());
     session.viewerTabOpenedAt = 0;
     state.sessions.push(session);
     state.activeSessionId = session.id;
@@ -481,7 +482,7 @@ test('collector readiness records hidden state and restores the originating tab'
     assert.equal(step.visibility, 'hidden');
 });
 
-test('timeout rejects a partial bank, opens no viewer, and focuses the covered tab', async () => {
+test('window end accepts the confirmed pool and opens the viewer', async () => {
     const state = collectingState();
     reserveOne(state.sessions[0]);
     state.sessions[0].startedAt = Date.now() - 100000;
@@ -502,17 +503,17 @@ test('timeout rejects a partial bank, opens no viewer, and focuses the covered t
         hydrationLatencyMs: 8000,
         advanceAttempt: 3,
     }, collectorSender(42));
-    assert.equal(response.failed, true);
-    assert.equal(harness.getState().sessions[0].status, Core.SESSION_STATUS.FAILED);
-    assert.equal(harness.getState().sessions[0].reserved[0].state, 'invalidated');
+    assert.equal(response.failed, false);
+    assert.equal(harness.getState().sessions[0].status, Core.SESSION_STATUS.COMPLETE);
+    assert.equal(harness.getState().sessions[0].reserved[0].state, 'reserved');
     assert.equal(
         harness.tabs.some((tab) => tab.url.includes('/viewer/viewer.html?session=')),
-        false
+        true
     );
-    assert.equal(harness.log.includes('tabs.update:42'), true);
+    assert.equal(harness.log.includes('tabs.update:42'), false);
 });
 
-test('deadline alarm fails a fully throttled hidden collector and reports to its overlay', async () => {
+test('deadline alarm completes a confirmed pool from a fully throttled hidden collector', async () => {
     const state = collectingState();
     reserveOne(state.sessions[0]);
     state.sessions[0].startedAt = Date.now() - 100000;
@@ -523,11 +524,33 @@ test('deadline alarm fails a fully throttled hidden collector and reports to its
         tabs: [{ id: 42, windowId: 1, active: false, url: Core.TIKTOK_FYP_URL }],
     });
     await harness.emitAlarm(`harvest-deadline:${state.activeSessionId}`);
-    assert.equal(harness.getState().sessions[0].status, Core.SESSION_STATUS.FAILED);
-    assert.equal(harness.getState().sessions[0].reserved[0].state, 'invalidated');
+    assert.equal(harness.getState().sessions[0].status, Core.SESSION_STATUS.COMPLETE);
+    assert.equal(harness.getState().sessions[0].reserved[0].state, 'reserved');
     assert.equal(
         harness.log.includes('tabs.sendMessage:42:STATE_UPDATED'),
         true
+    );
+    assert.equal(
+        harness.tabs.some((tab) => tab.url.includes('/viewer/viewer.html?session=')),
+        true
+    );
+});
+
+test('deadline alarm fails an empty window and returns to the covered TikTok tab', async () => {
+    const state = collectingState();
+    state.sessions[0].startedAt = Date.now() - 31000;
+    state.sessions[0].harvestStartedAt = state.sessions[0].startedAt;
+    state.sessions[0].harvestDeadlineAt = Date.now() - 1;
+    const harness = createHarness({
+        state,
+        tabs: [{ id: 42, windowId: 1, active: false, url: Core.TIKTOK_FYP_URL }],
+    });
+    await harness.emitAlarm(`harvest-deadline:${state.activeSessionId}`);
+    assert.equal(harness.getState().sessions[0].status, Core.SESSION_STATUS.FAILED);
+    assert.equal(harness.getState().sessions[0].stopReason, 'harvest_empty');
+    assert.equal(
+        harness.tabs.some((tab) => tab.url.includes('/viewer/viewer.html?session=')),
+        false
     );
     assert.equal(harness.log.includes('tabs.update:42'), true);
 });
@@ -771,7 +794,7 @@ test('a restored viewer claim cannot be erased by the startup reset', async () =
 test('a prepared reservation cannot complete collection or open a viewer', async () => {
     const state = collectingState();
     const session = state.sessions[0];
-    session.lockedSettings = { harvestTimeoutSeconds: 90, targetUnseenCount: 1 };
+    session.lockedSettings = { harvestDurationSeconds: 30 };
     const harness = createHarness({ state });
     const response = await harness.dispatch({
         type: Core.MESSAGE_TYPES.RESERVE_VIDEO,
@@ -800,10 +823,13 @@ test('a prepared reservation cannot complete collection or open a viewer', async
     );
 });
 
-test('the final concealment confirmation completes collection and opens exactly one viewer', async () => {
+test('a confirmation after the window closes completes collection and opens exactly one viewer', async () => {
     const state = collectingState();
     const session = state.sessions[0];
-    session.lockedSettings = { harvestTimeoutSeconds: 90, targetUnseenCount: 1 };
+    session.lockedSettings = { harvestDurationSeconds: 30 };
+    session.startedAt = Date.now() - 31000;
+    session.harvestStartedAt = session.startedAt;
+    session.harvestDeadlineAt = Date.now() - 1;
     const harness = createHarness({ state });
     const prepared = await harness.dispatch({
         type: Core.MESSAGE_TYPES.RESERVE_VIDEO,

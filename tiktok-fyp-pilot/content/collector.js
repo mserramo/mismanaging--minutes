@@ -322,12 +322,15 @@
         if (!overlay || !session) {
             return;
         }
-        const target = session.lockedSettings.targetUnseenCount;
-        const fraction = target > 0 ? Math.min(1, validUnseenCount / target) : 0;
+        const durationMs = session.lockedSettings.harvestDurationSeconds * 1000;
+        const elapsedMs = session.harvestStartedAt
+            ? Math.max(0, Date.now() - session.harvestStartedAt)
+            : 0;
+        const fraction = durationMs > 0 ? Math.min(1, elapsedMs / durationMs) : 0;
         const remaining = session.harvestDeadlineAt
             ? Math.max(0, Math.ceil((session.harvestDeadlineAt - Date.now()) / 1000))
             : 0;
-        overlay.progress.textContent = `${validUnseenCount} of ${target} videos sourced · ${remaining}s remaining`;
+        overlay.progress.textContent = `${validUnseenCount} videos sourced · ${remaining}s remaining`;
         overlay.fill.style.width = `${fraction * 100}%`;
         if (mode === 'failed') {
             overlay.title.textContent = 'Collection could not finish';
@@ -615,11 +618,7 @@
         }, 3);
         if (!prepared || !prepared.ok) {
             pendingReservations.delete(videoId);
-            await failClosed(
-                prepared && prepared.error === 'harvest_timeout'
-                    ? 'harvest_timeout'
-                    : 'reservation_persist_failed'
-            );
+            await failClosed('reservation_persist_failed');
             return;
         }
         applyProgress(prepared.progress);
@@ -718,7 +717,14 @@
             updateOverlay();
             const now = Date.now();
             if (now >= session.harvestDeadlineAt) {
-                await failClosed('harvest_timeout', { elapsedMs: now - session.harvestStartedAt });
+                const response = await phaseChanged('complete', lastDriverId, {
+                    timerDelayMs,
+                    hydrationLatencyMs: now - stageStartedAt,
+                    advanceAttempt: advanceAttempts,
+                }).catch(() => null);
+                if (response && response.progress) {
+                    applyProgress(response.progress);
+                }
                 return;
             }
             if (!Core.isFypPath(location.pathname)) {

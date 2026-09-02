@@ -6,8 +6,7 @@ const elements = {
     message: document.getElementById('message'),
     newSession: document.getElementById('new-session'),
     activeSession: document.getElementById('active-session'),
-    timeoutSummary: document.getElementById('timeout-summary'),
-    targetSummary: document.getElementById('target-summary'),
+    durationSummary: document.getElementById('duration-summary'),
     consent: document.getElementById('consent'),
     start: document.getElementById('start'),
     activeLabel: document.getElementById('active-label'),
@@ -59,10 +58,7 @@ function render(response) {
     const state = response.state;
     const active = state.activeSession;
     elements.revoke.hidden = !response.permissionGranted;
-    elements.timeoutSummary.textContent = `${state.settings.harvestTimeoutSeconds} seconds`;
-    elements.targetSummary.textContent =
-        `${state.settings.targetUnseenCount} ` +
-        (state.settings.targetUnseenCount === 1 ? 'video' : 'videos');
+    elements.durationSummary.textContent = `${state.settings.harvestDurationSeconds} seconds`;
 
     elements.newSession.hidden = Boolean(active);
     elements.activeSession.hidden = !active;
@@ -75,14 +71,14 @@ function render(response) {
     const progress = active.progress;
     const automated = progress.collectionMode === Core.COLLECTION_MODE.AUTOMATED_BACKGROUND;
     elements.activeProgress.textContent = automated
-        ? `${progress.unseenCount} / ${progress.targetUnseenCount} sourced · ` +
+        ? `${progress.unseenCount} sourced · ` +
             `${Math.ceil(progress.harvestRemainingMs / 1000)}s remaining`
         : `${Math.min(progress.qualifiedSeconds, progress.durationSeconds)} / ` +
             `${progress.durationSeconds}s · ${progress.unseenCount} / ` +
             `${progress.targetUnseenCount} reserved`;
     elements.timeProgress.style.width = automated
         ? `${Math.min(100, (progress.harvestElapsedMs /
-            (progress.harvestTimeoutSeconds * 1000)) * 100)}%`
+            (progress.harvestDurationSeconds * 1000)) * 100)}%`
         : `${Math.min(100, (progress.qualifiedMs /
             (progress.durationSeconds * 1000)) * 100)}%`;
     const collecting = active.status === Core.SESSION_STATUS.COLLECTING;

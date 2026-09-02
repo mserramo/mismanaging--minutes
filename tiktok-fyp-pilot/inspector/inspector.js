@@ -99,10 +99,13 @@ function renderSession(session, initiallyOpen) {
     meta.append(
         metadataItem('Mode', automated ? 'Automated background' : 'Legacy manual'),
         metadataItem(
-            'Locked timeout',
-            automated ? `${session.lockedSettings.harvestTimeoutSeconds}s` : '—'
+            'Locked harvest window',
+            automated ? `${session.lockedSettings.harvestDurationSeconds}s` : '—'
         ),
-        metadataItem('Unseen target', String(session.lockedSettings.targetUnseenCount)),
+        metadataItem(
+            automated ? 'Collection rule' : 'Unseen target',
+            automated ? 'All safe videos in window' : String(session.lockedSettings.targetUnseenCount)
+        ),
         metadataItem(
             automated ? 'Harvest elapsed' : 'Qualified time',
             automated ? formatMs(progress.harvestElapsedMs) : formatMs(session.qualifiedMs)
@@ -210,8 +213,7 @@ async function refresh() {
     elements.sessionCount.textContent = String(state.sessions.length);
     elements.permission.textContent = response.permissionGranted ? 'Granted' : 'Not granted';
     elements.settings.textContent =
-        `${state.settings.harvestTimeoutSeconds}s timeout + ` +
-        `${state.settings.targetUnseenCount} videos`;
+        `${state.settings.harvestDurationSeconds}s maximize window`;
     elements.revoke.disabled = !response.permissionGranted;
     elements.sessions.replaceChildren();
     elements.empty.hidden = state.sessions.length !== 0;

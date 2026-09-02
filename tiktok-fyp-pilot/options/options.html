@@ -22,26 +22,15 @@
             <div id="active-note" class="notice" hidden></div>
             <form id="settings-form" class="settings-form">
                 <div class="field">
-                    <label for="timeout">Background harvest timeout</label>
+                    <label for="duration">Background harvest window</label>
                     <div class="input-with-unit">
-                        <input id="timeout" name="timeout" type="number" min="15" max="600" step="1" required>
+                        <input id="duration" name="duration" type="number" min="15" max="600" step="1" required>
                         <span>seconds</span>
                     </div>
                     <span class="field-help">
-                        A fresh session fails cleanly when it cannot source the full bank within
-                        this wall-clock limit. Hidden-tab throttling still counts toward the limit.
-                    </span>
-                </div>
-
-                <div class="field">
-                    <label for="target">Required unseen-video bank</label>
-                    <div class="input-with-unit">
-                        <input id="target" name="target" type="number" min="1" max="50" step="1" required>
-                        <span>videos</span>
-                    </div>
-                    <span class="field-help">
-                        The viewer opens only after every target has been persisted, concealed,
-                        and confirmed. Partial banks are never shown.
+                        The collector keeps every safely confirmed recommendation it can source
+                        during this wall-clock window. It opens the viewer when time ends, provided
+                        at least one video was collected. Hidden-tab throttling still counts.
                     </span>
                 </div>
 

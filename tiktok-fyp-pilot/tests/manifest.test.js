@@ -58,7 +58,8 @@ test('viewer targets TikTok exactly and never uses wildcard postMessage', () => 
     const viewer = fs.readFileSync(path.join(root, 'viewer/viewer.js'), 'utf8');
     assert.match(viewer, /Core\.TIKTOK_ORIGIN/);
     assert.doesNotMatch(viewer, /postMessage\([\s\S]{0,180},\s*['"]\*['"]\s*\)/);
-    assert.match(viewer, /autoplay:\s*'0'/);
+    assert.match(viewer, /autoplay:\s*autoplayUnlocked \? '1' : '0'/);
+    assert.match(viewer, /allow = 'autoplay; fullscreen'/);
     assert.match(viewer, /referrerPolicy\s*=\s*'no-referrer'/);
 });
 

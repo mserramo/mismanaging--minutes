@@ -7,8 +7,9 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
     'use strict';
 
-    const SCHEMA_VERSION = 2;
+    const SCHEMA_VERSION = 3;
     const LEGACY_SCHEMA_VERSION = 1;
+    const TARGET_BANK_SCHEMA_VERSION = 2;
     const TIKTOK_ORIGIN = 'https://www.tiktok.com';
     const TIKTOK_FYP_URL = `${TIKTOK_ORIGIN}/foryou`;
     const CONTENT_SCRIPT_ID = 'tiktok-fyp-pilot-collector';
@@ -20,13 +21,11 @@
     });
 
     const DEFAULT_SETTINGS = Object.freeze({
-        harvestTimeoutSeconds: 90,
-        targetUnseenCount: 5,
+        harvestDurationSeconds: 30,
     });
 
     const SETTING_LIMITS = Object.freeze({
-        harvestTimeoutSeconds: Object.freeze({ min: 15, max: 600 }),
-        targetUnseenCount: Object.freeze({ min: 1, max: 50 }),
+        harvestDurationSeconds: Object.freeze({ min: 15, max: 600 }),
     });
 
     const MESSAGE_TYPES = Object.freeze({
@@ -87,6 +86,7 @@
         'ready_timeout',
         'playback_timeout',
         'play_command',
+        'participant_skip',
     ]);
 
     const EXCLUSION_CLASSIFICATIONS = new Set([
@@ -118,17 +118,11 @@
     function sanitizeSettings(value) {
         const input = value && typeof value === 'object' ? value : {};
         return {
-            harvestTimeoutSeconds: toBoundedInteger(
-                input.harvestTimeoutSeconds,
-                SETTING_LIMITS.harvestTimeoutSeconds.min,
-                SETTING_LIMITS.harvestTimeoutSeconds.max,
-                DEFAULT_SETTINGS.harvestTimeoutSeconds
-            ),
-            targetUnseenCount: toBoundedInteger(
-                input.targetUnseenCount,
-                SETTING_LIMITS.targetUnseenCount.min,
-                SETTING_LIMITS.targetUnseenCount.max,
-                DEFAULT_SETTINGS.targetUnseenCount
+            harvestDurationSeconds: toBoundedInteger(
+                input.harvestDurationSeconds,
+                SETTING_LIMITS.harvestDurationSeconds.min,
+                SETTING_LIMITS.harvestDurationSeconds.max,
+                DEFAULT_SETTINGS.harvestDurationSeconds
             ),
         };
     }
@@ -174,7 +168,7 @@
         return step;
     }
 
-    function normalizePersistedSession(raw, legacyInput) {
+    function normalizePersistedSession(raw, sourceSchemaVersion) {
         if (!raw || typeof raw !== 'object') {
             return null;
         }
@@ -245,6 +239,7 @@
             'playing',
             'ended',
             'unavailable',
+            'skipped',
         ]);
         for (const record of Array.isArray(raw.reserved) ? raw.reserved : []) {
             if (
@@ -301,6 +296,15 @@
                     'player_error'
                 );
             }
+            if (clean.viewerStatus === 'skipped') {
+                clean.viewerSkippedAt = persistedNumber(
+                    record.viewerSkippedAt,
+                    0,
+                    1e15,
+                    startedAt
+                );
+                clean.viewerTerminalType = 'participant_skip';
+            }
             reserved.push(clean);
         }
 
@@ -346,12 +350,23 @@
                 }
             });
 
+        const legacyInput = sourceSchemaVersion === LEGACY_SCHEMA_VERSION;
+        const targetBankInput = sourceSchemaVersion === TARGET_BANK_SCHEMA_VERSION;
         const collectionMode = legacyInput || raw.collectionMode === COLLECTION_MODE.LEGACY_MANUAL
             ? COLLECTION_MODE.LEGACY_MANUAL
             : COLLECTION_MODE.AUTOMATED_BACKGROUND;
         const lockedSettings = collectionMode === COLLECTION_MODE.LEGACY_MANUAL
             ? sanitizeLegacySettings(raw.lockedSettings)
-            : sanitizeSettings(raw.lockedSettings);
+            : targetBankInput
+                ? {
+                    harvestDurationSeconds: toBoundedInteger(
+                        raw.lockedSettings && raw.lockedSettings.harvestTimeoutSeconds,
+                        SETTING_LIMITS.harvestDurationSeconds.min,
+                        SETTING_LIMITS.harvestDurationSeconds.max,
+                        90
+                    ),
+                }
+                : sanitizeSettings(raw.lockedSettings);
         const harvestSteps = [];
         if (collectionMode === COLLECTION_MODE.AUTOMATED_BACKGROUND) {
             for (const step of (Array.isArray(raw.harvestSteps) ? raw.harvestSteps : []).slice(-500)) {
@@ -388,7 +403,7 @@
                     raw.harvestDeadlineAt,
                     startedAt,
                     1e15,
-                    startedAt + lockedSettings.harvestTimeoutSeconds * 1000
+                    startedAt + lockedSettings.harvestDurationSeconds * 1000
                 )
                 : null,
             harvestPhase: collectionMode === COLLECTION_MODE.AUTOMATED_BACKGROUND &&
@@ -429,13 +444,9 @@
         }
         if ([SESSION_STATUS.COMPLETE, SESSION_STATUS.VIEWING, SESSION_STATUS.VIEWED].includes(session.status)) {
             const progress = sessionProgress(session);
-            if (
-                !progress.unseenComplete ||
-                (
-                    collectionMode === COLLECTION_MODE.LEGACY_MANUAL &&
-                    !progress.timeComplete
-                )
-            ) {
+            if (!progress.unseenComplete || (
+                collectionMode === COLLECTION_MODE.LEGACY_MANUAL && !progress.timeComplete
+            )) {
                 return null;
             }
         }
@@ -446,25 +457,27 @@
         if (!raw || typeof raw !== 'object') {
             return createDefaultState();
         }
-        const legacyInput = raw.schemaVersion === LEGACY_SCHEMA_VERSION;
-        if (!legacyInput && raw.schemaVersion !== SCHEMA_VERSION) {
+        const sourceSchemaVersion = raw.schemaVersion;
+        const migratable = [LEGACY_SCHEMA_VERSION, TARGET_BANK_SCHEMA_VERSION]
+            .includes(sourceSchemaVersion);
+        if (!migratable && sourceSchemaVersion !== SCHEMA_VERSION) {
             return createDefaultState();
         }
         const sessions = [];
         for (const rawSession of Array.isArray(raw.sessions) ? raw.sessions : []) {
-            const session = normalizePersistedSession(rawSession, legacyInput);
+            const session = normalizePersistedSession(rawSession, sourceSchemaVersion);
             if (!session || sessions.some((existing) => existing.id === session.id)) {
                 return createDefaultState();
             }
-            if (legacyInput && session.status === SESSION_STATUS.COLLECTING) {
-                stopSession(session, Date.now(), 'legacy_mode_replaced');
+            if (migratable && session.status === SESSION_STATUS.COLLECTING) {
+                stopSession(session, Date.now(), 'collection_rule_replaced');
                 session.targetTabId = null;
             }
             sessions.push(session);
         }
         const state = {
             schemaVersion: SCHEMA_VERSION,
-            settings: legacyInput ? { ...DEFAULT_SETTINGS } : sanitizeSettings(raw.settings),
+            settings: migratable ? { ...DEFAULT_SETTINGS } : sanitizeSettings(raw.settings),
             activeSessionId:
                 typeof raw.activeSessionId === 'string' ? raw.activeSessionId : null,
             sessions,
@@ -540,7 +553,7 @@
             lockedSettings,
             qualifiedMs: 0,
             harvestStartedAt: now,
-            harvestDeadlineAt: now + lockedSettings.harvestTimeoutSeconds * 1000,
+            harvestDeadlineAt: now + lockedSettings.harvestDurationSeconds * 1000,
             harvestPhase: 'starting',
             harvestSteps: [],
             batchCounter: 0,
@@ -579,7 +592,7 @@
         const automated = session.collectionMode === COLLECTION_MODE.AUTOMATED_BACKGROUND;
         const now = sanitizeTimestamp(at, Date.now());
         const timeoutMs = automated
-            ? session.lockedSettings.harvestTimeoutSeconds * 1000
+            ? session.lockedSettings.harvestDurationSeconds * 1000
             : session.lockedSettings.durationSeconds * 1000;
         const harvestElapsedMs = automated
             ? Math.min(timeoutMs, Math.max(0, now - session.harvestStartedAt))
@@ -589,21 +602,27 @@
             status: session.status,
             collectionMode: session.collectionMode,
             durationSeconds: automated ? null : session.lockedSettings.durationSeconds,
-            harvestTimeoutSeconds: automated
-                ? session.lockedSettings.harvestTimeoutSeconds
+            harvestDurationSeconds: automated
+                ? session.lockedSettings.harvestDurationSeconds
                 : null,
             harvestElapsedMs,
             harvestRemainingMs: automated ? Math.max(0, timeoutMs - harvestElapsedMs) : null,
             harvestPhase: automated ? session.harvestPhase : null,
             timedOut: automated ? now >= session.harvestDeadlineAt : false,
-            targetUnseenCount: session.lockedSettings.targetUnseenCount,
+            targetUnseenCount: automated ? null : session.lockedSettings.targetUnseenCount,
             qualifiedMs: session.qualifiedMs,
             qualifiedSeconds: Math.floor(session.qualifiedMs / 1000),
-            timeComplete: automated ? false : session.qualifiedMs >= timeoutMs,
+            timeComplete: automated
+                ? now >= session.harvestDeadlineAt || [
+                    SESSION_STATUS.COMPLETE,
+                    SESSION_STATUS.VIEWING,
+                    SESSION_STATUS.VIEWED,
+                ].includes(session.status)
+                : session.qualifiedMs >= timeoutMs,
             unseenCount: validReservedVideos(session).length,
-            unseenComplete:
-                validReservedVideos(session).length >=
-                session.lockedSettings.targetUnseenCount,
+            unseenComplete: automated
+                ? validReservedVideos(session).length > 0
+                : validReservedVideos(session).length >= session.lockedSettings.targetUnseenCount,
             seenCount: session.seen.length,
             excludedCount: session.excluded.length,
         };
@@ -989,13 +1008,7 @@
             return false;
         }
         const progress = sessionProgress(session, at);
-        if (
-            !progress.unseenComplete ||
-            (
-                session.collectionMode === COLLECTION_MODE.LEGACY_MANUAL &&
-                !progress.timeComplete
-            )
-        ) {
+        if (!progress.unseenComplete || !progress.timeComplete) {
             return false;
         }
         const now = sanitizeTimestamp(at, Date.now());
@@ -1006,6 +1019,35 @@
         session.completedAt = now;
         session.updatedAt = now;
         return true;
+    }
+
+    function finalizeHarvestWindow(session, at) {
+        if (
+            !session ||
+            session.status !== SESSION_STATUS.COLLECTING ||
+            session.collectionMode !== COLLECTION_MODE.AUTOMATED_BACKGROUND
+        ) {
+            return { applied: false, outcome: 'not_collecting' };
+        }
+        const now = sanitizeTimestamp(at, Date.now());
+        if (now < session.harvestDeadlineAt) {
+            return { applied: false, outcome: 'not_due' };
+        }
+        session.reserved
+            .filter((record) => record.state === 'prepared')
+            .forEach((record) => {
+                invalidateReservation(
+                    session,
+                    record.videoId,
+                    'window_ended_before_concealment',
+                    now
+                );
+            });
+        if (evaluateCompletion(session, now)) {
+            return { applied: true, outcome: 'complete' };
+        }
+        failHarvest(session, now, 'harvest_empty');
+        return { applied: true, outcome: 'failed' };
     }
 
     function stopSession(session, at, reason) {
@@ -1185,7 +1227,7 @@
             return false;
         }
         const now = sanitizeTimestamp(payload.at, Date.now());
-        if (['ended', 'unavailable'].includes(record.viewerStatus)) {
+        if (['ended', 'unavailable', 'skipped'].includes(record.viewerStatus)) {
             return record.viewerTerminalType === type;
         }
 
@@ -1244,6 +1286,10 @@
         } else if (type === 'ended') {
             record.viewerStatus = 'ended';
             record.viewerEndedAt = now;
+            record.viewerTerminalType = type;
+        } else if (type === 'participant_skip') {
+            record.viewerStatus = 'skipped';
+            record.viewerSkippedAt = now;
             record.viewerTerminalType = type;
         } else if (
             type === 'player_error' ||
@@ -1379,6 +1425,7 @@
         confirmReservation,
         invalidateReservation,
         evaluateCompletion,
+        finalizeHarvestWindow,
         stopSession,
         failHarvest,
         recordDiagnostic,

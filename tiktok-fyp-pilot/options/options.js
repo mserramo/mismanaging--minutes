@@ -3,8 +3,7 @@
 
 const Core = TikTokPilotCore;
 const form = document.getElementById('settings-form');
-const timeout = document.getElementById('timeout');
-const target = document.getElementById('target');
+const duration = document.getElementById('duration');
 const save = document.getElementById('save');
 const reset = document.getElementById('reset');
 const message = document.getElementById('message');
@@ -34,13 +33,12 @@ async function loadSettings() {
         setMessage('Pilot settings could not be loaded.', 'error');
         return;
     }
-    timeout.value = response.state.settings.harvestTimeoutSeconds;
-    target.value = response.state.settings.targetUnseenCount;
+    duration.value = response.state.settings.harvestDurationSeconds;
     if (response.state.activeSession) {
         const locked = response.state.activeSession.progress;
         activeNote.textContent = locked.collectionMode === Core.COLLECTION_MODE.AUTOMATED_BACKGROUND
-            ? `The active session remains locked at a ${locked.harvestTimeoutSeconds}-second timeout and ` +
-                `${locked.targetUnseenCount} unseen videos. Changes below apply next time.`
+            ? `The active session remains locked to a ${locked.harvestDurationSeconds}-second sourcing window. ` +
+                'Changes below apply next time.'
             : `A preserved legacy session remains locked at ${locked.durationSeconds} qualified ` +
                 `seconds and ${locked.targetUnseenCount} unseen videos.`;
         activeNote.hidden = false;
@@ -54,8 +52,7 @@ form.addEventListener('submit', async (event) => {
     }
     save.disabled = true;
     const settings = Core.sanitizeSettings({
-        harvestTimeoutSeconds: timeout.value,
-        targetUnseenCount: target.value,
+        harvestDurationSeconds: duration.value,
     });
     const response = await send({
         type: Core.MESSAGE_TYPES.SAVE_SETTINGS,
@@ -66,14 +63,12 @@ form.addEventListener('submit', async (event) => {
         setMessage('Pilot settings could not be saved.', 'error');
         return;
     }
-    timeout.value = response.settings.harvestTimeoutSeconds;
-    target.value = response.settings.targetUnseenCount;
+    duration.value = response.settings.harvestDurationSeconds;
     setMessage('Pilot settings saved locally.', 'success');
 });
 
 reset.addEventListener('click', () => {
-    timeout.value = Core.DEFAULT_SETTINGS.harvestTimeoutSeconds;
-    target.value = Core.DEFAULT_SETTINGS.targetUnseenCount;
+    duration.value = Core.DEFAULT_SETTINGS.harvestDurationSeconds;
     message.hidden = true;
 });
 

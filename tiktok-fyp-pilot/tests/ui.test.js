@@ -30,25 +30,27 @@ test('participant-facing consent accurately states storage and network boundarie
     assert.match(popup, /Access remains until I use\s+Revoke access/i);
 });
 
-test('viewer exposes Play, terminal retry, and gated Next controls', () => {
+test('viewer exposes compact transport, autoplay, pause, and bidirectional navigation', () => {
     const html = fs.readFileSync(path.join(root, 'viewer/viewer.html'), 'utf8');
     const javascript = fs.readFileSync(path.join(root, 'viewer/viewer.js'), 'utf8');
     assert.match(html, /id="play"[^>]*disabled/);
-    assert.match(html, /id="next"[^>]*disabled/);
+    assert.match(html, /id="previous"/);
+    assert.match(html, /id="next"/);
     assert.match(html, /id="retry"[^>]*hidden/);
     assert.match(javascript, /queueViewerEventWithRetry/);
     assert.match(javascript, /iframe\.addEventListener\('load'/);
     assert.match(javascript, /iframe_loaded/);
-    assert.match(javascript, /nativePlayerFallback/);
-    assert.match(javascript, /is-interactive/);
     assert.doesNotMatch(javascript, /handleTerminal\('ready_timeout'/);
     assert.match(javascript, /PLAYBACK_STALL_MS/);
     assert.match(javascript, /armPlaybackWatchdog/);
     assert.match(javascript, /visibilitychange/);
-    assert.match(
-        javascript,
-        /normalized\.type === 'paused'[\s\S]{0,260}elements\.play\.disabled = false/
-    );
+    assert.match(javascript, /postPlayerCommand\('pause'\)/);
+    assert.match(javascript, /scheduleAutomaticAdvance/);
+    assert.match(javascript, /participant_skip/);
+    assert.match(javascript, /addEventListener\('wheel'/);
+    assert.match(javascript, /ArrowLeft/);
+    assert.match(javascript, /ArrowRight/);
+    assert.match(javascript, /event\.code === 'Space'/);
     assert.match(
         javascript,
         /normalized\.type === 'buffering'[\s\S]{0,320}armPlaybackWatchdog\(\)/

@@ -247,7 +247,7 @@ controls.runBackground.addEventListener('click', async () => {
     await new Promise((resolve) => setTimeout(resolve, 30));
 
     const testSession = Core.createSession(
-        { harvestTimeoutSeconds: 15, targetUnseenCount: 2 },
+        { harvestDurationSeconds: 15 },
         { id: 'synthetic-background', seed: 20260902, startedAt: 1000, targetTabId: 1 }
     );
     const records = Dom.snapshotFeed(document, location.href);
@@ -329,9 +329,16 @@ controls.runBackground.addEventListener('click', async () => {
         'DOM recycling cannot resurrect a tombstoned recommendation',
         recycled.classList.contains('ttfp-reserved-card')
     );
+    const completedWindow = Core.finalizeHarvestWindow(testSession, 16000);
+    writeLog(
+        'the fixed window keeps every safely confirmed video collected before its deadline',
+        completedWindow.outcome === 'complete' &&
+            testSession.status === Core.SESSION_STATUS.COMPLETE &&
+            Core.viewerQueue(testSession).length === 1
+    );
 
     const stalled = Core.createSession(
-        { harvestTimeoutSeconds: 15, targetUnseenCount: 2 },
+        { harvestDurationSeconds: 15 },
         { id: 'synthetic-stall', seed: 7, startedAt: 1000, targetTabId: 1 }
     );
     const partialId = ids[20];
@@ -360,7 +367,7 @@ controls.runBackground.addEventListener('click', async () => {
         driverVideoId: ids[21],
         feedOrder: 1,
     }, 2000 + attempt));
-    Core.failHarvest(stalled, 16000, 'harvest_timeout');
+    Core.failHarvest(stalled, 9000, 'harvest_stalled');
     writeLog(
         'three failed stage attempts reject the partial bank and open no viewer',
         stalled.status === Core.SESSION_STATUS.FAILED &&

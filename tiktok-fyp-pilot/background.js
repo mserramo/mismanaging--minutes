@@ -543,7 +543,7 @@ function currentViewerRecord(session) {
         .filter((record) => record.state === 'reserved')
         .slice()
         .sort((left, right) => left.order - right.order)
-        .find((record) => !['ended', 'unavailable'].includes(record.viewerStatus)) || null;
+        .find((record) => !['ended', 'unavailable', 'skipped'].includes(record.viewerStatus)) || null;
 }
 
 function viewerUrl(sessionId) {
@@ -1001,15 +1001,20 @@ async function dispatchMessage(message, sender) {
             }
             const now = Date.now();
             if (now >= session.harvestDeadlineAt) {
-                Core.recordDiagnostic(session, 'harvest_timeout', now, {
+                Core.recordDiagnostic(session, 'harvest_window_ended', now, {
                     elapsedMs: now - session.harvestStartedAt,
                 });
-                Core.failHarvest(session, now, 'harvest_timeout');
+                const finalization = Core.finalizeHarvestWindow(session, now);
+                const completed = finalization.outcome === 'complete';
+                if (completed && session.viewerTabOpenedAt === null) {
+                    session.viewerTabOpenedAt = 0;
+                }
                 return {
-                    ok: false,
-                    error: 'harvest_timeout',
-                    failed: true,
+                    ok: true,
+                    finished: true,
+                    failed: finalization.outcome === 'failed',
                     progress: Core.sessionProgress(session, now),
+                    viewerSessionId: completed ? session.id : null,
                 };
             }
             const step = Core.recordHarvestStep(session, message, now);
@@ -1019,10 +1024,13 @@ async function dispatchMessage(message, sender) {
                 progress: Core.sessionProgress(session, now),
             };
         });
-        if (mutation.result.failed) {
+        if (mutation.result.finished) {
             await clearHarvestAlarm(message.sessionId);
+        }
+        if (mutation.result.failed) {
             await focusTab(sender.tab.id);
         }
+        await maybeOpenViewer(mutation);
         return mutation.result;
     }
 
@@ -1267,7 +1275,7 @@ async function dispatchMessage(message, sender) {
             const target = Core.findReserved(session, message.videoId);
             const idempotentTerminalRetry = Boolean(
                 target &&
-                ['ended', 'unavailable'].includes(target.viewerStatus) &&
+                ['ended', 'unavailable', 'skipped'].includes(target.viewerStatus) &&
                 target.viewerTerminalType === message.eventType
             );
             if (
@@ -1405,24 +1413,36 @@ chrome.alarms.onAlarm.addListener((alarm) => {
             return { ok: false, error: 'alarm_not_due' };
         }
         const now = Date.now();
-        Core.recordDiagnostic(session, 'harvest_timeout', now, {
+        Core.recordDiagnostic(session, 'harvest_window_ended', now, {
             elapsedMs: now - session.harvestStartedAt,
         });
-        Core.failHarvest(session, now, 'harvest_timeout');
+        const finalization = Core.finalizeHarvestWindow(session, now);
+        const completed = finalization.outcome === 'complete';
+        if (completed && session.viewerTabOpenedAt === null) {
+            session.viewerTabOpenedAt = 0;
+        }
         return {
             ok: true,
             tabId: session.targetTabId,
             progress: Core.sessionProgress(session, now),
+            failed: finalization.outcome === 'failed',
+            viewerSessionId: completed ? session.id : null,
         };
     }).then(async (mutation) => {
-        if (!mutation.result.ok || !Number.isInteger(mutation.result.tabId)) {
+        if (!mutation.result.ok) {
             return;
         }
-        await chrome.tabs.sendMessage(mutation.result.tabId, {
-            type: Core.MESSAGE_TYPES.STATE_UPDATED,
-            progress: mutation.result.progress,
-        }).catch(() => undefined);
-        await focusTab(mutation.result.tabId);
+        if (Number.isInteger(mutation.result.tabId)) {
+            await chrome.tabs.sendMessage(mutation.result.tabId, {
+                type: Core.MESSAGE_TYPES.STATE_UPDATED,
+                progress: mutation.result.progress,
+            }).catch(() => undefined);
+        }
+        if (mutation.result.viewerSessionId) {
+            await openOrFocusViewer(mutation.result.viewerSessionId);
+        } else if (mutation.result.failed && Number.isInteger(mutation.result.tabId)) {
+            await focusTab(mutation.result.tabId);
+        }
     }).catch(() => undefined);
 });
 

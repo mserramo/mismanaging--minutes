@@ -24,7 +24,7 @@
             <p id="locked-message" class="muted"></p>
         </section>
 
-        <section id="viewer" class="viewer-layout" hidden>
+        <section id="viewer" class="viewer-layout" aria-label="Personalized video feed" hidden>
             <div class="player-frame">
                 <div id="player-mount" class="player-mount"></div>
                 <div id="player-placeholder" class="player-placeholder">
@@ -32,24 +32,18 @@
                     <p>Preparing the TikTok embed…</p>
                 </div>
             </div>
-            <aside class="viewer-controls card">
-                <p class="eyebrow">Video <span id="video-number"></span></p>
-                <h2 id="video-title">Ready to watch</h2>
-                <p id="video-status" class="muted">
-                    Wait for the player, then use the Play button below.
-                </p>
-                <div class="control-stack">
-                    <button id="play" type="button" disabled>Play video</button>
-                    <button id="next" class="secondary" type="button" disabled>Next video</button>
-                    <button id="retry" class="secondary" type="button" hidden>
-                        Retry saving status
-                    </button>
+            <div class="viewer-controls" role="group" aria-label="Video controls">
+                <button id="previous" class="nav-button" type="button" aria-label="Previous video">←</button>
+                <div class="status-copy" aria-live="polite">
+                    <span class="eyebrow">Video <span id="video-number"></span></span>
+                    <strong id="video-title">Ready to watch</strong>
+                    <span id="video-status">Press Play to begin.</span>
                 </div>
-                <p class="privacy-note">
-                    The official TikTok player hosts this video. The pilot stores only its numeric
-                    ID and playback status in this browser.
-                </p>
-            </aside>
+                <button id="play" class="play-button" type="button" disabled>Play</button>
+                <button id="next" class="nav-button" type="button" aria-label="Next video">→</button>
+                <button id="retry" class="retry-button" type="button" hidden>Retry save</button>
+            </div>
+            <p class="viewer-hint">Use ←/→, ↑/↓, or the mouse wheel to move. Space pauses or resumes.</p>
         </section>
 
         <section id="complete" class="card state-card" hidden>

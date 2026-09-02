@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "TikTok FYP Research Pilot",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Experimentally harvests a local pool of covered, account-personalized TikTok recommendations for a controlled viewer.",
   "minimum_chrome_version": "111",
   "incognito": "not_allowed",

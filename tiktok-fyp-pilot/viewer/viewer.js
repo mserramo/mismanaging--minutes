@@ -5,6 +5,9 @@ const Core = TikTokPilotCore;
 const READY_TIMEOUT_MS = 15000;
 const IFRAME_LOAD_GRACE_MS = 1000;
 const PLAYBACK_STALL_MS = 45000;
+const AUTO_ADVANCE_DELAY_MS = 450;
+const WHEEL_DEBOUNCE_MS = 650;
+const TERMINAL_STATUSES = new Set(['ended', 'unavailable', 'skipped']);
 const sessionId = new URLSearchParams(location.search).get('session');
 const elements = {
     notice: document.getElementById('notice'),
@@ -18,6 +21,7 @@ const elements = {
     videoNumber: document.getElementById('video-number'),
     videoTitle: document.getElementById('video-title'),
     videoStatus: document.getElementById('video-status'),
+    previous: document.getElementById('previous'),
     play: document.getElementById('play'),
     next: document.getElementById('next'),
     retry: document.getElementById('retry'),
@@ -30,13 +34,17 @@ let currentIframe = null;
 let readyTimer = null;
 let iframeLoadTimer = null;
 let playbackTimer = null;
+let autoAdvanceTimer = null;
 let lastCurrentTimeSecond = -1;
 let terminalHandled = false;
 let pendingTerminal = null;
 let eventQueue = Promise.resolve();
 let playbackPhase = 'idle';
 let readyHandled = false;
-let nativePlayerFallback = false;
+let replayMode = false;
+let autoplayUnlocked = false;
+let navigationBusy = false;
+let lastWheelAt = 0;
 
 function send(message) {
     return new Promise((resolve) => {
@@ -50,18 +58,26 @@ function send(message) {
     });
 }
 
+function currentRecord() {
+    return session && currentIndex >= 0 ? session.queue[currentIndex] : null;
+}
+
+function isTerminal(record) {
+    return Boolean(record && TERMINAL_STATUSES.has(record.viewerStatus));
+}
+
 function queueViewerEvent(type, value) {
-    if (!session || currentIndex < 0 || !session.queue[currentIndex]) {
+    const record = currentRecord();
+    if (!session || !record) {
         return Promise.resolve({ ok: false });
     }
     const targetSessionId = session.id;
-    const targetVideoId = session.queue[currentIndex].videoId;
-    const eventAt = Date.now();
+    const targetVideoId = record.videoId;
     const operation = eventQueue.then(() => send({
         type: Core.MESSAGE_TYPES.VIEWER_EVENT,
         sessionId: targetSessionId,
         videoId: targetVideoId,
-        at: eventAt,
+        at: Date.now(),
         eventType: type,
         value,
     }));
@@ -94,6 +110,11 @@ function showNotice(text, kind) {
     elements.notice.hidden = false;
 }
 
+function clearNotice() {
+    elements.notice.hidden = true;
+    elements.notice.textContent = '';
+}
+
 function embedUrl(videoId) {
     const parameters = new URLSearchParams({
         controls: '0',
@@ -103,7 +124,7 @@ function embedUrl(videoId) {
         fullscreen_button: '0',
         timestamp: '0',
         loop: '0',
-        autoplay: '0',
+        autoplay: autoplayUnlocked ? '1' : '0',
         music_info: '0',
         description: '0',
         rel: '0',
@@ -113,75 +134,80 @@ function embedUrl(videoId) {
     return `${Core.TIKTOK_ORIGIN}/player/v1/${videoId}?${parameters.toString()}`;
 }
 
-function unfinishedIndex(queue) {
-    return queue.findIndex(
-        (record) => !['ended', 'unavailable'].includes(record.viewerStatus)
-    );
-}
-
-function removeCurrentPlayer() {
-    if (readyTimer) {
-        clearTimeout(readyTimer);
-        readyTimer = null;
-    }
-    if (iframeLoadTimer) {
-        clearTimeout(iframeLoadTimer);
-        iframeLoadTimer = null;
-    }
-    if (playbackTimer) {
-        clearTimeout(playbackTimer);
-        playbackTimer = null;
-    }
-    currentIframe = null;
-    playbackPhase = 'idle';
-    nativePlayerFallback = false;
-    elements.playerMount.classList.remove('is-interactive');
-    elements.playerMount.replaceChildren();
-}
-
-async function acceptPlayerReady(eventType, statusText) {
-    if (
-        readyHandled ||
-        terminalHandled ||
-        !currentIframe ||
-        !session ||
-        currentIndex < 0
-    ) {
-        return;
-    }
-    readyHandled = true;
-    if (readyTimer) {
-        clearTimeout(readyTimer);
-        readyTimer = null;
-    }
-    if (iframeLoadTimer) {
-        clearTimeout(iframeLoadTimer);
-        iframeLoadTimer = null;
-    }
-    elements.placeholder.hidden = true;
-    const response = await queueViewerEventWithRetry(eventType, null);
-    if (!response || !response.ok) {
-        readyHandled = false;
-        elements.placeholder.hidden = false;
-        showNotice('Player readiness could not be saved locally. Reload this viewer.', 'error');
-        return;
-    }
-    session.queue[currentIndex].viewerStatus = 'ready';
-    nativePlayerFallback = eventType === 'iframe_loaded';
-    elements.playerMount.classList.toggle('is-interactive', nativePlayerFallback);
-    elements.play.hidden = nativePlayerFallback;
-    elements.play.disabled = nativePlayerFallback;
-    elements.videoTitle.textContent = 'Ready to watch';
-    elements.videoStatus.textContent = nativePlayerFallback
-        ? 'Use the Play button shown directly on the TikTok video.'
-        : statusText;
-}
-
 function clearPlaybackWatchdog() {
     if (playbackTimer) {
         clearTimeout(playbackTimer);
         playbackTimer = null;
     }
+}
+
+function clearPlayerTimers() {
+    if (readyTimer) {
+        clearTimeout(readyTimer);
+        readyTimer = null;
+    }
+    if (iframeLoadTimer) {
+        clearTimeout(iframeLoadTimer);
+        iframeLoadTimer = null;
+    }
+    if (autoAdvanceTimer) {
+        clearTimeout(autoAdvanceTimer);
+        autoAdvanceTimer = null;
+    }
+    clearPlaybackWatchdog();
+}
+
+function removeCurrentPlayer() {
+    clearPlayerTimers();
+    currentIframe = null;
+    playbackPhase = 'idle';
+    elements.playerMount.replaceChildren();
+}
+
+function updateNavigationControls() {
+    if (!session || currentIndex < 0) {
+        return;
+    }
+    elements.previous.disabled = navigationBusy || currentIndex === 0;
+    elements.next.disabled = navigationBusy || Boolean(pendingTerminal);
+    const onLast = currentIndex === session.queue.length - 1;
+    elements.next.textContent = onLast ? '✓' : '→';
+    elements.next.setAttribute('aria-label', onLast ? 'Finish viewer' : 'Next video');
+}
+
+function setPlaybackUi(phase, detail) {
+    playbackPhase = phase;
+    if (phase === 'preparing') {
+        elements.play.disabled = true;
+        elements.play.textContent = 'Play';
+        elements.videoTitle.textContent = replayMode ? 'Preparing replay' : 'Preparing video';
+        elements.videoStatus.textContent = 'Waiting for the TikTok player.';
+    } else if (phase === 'ready') {
+        elements.play.disabled = false;
+        elements.play.textContent = replayMode ? 'Replay' : 'Play';
+        elements.videoTitle.textContent = replayMode ? 'Ready to replay' : 'Ready to watch';
+        elements.videoStatus.textContent = detail || 'Press Play to begin.';
+    } else if (phase === 'requested' || phase === 'buffering') {
+        elements.play.disabled = false;
+        elements.play.textContent = 'Pause';
+        elements.videoTitle.textContent = phase === 'buffering' ? 'Buffering' : 'Starting';
+        elements.videoStatus.textContent = phase === 'buffering'
+            ? 'Waiting for TikTok playback.'
+            : 'Starting playback…';
+    } else if (phase === 'playing') {
+        elements.play.disabled = false;
+        elements.play.textContent = 'Pause';
+        elements.videoTitle.textContent = replayMode ? 'Replaying' : 'Now playing';
+        elements.videoStatus.textContent = 'Ends advance automatically.';
+    } else if (phase === 'paused') {
+        elements.play.disabled = false;
+        elements.play.textContent = 'Resume';
+        elements.videoTitle.textContent = 'Paused';
+        elements.videoStatus.textContent = 'Press Resume or Space.';
+    } else if (phase === 'terminal') {
+        elements.play.disabled = true;
+    }
+    updateNavigationControls();
 }
 
 function armPlaybackWatchdog() {
@@ -205,35 +231,128 @@ function armPlaybackWatchdog() {
             return;
         }
         elements.videoTitle.textContent = 'Playback stalled';
-        elements.videoStatus.textContent =
-            'No playback progress was received. You can continue to the next video.';
+        elements.videoStatus.textContent = 'Use Next to continue.';
         await handleTerminal('playback_timeout', null);
     }, PLAYBACK_STALL_MS);
 }
 
+function postPlayerCommand(type) {
+    if (!currentIframe || !currentIframe.contentWindow) {
+        return false;
+    }
+    currentIframe.contentWindow.postMessage(
+        { type, value: null, 'x-tiktok-player': true },
+        Core.TIKTOK_ORIGIN
+    );
+    return true;
+}
+
+async function requestPlayback(automatic) {
+    const iframe = currentIframe;
+    const record = currentRecord();
+    if (!iframe || !record || terminalHandled || !readyHandled) {
+        return false;
+    }
+    if (!automatic) {
+        autoplayUnlocked = true;
+        clearNotice();
+    }
+    setPlaybackUi('requested');
+    armPlaybackWatchdog();
+    const previousStatus = record.viewerStatus;
+    if (!replayMode) {
+        record.viewerStatus = 'play_requested';
+    }
+    const savePlay = replayMode
+        ? Promise.resolve({ ok: true })
+        : queueViewerEventWithRetry('play_command', null);
+    postPlayerCommand('unMute');
+    postPlayerCommand('play');
+    const response = await savePlay;
+    if (iframe !== currentIframe || terminalHandled) {
+        return false;
+    }
+    if (!response || !response.ok) {
+        clearPlaybackWatchdog();
+        postPlayerCommand('pause');
+        if (!replayMode) {
+            record.viewerStatus = previousStatus;
+        }
+        setPlaybackUi('ready');
+        showNotice('The Play action could not be saved locally. Please try again.', 'error');
+        return false;
+    }
+    return true;
+}
+
+async function pausePlayback() {
+    if (!currentIframe || terminalHandled) {
+        return;
+    }
+    postPlayerCommand('pause');
+    clearPlaybackWatchdog();
+    if (!replayMode) {
+        queueViewerEvent('paused', null);
+    }
+    setPlaybackUi('paused');
+}
+
+async function acceptPlayerReady(eventType, detail) {
+    const iframe = currentIframe;
+    const record = currentRecord();
+    if (readyHandled || terminalHandled || !iframe || !record) {
+        return;
+    }
+    readyHandled = true;
+    if (readyTimer) {
+        clearTimeout(readyTimer);
+        readyTimer = null;
+    }
+    if (iframeLoadTimer) {
+        clearTimeout(iframeLoadTimer);
+        iframeLoadTimer = null;
+    }
+    elements.placeholder.hidden = true;
+    const response = replayMode
+        ? { ok: true }
+        : await queueViewerEventWithRetry(eventType, null);
+    if (iframe !== currentIframe) {
+        return;
+    }
+    if (!response || !response.ok) {
+        readyHandled = false;
+        elements.placeholder.hidden = false;
+        showNotice('Player readiness could not be saved locally. Reload this viewer.', 'error');
+        return;
+    }
+    if (!replayMode) {
+        record.viewerStatus = 'ready';
+    }
+    setPlaybackUi('ready', detail);
+    if (autoplayUnlocked) {
+        await requestPlayback(true);
+    }
+}
+
 function loadCurrentVideo() {
     removeCurrentPlayer();
+    clearNotice();
     terminalHandled = false;
     pendingTerminal = null;
     readyHandled = false;
     lastCurrentTimeSecond = -1;
-    elements.play.disabled = true;
-    elements.next.disabled = true;
-    elements.next.textContent = 'Next video';
     elements.retry.hidden = true;
     elements.retry.disabled = false;
-    elements.play.hidden = false;
-    elements.play.textContent = 'Play video';
-    elements.videoTitle.textContent = 'Preparing video';
-    elements.videoStatus.textContent = 'Waiting for the official TikTok player.';
     elements.placeholder.hidden = false;
 
-    const record = session.queue[currentIndex];
-    if (!['ended', 'unavailable'].includes(record.viewerStatus)) {
+    const record = currentRecord();
+    replayMode = isTerminal(record);
+    if (!replayMode) {
         record.viewerStatus = 'pending';
     }
-    elements.videoNumber.textContent = `${currentIndex + 1}`;
+    elements.videoNumber.textContent = String(currentIndex + 1);
     elements.counter.textContent = `${currentIndex + 1} of ${session.queue.length}`;
+    setPlaybackUi('preparing');
 
     const iframe = document.createElement('iframe');
     iframe.title = `Reserved TikTok video ${currentIndex + 1}`;
@@ -249,76 +368,152 @@ function loadCurrentVideo() {
             if (terminalHandled || iframe !== currentIframe || readyHandled) {
                 return;
             }
-            acceptPlayerReady(
-                'iframe_loaded',
-                'Press Play to start this video.'
-            );
+            acceptPlayerReady('iframe_loaded', 'Play controls are ready.');
         }, IFRAME_LOAD_GRACE_MS);
     }, { once: true });
     elements.playerMount.appendChild(iframe);
 
-    // Some current TikTok players load successfully but omit onPlayerReady
-    // when embedded in a chrome-extension page. Never classify that omission
-    // alone as an unavailable post: expose the participant-initiated Play path
-    // and let an explicit player error or post-Play watchdog decide terminality.
     readyTimer = setTimeout(() => {
         if (terminalHandled || iframe !== currentIframe || readyHandled) {
             return;
         }
-        acceptPlayerReady(
-            'iframe_loaded',
-            'The embed loaded without a ready signal. Press Play to test playback.'
-        );
+        acceptPlayerReady('iframe_loaded', 'Press Play to test this embed.');
     }, READY_TIMEOUT_MS);
 }
 
 async function persistPendingTerminal() {
     if (!pendingTerminal) {
-        return;
+        return false;
     }
+    const record = currentRecord();
+    const terminal = pendingTerminal;
     elements.retry.disabled = true;
-    const response = await queueViewerEventWithRetry(
-        pendingTerminal.type,
-        pendingTerminal.value
-    );
+    const response = await queueViewerEventWithRetry(terminal.type, terminal.value);
     if (!response || !response.ok) {
         elements.retry.hidden = false;
         elements.retry.disabled = false;
-        showNotice(
-            'Playback finished, but its status was not saved locally. Use Retry saving status.',
-            'error'
-        );
+        showNotice('The video status was not saved locally. Use Retry save.', 'error');
+        updateNavigationControls();
+        return false;
+    }
+    pendingTerminal = null;
+    if (terminal.type === 'ended') {
+        record.viewerStatus = 'ended';
+    } else if (terminal.type === 'participant_skip') {
+        record.viewerStatus = 'skipped';
+    } else {
+        record.viewerStatus = 'unavailable';
+    }
+    elements.retry.hidden = true;
+    elements.retry.disabled = false;
+    setPlaybackUi('terminal');
+    updateNavigationControls();
+    return true;
+}
+
+function scheduleAutomaticAdvance() {
+    if (!autoplayUnlocked || currentIndex >= session.queue.length - 1) {
+        if (currentIndex === session.queue.length - 1) {
+            elements.videoStatus.textContent = 'Use ✓ to finish or ← to review.';
+        }
         return;
     }
-    const type = pendingTerminal.type;
-    pendingTerminal = null;
-    session.queue[currentIndex].viewerStatus =
-        type === 'ended' ? 'ended' : 'unavailable';
-    elements.retry.hidden = true;
-    elements.next.disabled = false;
-    elements.play.disabled = true;
+    const fromIndex = currentIndex;
+    autoAdvanceTimer = setTimeout(() => {
+        autoAdvanceTimer = null;
+        if (currentIndex === fromIndex) {
+            navigateTo(fromIndex + 1, true);
+        }
+    }, AUTO_ADVANCE_DELAY_MS);
 }
 
 async function handleTerminal(type, value) {
     if (terminalHandled) {
-        return;
+        return false;
     }
     terminalHandled = true;
-    if (readyTimer) {
-        clearTimeout(readyTimer);
-        readyTimer = null;
-    }
-    if (iframeLoadTimer) {
-        clearTimeout(iframeLoadTimer);
-        iframeLoadTimer = null;
-    }
-    if (playbackTimer) {
-        clearPlaybackWatchdog();
-    }
+    clearPlayerTimers();
     playbackPhase = 'terminal';
-    pendingTerminal = { type, value };
     elements.play.disabled = true;
-    await persistPendingTerminal();
+    if (replayMode) {
+        elements.videoTitle.textContent = type === 'ended' ? 'Replay finished' : 'Replay unavailable';
+        elements.videoStatus.textContent = 'Move to another video when ready.';
+        updateNavigationControls();
+        if (type === 'ended') {
+            scheduleAutomaticAdvance();
+        }
+        return true;
+    }
+    pendingTerminal = { type, value };
+    const saved = await persistPendingTerminal();
+    if (saved && type === 'ended') {
+        elements.videoTitle.textContent = 'Video finished';
+        elements.videoStatus.textContent = 'Advancing automatically…';
+        scheduleAutomaticAdvance();
+    }
+    return saved;
+}
+
+async function markCurrentSkipped() {
+    const record = currentRecord();
+    if (!record || replayMode || isTerminal(record)) {
+        return true;
+    }
+    elements.videoTitle.textContent = 'Skipping video';
+    elements.videoStatus.textContent = 'Saving navigation…';
+    return handleTerminal('participant_skip', null);
+}
+
+function allVideosTerminal() {
+    return session && session.queue.every(isTerminal);
+}
+
+async function finishViewer() {
+    if (!allVideosTerminal()) {
+        const unfinished = session.queue.findIndex((record) => !isTerminal(record));
+        if (unfinished >= 0) {
+            currentIndex = unfinished;
+            loadCurrentVideo();
+        }
+        return;
+    }
+    removeCurrentPlayer();
+    const response = await send({
+        type: Core.MESSAGE_TYPES.VIEWER_FINISH,
+        sessionId: session.id,
+    });
+    if (!response || !response.ok) {
+        showNotice('The viewer could not be marked complete.', 'error');
+        loadCurrentVideo();
+        return;
+    }
+    showComplete();
+}
+
+async function navigateTo(targetIndex, automatic) {
+    if (!session || navigationBusy || targetIndex < 0 || targetIndex === currentIndex) {
+        return;
+    }
+    navigationBusy = true;
+    updateNavigationControls();
+    const saved = await markCurrentSkipped();
+    if (!saved) {
+        navigationBusy = false;
+        updateNavigationControls();
+        return;
+    }
+    if (targetIndex >= session.queue.length) {
+        navigationBusy = false;
+        updateNavigationControls();
+        await finishViewer();
+        return;
+    }
+    currentIndex = targetIndex;
+    navigationBusy = false;
+    loadCurrentVideo();
+    if (!automatic) {
+        clearNotice();
+    }
 }
 
 async function handlePlayerMessage(event) {
@@ -330,169 +525,173 @@ async function handlePlayerMessage(event) {
     if (!normalized || !session || currentIndex < 0 || terminalHandled) {
         return;
     }
+    const record = currentRecord();
 
-    const record = session.queue[currentIndex];
+    if (normalized.type === 'ready') {
+        await acceptPlayerReady('ready', 'Press Play to begin.');
+        return;
+    }
+    if (normalized.type === 'player_error') {
+        if (normalized.value && normalized.value.code === 3002) {
+            clearPlaybackWatchdog();
+            setPlaybackUi('ready', 'Autoplay was blocked. Press Play to continue.');
+            return;
+        }
+        elements.placeholder.hidden = false;
+        elements.videoTitle.textContent = 'Video unavailable';
+        elements.videoStatus.textContent = 'Use Next to continue.';
+        await handleTerminal('player_error', normalized.value);
+        return;
+    }
 
     if (
-        nativePlayerFallback &&
+        !replayMode &&
         record.viewerStatus === 'ready' &&
-        (
-            normalized.type === 'playing' ||
-            (
-                normalized.type === 'current_time' &&
-                normalized.value.currentTime > 0
-            )
-        )
+        (normalized.type === 'playing' || (
+            normalized.type === 'current_time' && normalized.value.currentTime > 0
+        ))
     ) {
         const response = await queueViewerEventWithRetry('play_command', null);
         if (!response || !response.ok) {
-            showNotice('Native playback could not be saved locally. Reload this viewer.', 'error');
+            showNotice('Playback could not be saved locally. Reload this viewer.', 'error');
             return;
         }
         record.viewerStatus = 'play_requested';
-        playbackPhase = 'requested';
-        armPlaybackWatchdog();
     }
 
-    if (normalized.type === 'ready') {
-        if (!['pending', 'ready'].includes(record.viewerStatus)) {
-            return;
-        }
-        await acceptPlayerReady('ready', 'Press Play to start this video.');
-        return;
-    }
     if (normalized.type === 'current_time') {
-        if (!['play_requested', 'playing'].includes(record.viewerStatus)) {
+        if (
+            !replayMode &&
+            !['play_requested', 'playing'].includes(record.viewerStatus)
+        ) {
             return;
         }
         const second = Math.floor(normalized.value.currentTime);
         if (second !== lastCurrentTimeSecond) {
             lastCurrentTimeSecond = second;
-            playbackPhase = 'playing';
-            record.viewerStatus = 'playing';
-            elements.play.disabled = true;
-            elements.play.textContent = 'Playing';
-            queueViewerEvent('current_time', normalized.value);
+            if (!replayMode) {
+                record.viewerStatus = 'playing';
+                queueViewerEvent('current_time', normalized.value);
+            }
+            setPlaybackUi('playing');
             armPlaybackWatchdog();
         }
         return;
     }
     if (normalized.type === 'ended') {
-        if (!['play_requested', 'playing'].includes(record.viewerStatus)) {
+        if (
+            (!replayMode && !['play_requested', 'playing'].includes(record.viewerStatus)) ||
+            (replayMode && !['requested', 'playing', 'paused', 'buffering'].includes(playbackPhase))
+        ) {
             return;
         }
-        elements.videoTitle.textContent = 'Video finished';
-        elements.videoStatus.textContent = 'Continue when you are ready.';
         await handleTerminal('ended', null);
         return;
     }
-    if (normalized.type === 'player_error') {
-        elements.placeholder.hidden = false;
-        elements.videoTitle.textContent = 'Video unavailable';
-        elements.videoStatus.textContent =
-            'TikTok could not play this post. You can continue to the next video.';
-        await handleTerminal('player_error', normalized.value);
-        return;
-    }
-    if (['init', 'playing', 'paused', 'buffering'].includes(normalized.type)) {
+    if (normalized.type === 'playing') {
         if (
-            normalized.type !== 'init' &&
+            !replayMode &&
             !['play_requested', 'playing'].includes(record.viewerStatus)
         ) {
             return;
         }
-        if (normalized.type === 'playing') {
-            elements.videoTitle.textContent = 'Now playing';
-            elements.videoStatus.textContent = 'The next button unlocks when the video ends.';
+        if (!replayMode) {
             record.viewerStatus = 'playing';
-            playbackPhase = 'playing';
-            elements.play.disabled = true;
-            elements.play.textContent = 'Playing';
-            armPlaybackWatchdog();
-        } else if (normalized.type === 'paused') {
-            playbackPhase = 'paused';
-            clearPlaybackWatchdog();
-            elements.play.disabled = false;
-            elements.play.textContent = 'Resume video';
-            elements.videoTitle.textContent = 'Playback paused';
-            elements.videoStatus.textContent = 'Press Resume video to continue.';
-        } else if (normalized.type === 'buffering') {
-            playbackPhase = 'buffering';
-            elements.play.disabled = true;
-            elements.videoTitle.textContent = 'Buffering';
-            elements.videoStatus.textContent = 'Waiting for TikTok playback to resume.';
-            armPlaybackWatchdog();
+            queueViewerEvent('playing', null);
         }
-        queueViewerEvent(normalized.type, null);
+        setPlaybackUi('playing');
+        armPlaybackWatchdog();
+        return;
+    }
+    if (normalized.type === 'paused') {
+        if (
+            !replayMode &&
+            !['play_requested', 'playing'].includes(record.viewerStatus)
+        ) {
+            return;
+        }
+        if (!replayMode) {
+            queueViewerEvent('paused', null);
+        }
+        clearPlaybackWatchdog();
+        setPlaybackUi('paused');
+        return;
+    }
+    if (normalized.type === 'buffering') {
+        if (
+            !replayMode &&
+            !['play_requested', 'playing'].includes(record.viewerStatus)
+        ) {
+            return;
+        }
+        if (!replayMode) {
+            queueViewerEvent('buffering', null);
+        }
+        setPlaybackUi('buffering');
+        armPlaybackWatchdog();
+        return;
+    }
+    if (normalized.type === 'init' && !replayMode) {
+        queueViewerEvent('init', null);
     }
 }
 
-elements.play.addEventListener('click', async () => {
-    if (!currentIframe || !currentIframe.contentWindow || elements.play.disabled) {
-        return;
+elements.play.addEventListener('click', () => {
+    if (['playing', 'requested', 'buffering'].includes(playbackPhase)) {
+        pausePlayback();
+    } else {
+        requestPlayback(false);
     }
-    elements.play.disabled = true;
-    elements.videoStatus.textContent = 'Starting playback…';
-    const record = session.queue[currentIndex];
-    const wasResume = playbackPhase === 'paused' || record.viewerStatus === 'playing';
-    record.viewerStatus = 'play_requested';
-    playbackPhase = 'requested';
-    armPlaybackWatchdog();
-    const savePlayCommand = queueViewerEventWithRetry('play_command', null);
-    currentIframe.contentWindow.postMessage(
-        { type: 'unMute', value: null, 'x-tiktok-player': true },
-        Core.TIKTOK_ORIGIN
-    );
-    currentIframe.contentWindow.postMessage(
-        { type: 'play', value: null, 'x-tiktok-player': true },
-        Core.TIKTOK_ORIGIN
-    );
-    const response = await savePlayCommand;
-    if (!response || !response.ok) {
-        if (terminalHandled) {
-            return;
-        }
-        playbackPhase = wasResume ? 'paused' : 'idle';
-        clearPlaybackWatchdog();
-        currentIframe.contentWindow.postMessage(
-            { type: 'pause', value: null, 'x-tiktok-player': true },
-            Core.TIKTOK_ORIGIN
-        );
-        record.viewerStatus = wasResume ? 'playing' : 'ready';
-        elements.play.disabled = false;
-        elements.play.textContent = wasResume ? 'Resume video' : 'Play video';
-        showNotice('The Play action could not be saved locally. Please try again.', 'error');
-    }
+});
+
+elements.previous.addEventListener('click', () => {
+    navigateTo(currentIndex - 1, false);
+});
+
+elements.next.addEventListener('click', () => {
+    navigateTo(currentIndex + 1, false);
 });
 
 elements.retry.addEventListener('click', () => {
     persistPendingTerminal();
 });
 
-elements.next.addEventListener('click', async () => {
-    if (!terminalHandled || elements.next.disabled) {
+document.addEventListener('keydown', (event) => {
+    if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey) {
         return;
     }
-    currentIndex = unfinishedIndex(session.queue);
-    if (currentIndex === -1) {
-        removeCurrentPlayer();
-        elements.next.disabled = true;
-        elements.next.textContent = 'Finishing…';
-        const response = await send({
-            type: Core.MESSAGE_TYPES.VIEWER_FINISH,
-            sessionId: session.id,
-        });
-        if (!response || !response.ok) {
-            showNotice('The viewer could not be marked complete.', 'error');
-            elements.next.disabled = false;
-            elements.next.textContent = 'Retry finishing';
-            return;
-        }
-        showComplete();
+    if (['INPUT', 'TEXTAREA', 'SELECT'].includes(event.target.tagName)) {
         return;
     }
-    loadCurrentVideo();
+    const previousKeys = new Set(['ArrowLeft', 'ArrowUp', 'PageUp']);
+    const nextKeys = new Set(['ArrowRight', 'ArrowDown', 'PageDown']);
+    if (previousKeys.has(event.key)) {
+        event.preventDefault();
+        navigateTo(currentIndex - 1, false);
+    } else if (nextKeys.has(event.key)) {
+        event.preventDefault();
+        navigateTo(currentIndex + 1, false);
+    } else if (event.key === ' ' || event.code === 'Space') {
+        event.preventDefault();
+        elements.play.click();
+    }
 });
+
+elements.viewer.addEventListener('wheel', (event) => {
+    if (Math.abs(event.deltaY) < 8 && Math.abs(event.deltaX) < 8) {
+        return;
+    }
+    event.preventDefault();
+    const now = Date.now();
+    if (now - lastWheelAt < WHEEL_DEBOUNCE_MS) {
+        return;
+    }
+    lastWheelAt = now;
+    const delta = Math.abs(event.deltaY) >= Math.abs(event.deltaX)
+        ? event.deltaY
+        : event.deltaX;
+    navigateTo(currentIndex + (delta > 0 ? 1 : -1), false);
+}, { passive: false });
 
 function showComplete() {
     elements.viewer.hidden = true;
@@ -508,17 +707,15 @@ elements.openInspector.addEventListener('click', () => {
 window.addEventListener('message', handlePlayerMessage);
 document.addEventListener('visibilitychange', () => {
     if (document.visibilityState !== 'visible') {
+        if (['requested', 'playing', 'buffering'].includes(playbackPhase)) {
+            postPlayerCommand('pause');
+            if (!replayMode) {
+                queueViewerEvent('paused', null);
+            }
+            setPlaybackUi('paused');
+        }
         clearPlaybackWatchdog();
         return;
-    }
-    // Visibility alone is not evidence that the iframe resumed. Keep the
-    // watchdog suspended and expose an explicit resume affordance until a fresh
-    // playing/current-time message arrives.
-    if (['requested', 'playing', 'buffering'].includes(playbackPhase)) {
-        playbackPhase = 'paused';
-        elements.play.disabled = false;
-        elements.play.textContent = 'Resume video';
-        elements.videoStatus.textContent = 'Press Resume video if playback did not resume.';
     }
 });
 
@@ -535,12 +732,12 @@ async function initialize() {
     if (!response || !response.ok) {
         elements.locked.hidden = false;
         elements.lockedMessage.textContent = response && response.error === 'collection_not_complete'
-            ? 'The complete unseen-video bank must be confirmed before this viewer opens.'
+            ? 'The sourcing window must finish before this viewer opens.'
             : 'This local viewer session is unavailable.';
         return;
     }
     session = response.session;
-    currentIndex = unfinishedIndex(session.queue);
+    currentIndex = session.queue.findIndex((record) => !isTerminal(record));
     if (currentIndex === -1 || session.status === Core.SESSION_STATUS.VIEWED) {
         showComplete();
         return;
