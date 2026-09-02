@@ -1,0 +1,29 @@
+{
+  "manifest_version": 3,
+  "name": "TikTok FYP Research Pilot",
+  "version": "0.1.0",
+  "description": "Locally records seen TikTok post IDs and reserves unseen FYP posts for a controlled viewer.",
+  "minimum_chrome_version": "102",
+  "incognito": "not_allowed",
+  "permissions": [
+    "storage",
+    "scripting"
+  ],
+  "optional_host_permissions": [
+    "https://www.tiktok.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "TikTok FYP Research Pilot",
+    "default_popup": "popup/popup.html"
+  },
+  "options_ui": {
+    "page": "options/options.html",
+    "open_in_tab": true
+  },
+  "content_security_policy": {
+    "extension_pages": "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'none'; connect-src 'none'; frame-src https://www.tiktok.com;"
+  }
+}

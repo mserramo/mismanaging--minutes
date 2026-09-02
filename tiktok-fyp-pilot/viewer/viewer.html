@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Personalized video viewer</title>
+    <link rel="stylesheet" href="../ui/common.css">
+    <link rel="stylesheet" href="viewer.css">
+</head>
+<body>
+    <main class="viewer-shell">
+        <header class="viewer-header">
+            <div>
+                <p class="eyebrow">Research viewer</p>
+                <h1>Your reserved videos</h1>
+            </div>
+            <div id="counter" class="viewer-counter" aria-live="polite"></div>
+        </header>
+
+        <div id="notice" class="notice" role="status" hidden></div>
+
+        <section id="locked" class="card state-card" hidden>
+            <h2>The viewer is still locked</h2>
+            <p id="locked-message" class="muted"></p>
+        </section>
+
+        <section id="viewer" class="viewer-layout" hidden>
+            <div class="player-frame">
+                <div id="player-mount" class="player-mount"></div>
+                <div id="player-placeholder" class="player-placeholder">
+                    <div class="placeholder-mark" aria-hidden="true">▶</div>
+                    <p>Preparing the TikTok embed…</p>
+                </div>
+            </div>
+            <aside class="viewer-controls card">
+                <p class="eyebrow">Video <span id="video-number"></span></p>
+                <h2 id="video-title">Ready to watch</h2>
+                <p id="video-status" class="muted">
+                    Wait for the player, then use the Play button below.
+                </p>
+                <div class="control-stack">
+                    <button id="play" type="button" disabled>Play video</button>
+                    <button id="next" class="secondary" type="button" disabled>Next video</button>
+                    <button id="retry" class="secondary" type="button" hidden>
+                        Retry saving status
+                    </button>
+                </div>
+                <p class="privacy-note">
+                    The official TikTok player hosts this video. The pilot stores only its numeric
+                    ID and playback status in this browser.
+                </p>
+            </aside>
+        </section>
+
+        <section id="complete" class="card state-card" hidden>
+            <div class="complete-mark" aria-hidden="true">✓</div>
+            <h2>Viewer complete</h2>
+            <p class="muted">Every valid reserved video has been presented.</p>
+            <button id="open-inspector" class="secondary" type="button">Review local data</button>
+        </section>
+    </main>
+    <script src="../lib/core.js"></script>
+    <script src="viewer.js"></script>
+</body>
+</html>

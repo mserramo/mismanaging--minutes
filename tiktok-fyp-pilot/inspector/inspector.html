@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Local pilot data</title>
+    <link rel="stylesheet" href="../ui/common.css">
+    <link rel="stylesheet" href="inspector.css">
+</head>
+<body>
+    <main class="page-shell inspector-shell">
+        <header class="page-header inspector-header">
+            <div>
+                <p class="eyebrow">TikTok FYP research pilot</p>
+                <h1>Local data inspector</h1>
+                <p class="lede">
+                    Read-only session records stored in this Chrome profile. There is no upload
+                    or export function in this pilot.
+                </p>
+            </div>
+            <div class="button-row">
+                <button id="harness" class="secondary" type="button">Open synthetic harness</button>
+                <button id="clear" class="danger" type="button">Clear collected data</button>
+                <button id="revoke" class="secondary" type="button">Revoke TikTok access</button>
+            </div>
+        </header>
+
+        <div id="message" class="notice" role="status" hidden></div>
+
+        <section class="summary-strip card">
+            <div>
+                <span>Schema</span>
+                <strong id="schema">—</strong>
+            </div>
+            <div>
+                <span>Stored sessions</span>
+                <strong id="session-count">—</strong>
+            </div>
+            <div>
+                <span>TikTok access</span>
+                <strong id="permission">—</strong>
+            </div>
+            <div>
+                <span>Next-session settings</span>
+                <strong id="settings">—</strong>
+            </div>
+        </section>
+
+        <section id="empty" class="card empty-state" hidden>
+            <h2>No collected sessions</h2>
+            <p class="muted">Start a pilot session from the extension popup.</p>
+        </section>
+
+        <section id="sessions" class="sessions" aria-live="polite"></section>
+    </main>
+    <script src="../lib/core.js"></script>
+    <script src="inspector.js"></script>
+</body>
+</html>

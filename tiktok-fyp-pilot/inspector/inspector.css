@@ -1,0 +1,159 @@
+.inspector-shell {
+    width: min(1180px, calc(100% - 32px));
+}
+
+.inspector-header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 24px;
+}
+
+.inspector-header > div:first-child {
+    max-width: 720px;
+}
+
+#message {
+    margin-bottom: 18px;
+}
+
+.summary-strip {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(150px, 1fr));
+    gap: 12px;
+    margin-bottom: 18px;
+}
+
+.summary-strip span,
+.summary-strip strong {
+    display: block;
+}
+
+.summary-strip span {
+    margin-bottom: 3px;
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.sessions {
+    display: grid;
+    gap: 16px;
+}
+
+.session-card {
+    padding: 0;
+    overflow: hidden;
+}
+
+.session-card > summary {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 18px;
+    padding: 18px 22px;
+    cursor: pointer;
+    list-style: none;
+}
+
+.session-card > summary::-webkit-details-marker {
+    display: none;
+}
+
+.session-card > summary:hover {
+    background: #fafbfc;
+}
+
+.session-title {
+    margin-bottom: 4px;
+    font-size: 16px;
+    font-weight: 800;
+}
+
+.session-subtitle {
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.session-status {
+    padding: 4px 9px;
+    border-radius: 999px;
+    background: #f0f2f7;
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 800;
+    text-transform: capitalize;
+}
+
+.session-body {
+    padding: 0 22px 22px;
+    border-top: 1px solid var(--line);
+}
+
+.metadata-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(130px, 1fr));
+    gap: 10px;
+    padding: 18px 0;
+}
+
+.metadata-grid > div {
+    padding: 10px;
+    border-radius: 10px;
+    background: #f8f9fb;
+}
+
+.metadata-grid span,
+.metadata-grid strong {
+    display: block;
+}
+
+.metadata-grid span {
+    color: var(--muted);
+    font-size: 11px;
+}
+
+.table-wrap {
+    overflow-x: auto;
+    margin-bottom: 18px;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+}
+
+th,
+td {
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--line);
+    text-align: left;
+    white-space: nowrap;
+}
+
+th {
+    color: var(--muted);
+    font-weight: 700;
+}
+
+.section-heading {
+    margin: 4px 0 8px;
+    font-size: 13px;
+}
+
+.empty-state {
+    margin-top: 18px;
+    text-align: center;
+}
+
+@media (max-width: 760px) {
+    .inspector-header {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .summary-strip,
+    .metadata-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+}

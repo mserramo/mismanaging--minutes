@@ -1,0 +1,158 @@
+body {
+    width: 380px;
+    min-height: 420px;
+    background: #fff;
+}
+
+.popup-shell {
+    padding: 20px;
+}
+
+.popup-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 18px;
+}
+
+.popup-header h1 {
+    margin: 0;
+    font-size: 22px;
+}
+
+.popup-header .eyebrow {
+    margin-bottom: 2px;
+}
+
+.brand-mark {
+    width: 38px;
+    height: 38px;
+    flex: 0 0 auto;
+    border-radius: 12px;
+    background:
+        radial-gradient(circle at 33% 34%, #fff 0 7%, transparent 8%),
+        linear-gradient(135deg, #111827 0 48%, #5b5bd6 48% 100%);
+    box-shadow: 0 8px 20px rgba(91, 91, 214, 0.24);
+}
+
+#message {
+    margin-bottom: 16px;
+}
+
+.summary-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+.summary-grid > div {
+    padding: 11px;
+    border-radius: 10px;
+    background: #f5f7fb;
+}
+
+.summary-grid span,
+.summary-grid strong {
+    display: block;
+}
+
+.summary-grid span {
+    margin-bottom: 2px;
+    color: var(--muted);
+    font-size: 11px;
+}
+
+.privacy-box {
+    padding: 14px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+}
+
+.privacy-box p {
+    margin: 6px 0 12px;
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.consent-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 9px;
+    cursor: pointer;
+    font-size: 12px;
+}
+
+.consent-row input {
+    margin-top: 3px;
+}
+
+.status-card {
+    padding: 15px;
+    border-radius: 12px;
+    background: #f5f7fb;
+}
+
+.status-topline {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.status-pill {
+    padding: 3px 8px;
+    border-radius: 999px;
+    background: #ecfdf3;
+    color: var(--success);
+    font-weight: 700;
+}
+
+#active-progress {
+    display: block;
+    margin-bottom: 10px;
+}
+
+.progress-track {
+    height: 7px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: #e4e7ec;
+}
+
+.progress-fill {
+    width: 0;
+    height: 100%;
+    border-radius: inherit;
+    background: var(--accent);
+    transition: width 180ms ease;
+}
+
+.popup-footer {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 10px;
+    margin-top: 20px;
+    padding-top: 14px;
+    border-top: 1px solid var(--line);
+}
+
+.text-button {
+    min-height: 28px;
+    padding: 2px 0;
+    border: 0;
+    background: transparent;
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.text-button:hover:not(:disabled) {
+    background: transparent;
+    color: var(--ink);
+}
+
+.danger-text {
+    color: var(--danger);
+}

@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Pilot settings</title>
+    <link rel="stylesheet" href="../ui/common.css">
+    <link rel="stylesheet" href="options.css">
+</head>
+<body>
+    <main class="page-shell">
+        <header class="page-header">
+            <p class="eyebrow">TikTok FYP research pilot</p>
+            <h1>Pilot settings</h1>
+            <p class="lede">
+                These values become a locked snapshot when a new collection session starts.
+                Editing them never changes a session already in progress.
+            </p>
+        </header>
+
+        <section class="card stack">
+            <div id="active-note" class="notice" hidden></div>
+            <form id="settings-form" class="settings-form">
+                <div class="field">
+                    <label for="duration">Required qualified viewing time</label>
+                    <div class="input-with-unit">
+                        <input id="duration" name="duration" type="number" min="1" max="3600" step="1" required>
+                        <span>seconds</span>
+                    </div>
+                    <span class="field-help">
+                        Counts only while one identified, playing FYP video is at least 60% visible
+                        in the focused Chrome window.
+                    </span>
+                </div>
+
+                <div class="field">
+                    <label for="target">Required unseen-video bank</label>
+                    <div class="input-with-unit">
+                        <input id="target" name="target" type="number" min="1" max="50" step="1" required>
+                        <span>videos</span>
+                    </div>
+                    <span class="field-help">
+                        The viewer opens only after both this target and the qualified-time target are met.
+                    </span>
+                </div>
+
+                <div class="button-row">
+                    <button id="save" type="submit">Save pilot settings</button>
+                    <button id="reset" class="secondary" type="button">Restore defaults</button>
+                </div>
+            </form>
+            <div id="message" class="notice" role="status" hidden></div>
+        </section>
+
+        <section class="card boundary-card">
+            <h2>Local pilot boundary</h2>
+            <p>
+                The settings and collected IDs remain in this Chrome profile. This prototype has
+                no upload endpoint, participant identifier, or oTree integration.
+            </p>
+        </section>
+    </main>
+    <script src="../lib/core.js"></script>
+    <script src="options.js"></script>
+</body>
+</html>

@@ -1,0 +1,23 @@
+.settings-form {
+    display: grid;
+    gap: 24px;
+}
+
+.input-with-unit {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.input-with-unit span {
+    color: var(--muted);
+}
+
+.boundary-card {
+    margin-top: 18px;
+}
+
+.boundary-card p {
+    margin-bottom: 0;
+    color: var(--muted);
+}

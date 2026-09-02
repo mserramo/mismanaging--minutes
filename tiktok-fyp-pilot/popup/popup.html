@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>TikTok FYP Research Pilot</title>
+    <link rel="stylesheet" href="../ui/common.css">
+    <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+    <main class="popup-shell">
+        <header class="popup-header">
+            <div class="brand-mark" aria-hidden="true"></div>
+            <div>
+                <p class="eyebrow">Browser-local pilot</p>
+                <h1>TikTok FYP study</h1>
+            </div>
+        </header>
+
+        <div id="message" class="notice" role="status" hidden></div>
+
+        <section id="new-session" class="stack" hidden>
+            <div class="summary-grid" aria-label="Current pilot settings">
+                <div>
+                    <span>Qualified viewing</span>
+                    <strong id="duration-summary">60 seconds</strong>
+                </div>
+                <div>
+                    <span>Unseen target</span>
+                    <strong id="target-summary">5 videos</strong>
+                </div>
+            </div>
+
+            <div class="privacy-box">
+                <strong>What this extension can record</strong>
+                <p>
+                    Only numeric video IDs, local timing/status metadata, and player events.
+                    It reads post links to extract the IDs but does not store usernames, captions,
+                    messages, credentials, or cookies. No collected records go to a researcher or
+                    pilot backend; normal TikTok pages and embeds still communicate with TikTok.
+                </p>
+                <label class="consent-row">
+                    <input id="consent" type="checkbox">
+                    <span>
+                        I understand and allow TikTok site access. Access remains until I use
+                        Revoke access.
+                    </span>
+                </label>
+            </div>
+
+            <button id="start" type="button" disabled>Allow access and start</button>
+        </section>
+
+        <section id="active-session" class="stack" hidden>
+            <div class="status-card">
+                <div class="status-topline">
+                    <span id="active-label">Collection in progress</span>
+                    <span id="active-status" class="status-pill">Active</span>
+                </div>
+                <strong id="active-progress">0 / 60s · 0 / 5 reserved</strong>
+                <div class="progress-track" aria-hidden="true">
+                    <div id="time-progress" class="progress-fill"></div>
+                </div>
+            </div>
+            <div class="button-row">
+                <button id="resume" type="button">Return to FYP</button>
+                <button id="open-viewer" type="button" hidden>Open viewer</button>
+                <button id="stop" class="secondary" type="button">Stop session</button>
+            </div>
+        </section>
+
+        <footer class="popup-footer">
+            <button id="settings" class="text-button" type="button">Pilot settings</button>
+            <button id="inspector" class="text-button" type="button">Local data</button>
+            <button id="clear" class="text-button danger-text" type="button">Clear data</button>
+            <button id="revoke" class="text-button danger-text" type="button">Revoke access</button>
+        </footer>
+    </main>
+    <script src="../lib/core.js"></script>
+    <script src="popup.js"></script>
+</body>
+</html>

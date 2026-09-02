@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Synthetic FYP harness</title>
+    <link rel="stylesheet" href="../ui/common.css">
+    <link rel="stylesheet" href="harness.css">
+</head>
+<body>
+    <main class="harness-shell">
+        <aside class="control-panel card">
+            <p class="eyebrow">Development fixture</p>
+            <h1>Synthetic FYP harness</h1>
+            <p class="muted">
+                Exercises the production ID parser, DOM adapter, visibility gates, deterministic
+                selector, and tombstone behavior without a TikTok account. It is a deterministic
+                fixture, not a substitute for the live collector check.
+            </p>
+
+            <div class="control-grid">
+                <button id="reset" class="secondary" type="button">Reset</button>
+                <button id="add-batch" type="button">Insert 6-card batch</button>
+                <button id="add-fragmented" class="secondary" type="button">Insert two batches (3 + 3)</button>
+                <button id="advance-card" class="secondary" type="button">Advance visible card</button>
+                <button id="toggle-playing" class="secondary" type="button">Pause synthetic video</button>
+                <button id="toggle-focus" class="secondary" type="button">Simulate blur</button>
+                <button id="advance-499" class="secondary" type="button">Advance exposure to 499ms</button>
+                <button id="advance-1" class="secondary" type="button">Advance exposure by 1ms</button>
+                <button id="rerender" class="secondary" type="button">Rerender tombstone</button>
+                <button id="run" type="button">Run built-in assertions</button>
+            </div>
+
+            <section class="state-grid" aria-label="Synthetic state">
+                <div><span>Playing</span><strong id="playing-state">Yes</strong></div>
+                <div><span>Focused</span><strong id="focus-state">Yes</strong></div>
+                <div><span>Exposure</span><strong id="exposure-state">0ms</strong></div>
+                <div><span>Seen</span><strong id="seen-state">No</strong></div>
+                <div><span>Reserved</span><strong id="reserved-state">0</strong></div>
+                <div><span>Gate</span><strong id="gate-state">Paused</strong></div>
+            </section>
+
+            <h2>Event log</h2>
+            <ol id="log" class="event-log" aria-live="polite"></ol>
+        </aside>
+
+        <section class="feed-column">
+            <div class="feed-heading">
+                <p class="eyebrow">Synthetic feed</p>
+                <p>Cards use TikTok-shaped post links, but no network requests are made.</p>
+            </div>
+            <div id="feed" class="synthetic-feed"></div>
+        </section>
+    </main>
+    <script src="../lib/core.js"></script>
+    <script src="../content/dom-adapter.js"></script>
+    <script src="harness.js"></script>
+</body>
+</html>
