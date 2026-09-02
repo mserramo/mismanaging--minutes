@@ -22,14 +22,14 @@
             <div id="active-note" class="notice" hidden></div>
             <form id="settings-form" class="settings-form">
                 <div class="field">
-                    <label for="duration">Required qualified viewing time</label>
+                    <label for="timeout">Background harvest timeout</label>
                     <div class="input-with-unit">
-                        <input id="duration" name="duration" type="number" min="1" max="3600" step="1" required>
+                        <input id="timeout" name="timeout" type="number" min="15" max="600" step="1" required>
                         <span>seconds</span>
                     </div>
                     <span class="field-help">
-                        Counts only while one identified, playing FYP video is at least 60% visible
-                        in the focused Chrome window.
+                        A fresh session fails cleanly when it cannot source the full bank within
+                        this wall-clock limit. Hidden-tab throttling still counts toward the limit.
                     </span>
                 </div>
 
@@ -40,7 +40,8 @@
                         <span>videos</span>
                     </div>
                     <span class="field-help">
-                        The viewer opens only after both this target and the qualified-time target are met.
+                        The viewer opens only after every target has been persisted, concealed,
+                        and confirmed. Partial banks are never shown.
                     </span>
                 </div>
 

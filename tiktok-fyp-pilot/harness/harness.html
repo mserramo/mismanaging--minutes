@@ -13,9 +13,10 @@
             <p class="eyebrow">Development fixture</p>
             <h1>Synthetic FYP harness</h1>
             <p class="muted">
-                Exercises the production ID parser, DOM adapter, visibility gates, deterministic
-                selector, and tombstone behavior without a TikTok account. It is a deterministic
-                fixture, not a substitute for the live collector check.
+                Exercises the production ID parser, DOM adapter, deterministic selector,
+                persist-before-conceal handshake, hidden-tab diagnostics, hydration, retry,
+                and tombstone behavior without a TikTok account. It is not a substitute for
+                the live collector check.
             </p>
 
             <div class="control-grid">
@@ -28,6 +29,7 @@
                 <button id="advance-499" class="secondary" type="button">Advance exposure to 499ms</button>
                 <button id="advance-1" class="secondary" type="button">Advance exposure by 1ms</button>
                 <button id="rerender" class="secondary" type="button">Rerender tombstone</button>
+                <button id="run-background" type="button">Run background-harvest assertions</button>
                 <button id="run" type="button">Run built-in assertions</button>
             </div>
 

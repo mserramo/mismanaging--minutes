@@ -535,7 +535,7 @@ async function initialize() {
     if (!response || !response.ok) {
         elements.locked.hidden = false;
         elements.lockedMessage.textContent = response && response.error === 'collection_not_complete'
-            ? 'Both the qualified-time and unseen-video targets must be met first.'
+            ? 'The complete unseen-video bank must be confirmed before this viewer opens.'
             : 'This local viewer session is unavailable.';
         return;
     }

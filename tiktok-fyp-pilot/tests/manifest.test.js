@@ -17,7 +17,7 @@ function allFiles(directory) {
 
 test('manifest has narrow MV3 permissions and no static TikTok injection', () => {
     assert.equal(manifest.manifest_version, 3);
-    assert.deepEqual(manifest.permissions.sort(), ['scripting', 'storage']);
+    assert.deepEqual(manifest.permissions.sort(), ['alarms', 'scripting', 'storage']);
     assert.deepEqual(manifest.optional_host_permissions, ['https://www.tiktok.com/*']);
     assert.equal(manifest.host_permissions, undefined);
     assert.equal(manifest.content_scripts, undefined);
@@ -67,10 +67,17 @@ test('collector and service worker retain fail-closed runtime guards', () => {
     const background = fs.readFileSync(path.join(root, 'background.js'), 'utf8');
     assert.match(collector, /event\.isTrusted/);
     assert.match(collector, /Core\.isFypPath\(location\.pathname\)/);
-    assert.match(collector, /IntersectionObserver/);
-    assert.match(collector, /MARK_EXPOSED/);
+    assert.match(collector, /MutationObserver/);
+    assert.match(collector, /setTimeout/);
+    assert.doesNotMatch(collector, /requestAnimationFrame/);
+    assert.match(collector, /attachShadow\(\{ mode: 'closed' \}\)/);
+    assert.match(collector, /media\.muted = true/);
+    assert.match(collector, /stopImmediatePropagation/);
     assert.match(collector, /EXCLUDE_VIDEO/);
-    assert.match(collector, /failClosedAfterSafetyWrite/);
+    assert.match(collector, /CONFIRM_RESERVATION/);
+    assert.match(collector, /SETTLE_DELAY_MS = 750/);
+    assert.match(collector, /STAGE_TIMEOUT_MS = 8000/);
+    assert.match(collector, /MAX_ADVANCE_ATTEMPTS = 3/);
     assert.match(collector, /excludeAmbiguousRecords/);
     assert.match(collector, /ttfp-reserved-card/);
     assert.doesNotMatch(collector, /record\.element\.remove\(\)/);
@@ -79,6 +86,8 @@ test('collector and service worker retain fail-closed runtime guards', () => {
     assert.match(background, /isViewerForSession/);
     assert.match(background, /wrong_viewer_tab/);
     assert.match(background, /activateTombstoneGuards/);
+    assert.match(background, /harvestReturnTabs/);
+    assert.match(background, /CONFIRM_RESERVATION/);
     assert.match(background, /STATE_UPDATED/);
     assert.doesNotMatch(background, /tabs\.query\(\{\s*url:\s*chrome\.runtime\.getURL\('viewer/);
 });

@@ -21,7 +21,7 @@ function makeSession(settings) {
 }
 
 function reserve(session, videoId, order, aheadBy) {
-    return Core.reserveVideo(session, {
+    const prepared = Core.reserveVideo(session, {
         videoId,
         batchId: `batch-${order}`,
         batchNumber: order,
@@ -36,25 +36,30 @@ function reserve(session, videoId, order, aheadBy) {
             occurrenceCount: 1,
         },
     });
+    if (prepared.applied) {
+        const confirmed = Core.confirmReservation(session, videoId, 2100 + order);
+        assert.equal(confirmed.applied, true);
+    }
+    return prepared;
 }
 
 test('defaults and settings bounds are stable', () => {
     assert.deepEqual(Core.DEFAULT_SETTINGS, {
-        durationSeconds: 60,
+        harvestTimeoutSeconds: 90,
         targetUnseenCount: 5,
     });
     assert.deepEqual(Core.sanitizeSettings({
-        durationSeconds: 0,
+        harvestTimeoutSeconds: 0,
         targetUnseenCount: 999,
     }), {
-        durationSeconds: 1,
+        harvestTimeoutSeconds: 15,
         targetUnseenCount: 50,
     });
     assert.deepEqual(Core.sanitizeSettings({
-        durationSeconds: '90',
+        harvestTimeoutSeconds: '120',
         targetUnseenCount: '7',
     }), {
-        durationSeconds: 90,
+        harvestTimeoutSeconds: 120,
         targetUnseenCount: 7,
     });
 });
@@ -134,13 +139,14 @@ test('timer gaps are clamped and seen transition occurs at 500ms', () => {
 });
 
 test('starting a session snapshots settings', () => {
-    const settings = { durationSeconds: 90, targetUnseenCount: 7 };
+    const settings = { harvestTimeoutSeconds: 120, targetUnseenCount: 7 };
     const session = makeSession(settings);
-    settings.durationSeconds = 5;
+    settings.harvestTimeoutSeconds = 15;
     assert.deepEqual(session.lockedSettings, {
-        durationSeconds: 90,
+        harvestTimeoutSeconds: 120,
         targetUnseenCount: 7,
     });
+    assert.equal(session.harvestDeadlineAt, 121000);
 });
 
 test('source sequences reject duplicates and out-of-order messages', () => {
@@ -235,6 +241,31 @@ test('one fully offscreen card ahead is eligible but overlap still fails closed'
     assert.equal(reserve(session, IDS.a, 2, 1).applied, true);
     assert.equal(session.reserved[0].aheadBy, 1);
     assert.equal(reserve(makeSession(), IDS.b, 2, 0).applied, false);
+});
+
+test('automated selection considers only the immediate surviving successor', () => {
+    const immediate = {
+        videoId: IDS.a,
+        feedOrder: 2,
+        aheadBy: 1,
+        intersectionRatio: 0,
+        belowViewport: true,
+        everIntersected: false,
+        connected: true,
+        occurrenceCount: 1,
+    };
+    const later = { ...immediate, videoId: IDS.b, feedOrder: 3, aheadBy: 2 };
+    assert.equal(
+        Core.selectImmediateSafeCandidate(123, 'successor', [later, immediate]).videoId,
+        IDS.a
+    );
+    assert.equal(
+        Core.selectImmediateSafeCandidate(123, 'unsafe-successor', [
+            { ...immediate, intersectionRatio: 0.01 },
+            later,
+        ]),
+        null
+    );
 });
 
 test('seen and reserved classifications are mutually exclusive', () => {
@@ -347,28 +378,102 @@ test('stored seed and batch ordinal reproduce the same safe choice after restore
     );
 });
 
-test('completion requires both gates and fires only once', () => {
-    const session = makeSession({ durationSeconds: 1, targetUnseenCount: 2 });
+test('automated completion requires the full confirmed bank and fires only once', () => {
+    const session = makeSession({ harvestTimeoutSeconds: 90, targetUnseenCount: 2 });
     reserve(session, IDS.a, 1);
-    reserve(session, IDS.b, 2);
     assert.equal(Core.evaluateCompletion(session, 2000), false);
-    [350, 350, 300].forEach((delta, index) => {
-        Core.applyActivity(session, {
-            at: 2100 + index,
-            qualifiedDeltaMs: delta,
-        });
-    });
-    assert.equal(session.qualifiedMs, 1000);
+    reserve(session, IDS.b, 2);
     assert.equal(Core.evaluateCompletion(session, 2500), true);
     assert.equal(Core.evaluateCompletion(session, 2600), false);
     assert.equal(session.status, Core.SESSION_STATUS.COMPLETE);
 });
 
+test('reservation is persisted before concealment confirmation and cannot enter viewer early', () => {
+    const session = makeSession({ harvestTimeoutSeconds: 90, targetUnseenCount: 1 });
+    const prepared = Core.reserveVideo(session, {
+        videoId: IDS.a,
+        batchId: 'batch-1',
+        batchNumber: 1,
+        at: 1500,
+        evidence: {
+            feedOrder: 2,
+            aheadBy: 1,
+            intersectionRatio: 0,
+            belowViewport: true,
+            everIntersected: false,
+            connected: true,
+            occurrenceCount: 1,
+        },
+    });
+    assert.equal(prepared.applied, true);
+    assert.equal(Core.findReserved(session, IDS.a).state, 'prepared');
+    assert.deepEqual(session.tombstones, []);
+    assert.deepEqual(Core.viewerQueue(session), []);
+    assert.equal(Core.evaluateCompletion(session, 1600), false);
+
+    assert.equal(Core.confirmReservation(session, IDS.a, 1700).applied, true);
+    assert.equal(Core.findReserved(session, IDS.a).state, 'reserved');
+    assert.deepEqual(session.tombstones, [IDS.a]);
+    assert.equal(Core.evaluateCompletion(session, 1800), true);
+});
+
+test('harvest diagnostics capture hidden timer delay and automation drivers', () => {
+    const session = makeSession();
+    const result = Core.recordHarvestStep(session, {
+        phase: 'advancing',
+        visibility: 'hidden',
+        timerDelayMs: 1700,
+        hydrationLatencyMs: 820,
+        advanceAttempt: 2,
+        driverVideoId: IDS.a,
+        feedOrder: 1,
+    }, 2000);
+    assert.equal(result.applied, true);
+    assert.equal(session.harvestSteps[0].visibility, 'hidden');
+    assert.equal(session.harvestSteps[0].timerDelayMs, 1700);
+    assert.equal(Core.findExcluded(session, IDS.a).classification, 'automation_driver');
+    assert.equal(reserve(session, IDS.a, 2).reason, 'already_exposed');
+});
+
+test('timeout progress is wall-clock based and failure rejects a partial bank', () => {
+    const session = makeSession({ harvestTimeoutSeconds: 15, targetUnseenCount: 2 });
+    reserve(session, IDS.a, 1);
+    assert.equal(Core.sessionProgress(session, 15999).timedOut, false);
+    assert.equal(Core.sessionProgress(session, 16000).timedOut, true);
+    assert.equal(Core.failHarvest(session, 16000, 'harvest_timeout'), true);
+    assert.equal(session.status, Core.SESSION_STATUS.FAILED);
+    assert.equal(Core.findReserved(session, IDS.a).state, 'invalidated');
+    assert.deepEqual(Core.viewerQueue(session), []);
+});
+
+test('schema 1 migration preserves completed sessions and stops collecting sessions', () => {
+    const completed = makeSession({ harvestTimeoutSeconds: 90, targetUnseenCount: 1 });
+    reserve(completed, IDS.a, 1);
+    completed.status = Core.SESSION_STATUS.COMPLETE;
+    completed.completedAt = 2500;
+    completed.lockedSettings = { durationSeconds: 1, targetUnseenCount: 1 };
+    completed.qualifiedMs = 1000;
+    const collecting = makeSession();
+    collecting.id = 'legacy-collecting';
+    collecting.lockedSettings = { durationSeconds: 60, targetUnseenCount: 5 };
+    const migrated = Core.normalizeState({
+        schemaVersion: 1,
+        settings: { durationSeconds: 60, targetUnseenCount: 5 },
+        activeSessionId: collecting.id,
+        sessions: [completed, collecting],
+    });
+    assert.equal(migrated.schemaVersion, 2);
+    assert.equal(migrated.sessions[0].collectionMode, Core.COLLECTION_MODE.LEGACY_MANUAL);
+    assert.equal(migrated.sessions[0].status, Core.SESSION_STATUS.COMPLETE);
+    assert.equal(migrated.sessions[1].status, Core.SESSION_STATUS.STOPPED);
+    assert.equal(migrated.sessions[1].stopReason, 'legacy_mode_replaced');
+    assert.equal(migrated.activeSessionId, null);
+});
+
 test('viewer ordering, terminal dedupe, and completion are stable', () => {
-    const session = makeSession({ durationSeconds: 1, targetUnseenCount: 2 });
+    const session = makeSession({ harvestTimeoutSeconds: 90, targetUnseenCount: 2 });
     reserve(session, IDS.b, 2);
     reserve(session, IDS.a, 1);
-    session.qualifiedMs = 1000;
     Core.evaluateCompletion(session, 2500);
     assert.deepEqual(Core.viewerQueue(session).map((item) => item.videoId), [IDS.b, IDS.a]);
     assert.equal(Core.applyViewerEvent(session, {
@@ -413,9 +518,8 @@ test('viewer ordering, terminal dedupe, and completion are stable', () => {
 });
 
 test('a playback progress stall is terminal only after readiness and Play', () => {
-    const session = makeSession({ durationSeconds: 1, targetUnseenCount: 1 });
+    const session = makeSession({ harvestTimeoutSeconds: 90, targetUnseenCount: 1 });
     reserve(session, IDS.a, 1);
-    session.qualifiedMs = 1000;
     Core.evaluateCompletion(session, 2500);
     assert.equal(Core.applyViewerEvent(session, {
         videoId: IDS.a,
@@ -441,9 +545,8 @@ test('a playback progress stall is terminal only after readiness and Play', () =
 });
 
 test('only collecting sessions can be stopped', () => {
-    const session = makeSession({ durationSeconds: 1, targetUnseenCount: 1 });
+    const session = makeSession({ harvestTimeoutSeconds: 90, targetUnseenCount: 1 });
     reserve(session, IDS.a, 1);
-    session.qualifiedMs = 1000;
     Core.evaluateCompletion(session, 2000);
     assert.equal(Core.stopSession(session, 2100, 'participant_stopped'), false);
     assert.equal(session.status, Core.SESSION_STATUS.COMPLETE);
@@ -536,12 +639,12 @@ test('state restoration strips unknown fields and fails closed on corrupt classi
 
 test('clear keeps settings but removes every session', () => {
     const state = Core.createDefaultState();
-    state.settings = { durationSeconds: 90, targetUnseenCount: 8 };
+    state.settings = { harvestTimeoutSeconds: 120, targetUnseenCount: 8 };
     state.sessions.push(makeSession());
     state.activeSessionId = state.sessions[0].id;
     assert.deepEqual(Core.clearCollectedData(state), {
         schemaVersion: Core.SCHEMA_VERSION,
-        settings: { durationSeconds: 90, targetUnseenCount: 8 },
+        settings: { harvestTimeoutSeconds: 120, targetUnseenCount: 8 },
         activeSessionId: null,
         sessions: [],
     });

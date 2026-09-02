@@ -15,6 +15,7 @@ const controls = {
     advance499: document.getElementById('advance-499'),
     advance1: document.getElementById('advance-1'),
     rerender: document.getElementById('rerender'),
+    runBackground: document.getElementById('run-background'),
     run: document.getElementById('run'),
 };
 const displays = {
@@ -237,6 +238,146 @@ controls.rerender.addEventListener('click', () => {
         return;
     }
     feed.appendChild(createCard(reserved[0], false));
+});
+
+controls.runBackground.addEventListener('click', async () => {
+    reset();
+    observer.disconnect();
+    addBatch(6);
+    await new Promise((resolve) => setTimeout(resolve, 30));
+
+    const testSession = Core.createSession(
+        { harvestTimeoutSeconds: 15, targetUnseenCount: 2 },
+        { id: 'synthetic-background', seed: 20260902, startedAt: 1000, targetTabId: 1 }
+    );
+    const records = Dom.snapshotFeed(document, location.href);
+    const driver = records[0];
+    const candidate = records[1];
+    const step = Core.recordHarvestStep(testSession, {
+        phase: 'waiting_candidate',
+        visibility: 'hidden',
+        timerDelayMs: 1400,
+        hydrationLatencyMs: 0,
+        advanceAttempt: 0,
+        driverVideoId: driver.videoId,
+        feedOrder: 1,
+    }, 1100);
+    writeLog(
+        'hidden-tab timer delay and automation driver are recorded',
+        step.applied &&
+            testSession.harvestSteps[0].visibility === 'hidden' &&
+            Core.findExcluded(testSession, driver.videoId).classification === 'automation_driver'
+    );
+
+    const prepared = Core.reserveVideo(testSession, {
+        videoId: candidate.videoId,
+        batchId: 'synthetic-batch-1',
+        batchNumber: 1,
+        at: 1200,
+        evidence: {
+            feedOrder: 2,
+            aheadBy: 1,
+            intersectionRatio: 0,
+            belowViewport: true,
+            everIntersected: false,
+            connected: true,
+            occurrenceCount: 1,
+        },
+    });
+    writeLog(
+        'candidate is persisted before any tombstone or concealment',
+        prepared.applied &&
+            Core.findReserved(testSession, candidate.videoId).state === 'prepared' &&
+            testSession.tombstones.length === 0 &&
+            !candidate.element.classList.contains('ttfp-reserved-card')
+    );
+    candidate.element.classList.add('ttfp-reserved-card');
+    candidate.element.setAttribute('aria-hidden', 'true');
+    tombstones.add(candidate.videoId);
+    const confirmed = Core.confirmReservation(testSession, candidate.videoId, 1300);
+    reserved.push(candidate.videoId);
+    writeLog(
+        'concealed candidate confirms once and never becomes a driver',
+        confirmed.applied &&
+            Core.viewerQueue(testSession).length === 1 &&
+            Core.findExcluded(testSession, candidate.videoId) === null
+    );
+
+    Core.recordHarvestStep(testSession, {
+        phase: 'waiting_hydration',
+        visibility: 'hidden',
+        timerDelayMs: 900,
+        hydrationLatencyMs: 780,
+        advanceAttempt: 1,
+        driverVideoId: driver.videoId,
+        feedOrder: 1,
+    }, 2100);
+    addBatch(2);
+    writeLog(
+        'replacement hydration after a scroll-fallback attempt is recorded',
+        testSession.harvestSteps.some((item) =>
+            item.phase === 'waiting_hydration' &&
+            item.advanceAttempt === 1 &&
+            item.hydrationLatencyMs === 780
+        )
+    );
+
+    const recycled = createCard(candidate.videoId, false);
+    feed.appendChild(recycled);
+    sweepTombstones(Dom.snapshotFeed(document, location.href));
+    writeLog(
+        'DOM recycling cannot resurrect a tombstoned recommendation',
+        recycled.classList.contains('ttfp-reserved-card')
+    );
+
+    const stalled = Core.createSession(
+        { harvestTimeoutSeconds: 15, targetUnseenCount: 2 },
+        { id: 'synthetic-stall', seed: 7, startedAt: 1000, targetTabId: 1 }
+    );
+    const partialId = ids[20];
+    Core.reserveVideo(stalled, {
+        videoId: partialId,
+        batchId: 'partial',
+        batchNumber: 1,
+        at: 1200,
+        evidence: {
+            feedOrder: 2,
+            aheadBy: 1,
+            intersectionRatio: 0,
+            belowViewport: true,
+            everIntersected: false,
+            connected: true,
+            occurrenceCount: 1,
+        },
+    });
+    Core.confirmReservation(stalled, partialId, 1300);
+    [1, 2, 3].forEach((attempt) => Core.recordHarvestStep(stalled, {
+        phase: 'advancing',
+        visibility: 'hidden',
+        timerDelayMs: 1000,
+        hydrationLatencyMs: 8000,
+        advanceAttempt: attempt,
+        driverVideoId: ids[21],
+        feedOrder: 1,
+    }, 2000 + attempt));
+    Core.failHarvest(stalled, 16000, 'harvest_timeout');
+    writeLog(
+        'three failed stage attempts reject the partial bank and open no viewer',
+        stalled.status === Core.SESSION_STATUS.FAILED &&
+            Core.viewerQueue(stalled).length === 0 &&
+            Core.findReserved(stalled, partialId).state === 'invalidated'
+    );
+    const retried = Core.createSession(
+        stalled.lockedSettings,
+        { id: 'synthetic-retry', seed: 8, startedAt: 17000, targetTabId: 1 }
+    );
+    writeLog(
+        'retry starts with a fresh empty bank and a new deadline',
+        retried.status === Core.SESSION_STATUS.COLLECTING &&
+            retried.reserved.length === 0 &&
+            retried.harvestDeadlineAt === 32000
+    );
+    updateState();
 });
 controls.run.addEventListener('click', async () => {
     reset();

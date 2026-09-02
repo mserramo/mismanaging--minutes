@@ -51,6 +51,8 @@ function createHarness(options = {}) {
     const runtimeStartup = eventSlot();
     const permissionRemoved = eventSlot();
     const tabRemoved = eventSlot();
+    const alarmEvent = eventSlot();
+    const alarms = new Map();
 
     const chrome = {
         runtime: {
@@ -103,6 +105,21 @@ function createHarness(options = {}) {
             },
             onRemoved: permissionRemoved,
         },
+        alarms: {
+            async create(name, details) {
+                alarms.set(name, { name, scheduledTime: details.when });
+                log.push(`alarms.create:${name}`);
+            },
+            async clear(name) {
+                const existed = alarms.delete(name);
+                log.push(`alarms.clear:${name}`);
+                return existed;
+            },
+            async getAll() {
+                return clone(Array.from(alarms.values()));
+            },
+            onAlarm: alarmEvent,
+        },
         scripting: {
             async getRegisteredContentScripts() {
                 return clone(registered);
@@ -127,6 +144,9 @@ function createHarness(options = {}) {
             async query(query = {}) {
                 return clone(tabs.filter((tab) => {
                     if (query.currentWindow && tab.windowId !== 1) {
+                        return false;
+                    }
+                    if (query.active === true && tab.active !== true) {
                         return false;
                     }
                     return !query.url || urlMatches(query.url, tab.url);
@@ -222,11 +242,16 @@ function createHarness(options = {}) {
         async emitStartup() {
             await Promise.all(runtimeStartup.listeners.map((listener) => listener()));
         },
+        async emitAlarm(name) {
+            await Promise.all(alarmEvent.listeners.map((listener) => listener({ name })));
+            await new Promise((resolve) => setTimeout(resolve, 0));
+        },
         getState: () => clone(stored),
         getPermission: () => permissionGranted,
         registered,
         tabs,
         log,
+        alarms,
     };
 }
 
@@ -253,6 +278,15 @@ function collectorSender(tabId = 42) {
     };
 }
 
+function tiktokSender(url, tabId = 42) {
+    return {
+        id: extensionId,
+        url,
+        tab: { id: tabId },
+        frameId: 0,
+    };
+}
+
 function viewerSender(sessionId, tabId) {
     return {
         id: extensionId,
@@ -264,7 +298,7 @@ function viewerSender(sessionId, tabId) {
 
 function collectingState() {
     const state = Core.createDefaultState();
-    const session = Core.createSession({ durationSeconds: 60, targetUnseenCount: 5 }, {
+    const session = Core.createSession({ harvestTimeoutSeconds: 90, targetUnseenCount: 5 }, {
         id: 'session-background-test',
         seed: 123,
         startedAt: Date.now(),
@@ -276,7 +310,7 @@ function collectingState() {
 }
 
 function reserveOne(session, videoId = '7311111111111111111') {
-    return Core.reserveVideo(session, {
+    const prepared = Core.reserveVideo(session, {
         videoId,
         batchId: 'batch-1',
         batchNumber: 1,
@@ -291,18 +325,21 @@ function reserveOne(session, videoId = '7311111111111111111') {
             occurrenceCount: 1,
         },
     });
+    if (prepared.applied) {
+        Core.confirmReservation(session, videoId, Date.now());
+    }
+    return prepared;
 }
 
 function completeState() {
     const state = Core.createDefaultState();
-    const session = Core.createSession({ durationSeconds: 1, targetUnseenCount: 1 }, {
+    const session = Core.createSession({ harvestTimeoutSeconds: 90, targetUnseenCount: 1 }, {
         id: 'session-viewer-test',
         seed: 456,
         startedAt: Date.now(),
         targetTabId: 42,
     });
     reserveOne(session);
-    session.qualifiedMs = 1000;
     Core.evaluateCompletion(session, Date.now());
     session.viewerTabOpenedAt = 0;
     state.sessions.push(session);
@@ -417,6 +454,127 @@ test('a closed target never silently rebinds and resumes only through the popup'
     );
 });
 
+test('collector readiness records hidden state and restores the originating tab', async () => {
+    const harness = createHarness({
+        tabs: [
+            { id: 7, windowId: 1, active: true, url: 'https://experiment.test/task' },
+            { id: 42, windowId: 1, active: false, url: Core.TIKTOK_FYP_URL },
+        ],
+    });
+    const started = await harness.dispatch(
+        { type: Core.MESSAGE_TYPES.START_SESSION },
+        popupSender()
+    );
+    assert.equal(started.ok, true);
+    const ready = await harness.dispatch({
+        type: Core.MESSAGE_TYPES.COLLECTOR_READY,
+        sessionId: started.sessionId,
+        sourceId: 'source-ready-hidden',
+        sequence: 1,
+        visibility: 'hidden',
+        timerDelayMs: 1300,
+    }, collectorSender(42));
+    assert.equal(ready.ok, true);
+    assert.equal(ready.returned, true);
+    assert.equal(harness.log.includes('tabs.update:7'), true);
+    const step = harness.getState().sessions[0].harvestSteps[0];
+    assert.equal(step.visibility, 'hidden');
+});
+
+test('timeout rejects a partial bank, opens no viewer, and focuses the covered tab', async () => {
+    const state = collectingState();
+    reserveOne(state.sessions[0]);
+    state.sessions[0].startedAt = Date.now() - 100000;
+    state.sessions[0].harvestStartedAt = state.sessions[0].startedAt;
+    state.sessions[0].harvestDeadlineAt = Date.now() - 1;
+    const harness = createHarness({
+        state,
+        tabs: [{ id: 42, windowId: 1, active: false, url: Core.TIKTOK_FYP_URL }],
+    });
+    const response = await harness.dispatch({
+        type: Core.MESSAGE_TYPES.HARVEST_STEP,
+        sessionId: state.activeSessionId,
+        sourceId: 'source-timeout',
+        sequence: 1,
+        phase: 'waiting_hydration',
+        visibility: 'hidden',
+        timerDelayMs: 2000,
+        hydrationLatencyMs: 8000,
+        advanceAttempt: 3,
+    }, collectorSender(42));
+    assert.equal(response.failed, true);
+    assert.equal(harness.getState().sessions[0].status, Core.SESSION_STATUS.FAILED);
+    assert.equal(harness.getState().sessions[0].reserved[0].state, 'invalidated');
+    assert.equal(
+        harness.tabs.some((tab) => tab.url.includes('/viewer/viewer.html?session=')),
+        false
+    );
+    assert.equal(harness.log.includes('tabs.update:42'), true);
+});
+
+test('deadline alarm fails a fully throttled hidden collector and reports to its overlay', async () => {
+    const state = collectingState();
+    reserveOne(state.sessions[0]);
+    state.sessions[0].startedAt = Date.now() - 100000;
+    state.sessions[0].harvestStartedAt = state.sessions[0].startedAt;
+    state.sessions[0].harvestDeadlineAt = Date.now() - 1;
+    const harness = createHarness({
+        state,
+        tabs: [{ id: 42, windowId: 1, active: false, url: Core.TIKTOK_FYP_URL }],
+    });
+    await harness.emitAlarm(`harvest-deadline:${state.activeSessionId}`);
+    assert.equal(harness.getState().sessions[0].status, Core.SESSION_STATUS.FAILED);
+    assert.equal(harness.getState().sessions[0].reserved[0].state, 'invalidated');
+    assert.equal(
+        harness.log.includes('tabs.sendMessage:42:STATE_UPDATED'),
+        true
+    );
+    assert.equal(harness.log.includes('tabs.update:42'), true);
+});
+
+test('unsupported TikTok state may fail bound collection without bypassing the page', async () => {
+    const state = collectingState();
+    const harness = createHarness({
+        state,
+        tabs: [{ id: 42, windowId: 1, active: false, url: 'https://www.tiktok.com/login' }],
+    });
+    const response = await harness.dispatch({
+        type: Core.MESSAGE_TYPES.HARVEST_FAIL,
+        sessionId: state.activeSessionId,
+        sourceId: 'source-login',
+        sequence: 1,
+        reason: 'login_or_unsupported_page',
+        detail: { pathCode: 'not_fyp' },
+    }, tiktokSender('https://www.tiktok.com/login'));
+    assert.equal(response.ok, true);
+    assert.equal(harness.getState().sessions[0].status, Core.SESSION_STATUS.FAILED);
+});
+
+test('popup retry reuses the failed bound tab but creates a fresh empty session', async () => {
+    const state = collectingState();
+    reserveOne(state.sessions[0]);
+    Core.failHarvest(state.sessions[0], Date.now(), 'harvest_stalled');
+    const harness = createHarness({
+        state,
+        tabs: [
+            { id: 7, windowId: 1, active: true, url: 'https://experiment.test/task' },
+            { id: 42, windowId: 1, active: false, url: 'https://www.tiktok.com/login' },
+        ],
+    });
+    const response = await harness.dispatch(
+        { type: Core.MESSAGE_TYPES.START_SESSION },
+        popupSender()
+    );
+    assert.equal(response.ok, true);
+    const nextState = harness.getState();
+    assert.equal(nextState.sessions.length, 2);
+    assert.equal(nextState.sessions[0].status, Core.SESSION_STATUS.FAILED);
+    assert.equal(nextState.sessions[1].status, Core.SESSION_STATUS.COLLECTING);
+    assert.equal(nextState.sessions[1].reserved.length, 0);
+    assert.equal(nextState.sessions[1].targetTabId, 42);
+    assert.equal(harness.tabs.find((tab) => tab.id === 42).url, Core.TIKTOK_FYP_URL);
+});
+
 test('browser restart invalidates the old collection-tab capability until explicit resume', async () => {
     const state = collectingState();
     reserveOne(state.sessions[0]);
@@ -478,7 +636,7 @@ test('a second FYP tab receives tombstone guard but cannot collect', async () =>
     assert.equal(activity.ok, false);
 });
 
-test('the first reservation activates guards in FYP tabs already open', async () => {
+test('the first confirmed concealment activates guards in FYP tabs already open', async () => {
     const state = collectingState();
     const harness = createHarness({
         state,
@@ -487,7 +645,7 @@ test('the first reservation activates guards in FYP tabs already open', async ()
             { id: 99, windowId: 1, active: false, url: Core.TIKTOK_FYP_URL },
         ],
     });
-    const response = await harness.dispatch({
+    const prepared = await harness.dispatch({
         type: Core.MESSAGE_TYPES.RESERVE_VIDEO,
         sessionId: state.activeSessionId,
         sourceId: 'source-first-tombstone',
@@ -504,6 +662,15 @@ test('the first reservation activates guards in FYP tabs already open', async ()
             connected: true,
             occurrenceCount: 1,
         },
+    }, collectorSender(42));
+    assert.equal(prepared.ok, true);
+    assert.equal(harness.log.includes('scripting.execute:99'), false);
+    const response = await harness.dispatch({
+        type: Core.MESSAGE_TYPES.CONFIRM_RESERVATION,
+        sessionId: state.activeSessionId,
+        sourceId: 'source-first-tombstone',
+        sequence: 2,
+        videoId: '7311111111111111111',
     }, collectorSender(42));
     assert.equal(response.ok, true);
     assert.equal(harness.log.includes('scripting.execute:99'), true);
@@ -601,15 +768,19 @@ test('a restored viewer claim cannot be erased by the startup reset', async () =
     assert.equal(harness.log.some((entry) => entry.startsWith('tabs.create:')), false);
 });
 
-test('the final time gate completes collection and opens exactly one viewer', async () => {
+test('a prepared reservation cannot complete collection or open a viewer', async () => {
     const state = collectingState();
     const session = state.sessions[0];
-    session.lockedSettings = { durationSeconds: 1, targetUnseenCount: 1 };
-    Core.reserveVideo(session, {
+    session.lockedSettings = { harvestTimeoutSeconds: 90, targetUnseenCount: 1 };
+    const harness = createHarness({ state });
+    const response = await harness.dispatch({
+        type: Core.MESSAGE_TYPES.RESERVE_VIDEO,
+        sessionId: session.id,
+        sourceId: 'source-prepared-only',
+        sequence: 1,
         videoId: '7311111111111111111',
         batchId: 'batch-1',
         batchNumber: 1,
-        at: Date.now(),
         evidence: {
             feedOrder: 3,
             aheadBy: 2,
@@ -619,31 +790,22 @@ test('the final time gate completes collection and opens exactly one viewer', as
             connected: true,
             occurrenceCount: 1,
         },
-    });
-    session.qualifiedMs = 750;
-    const harness = createHarness({ state });
-    const response = await harness.dispatch({
-        type: Core.MESSAGE_TYPES.ACTIVITY_TICK,
-        sessionId: session.id,
-        sourceId: 'source-final-time',
-        sequence: 1,
-        qualifiedDeltaMs: 250,
     }, collectorSender(42));
     assert.equal(response.ok, true);
-    assert.equal(harness.getState().sessions[0].status, Core.SESSION_STATUS.COMPLETE);
+    assert.equal(harness.getState().sessions[0].reserved[0].state, 'prepared');
+    assert.equal(harness.getState().sessions[0].status, Core.SESSION_STATUS.COLLECTING);
     assert.equal(
         harness.tabs.filter((tab) => tab.url.includes('/viewer/viewer.html?session=')).length,
-        1
+        0
     );
 });
 
-test('the final unseen gate completes collection and opens exactly one viewer', async () => {
+test('the final concealment confirmation completes collection and opens exactly one viewer', async () => {
     const state = collectingState();
     const session = state.sessions[0];
-    session.lockedSettings = { durationSeconds: 1, targetUnseenCount: 1 };
-    session.qualifiedMs = 1000;
+    session.lockedSettings = { harvestTimeoutSeconds: 90, targetUnseenCount: 1 };
     const harness = createHarness({ state });
-    const response = await harness.dispatch({
+    const prepared = await harness.dispatch({
         type: Core.MESSAGE_TYPES.RESERVE_VIDEO,
         sessionId: session.id,
         sourceId: 'source-final-unseen',
@@ -661,7 +823,19 @@ test('the final unseen gate completes collection and opens exactly one viewer', 
             occurrenceCount: 1,
         },
     }, collectorSender(42));
+    assert.equal(prepared.ok, true);
+    const confirmationMessage = {
+        type: Core.MESSAGE_TYPES.CONFIRM_RESERVATION,
+        sessionId: session.id,
+        sourceId: 'source-final-unseen',
+        sequence: 2,
+        videoId: '7311111111111111111',
+    };
+    const response = await harness.dispatch(confirmationMessage, collectorSender(42));
     assert.equal(response.ok, true);
+    const retriedResponse = await harness.dispatch(confirmationMessage, collectorSender(42));
+    assert.equal(retriedResponse.ok, true);
+    assert.equal(retriedResponse.duplicate, true);
     assert.equal(harness.getState().sessions[0].status, Core.SESSION_STATUS.COMPLETE);
     assert.equal(
         harness.tabs.filter((tab) => tab.url.includes('/viewer/viewer.html?session=')).length,

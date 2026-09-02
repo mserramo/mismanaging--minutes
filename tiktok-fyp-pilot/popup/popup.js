@@ -6,7 +6,7 @@ const elements = {
     message: document.getElementById('message'),
     newSession: document.getElementById('new-session'),
     activeSession: document.getElementById('active-session'),
-    durationSummary: document.getElementById('duration-summary'),
+    timeoutSummary: document.getElementById('timeout-summary'),
     targetSummary: document.getElementById('target-summary'),
     consent: document.getElementById('consent'),
     start: document.getElementById('start'),
@@ -15,6 +15,7 @@ const elements = {
     activeProgress: document.getElementById('active-progress'),
     timeProgress: document.getElementById('time-progress'),
     resume: document.getElementById('resume'),
+    retry: document.getElementById('retry'),
     openViewer: document.getElementById('open-viewer'),
     stop: document.getElementById('stop'),
     settings: document.getElementById('settings'),
@@ -58,7 +59,7 @@ function render(response) {
     const state = response.state;
     const active = state.activeSession;
     elements.revoke.hidden = !response.permissionGranted;
-    elements.durationSummary.textContent = `${state.settings.durationSeconds} seconds`;
+    elements.timeoutSummary.textContent = `${state.settings.harvestTimeoutSeconds} seconds`;
     elements.targetSummary.textContent =
         `${state.settings.targetUnseenCount} ` +
         (state.settings.targetUnseenCount === 1 ? 'video' : 'videos');
@@ -72,22 +73,32 @@ function render(response) {
     }
 
     const progress = active.progress;
-    elements.activeProgress.textContent =
-        `${Math.min(progress.qualifiedSeconds, progress.durationSeconds)} / ` +
-        `${progress.durationSeconds}s · ${progress.unseenCount} / ` +
-        `${progress.targetUnseenCount} reserved`;
-    elements.timeProgress.style.width =
-        `${Math.min(100, (progress.qualifiedMs / (progress.durationSeconds * 1000)) * 100)}%`;
+    const automated = progress.collectionMode === Core.COLLECTION_MODE.AUTOMATED_BACKGROUND;
+    elements.activeProgress.textContent = automated
+        ? `${progress.unseenCount} / ${progress.targetUnseenCount} sourced · ` +
+            `${Math.ceil(progress.harvestRemainingMs / 1000)}s remaining`
+        : `${Math.min(progress.qualifiedSeconds, progress.durationSeconds)} / ` +
+            `${progress.durationSeconds}s · ${progress.unseenCount} / ` +
+            `${progress.targetUnseenCount} reserved`;
+    elements.timeProgress.style.width = automated
+        ? `${Math.min(100, (progress.harvestElapsedMs /
+            (progress.harvestTimeoutSeconds * 1000)) * 100)}%`
+        : `${Math.min(100, (progress.qualifiedMs /
+            (progress.durationSeconds * 1000)) * 100)}%`;
     const collecting = active.status === Core.SESSION_STATUS.COLLECTING;
+    const failed = active.status === Core.SESSION_STATUS.FAILED;
     elements.activeLabel.textContent = collecting
         ? 'Collection in progress'
         : active.status === Core.SESSION_STATUS.COMPLETE
             ? 'Collection complete'
-            : 'Viewer in progress';
-    elements.activeStatus.textContent = collecting ? 'Active' : 'Ready';
+            : failed
+                ? 'Collection failed'
+                : 'Viewer in progress';
+    elements.activeStatus.textContent = collecting ? 'Background' : failed ? 'Retry' : 'Ready';
     elements.resume.hidden = !collecting;
+    elements.retry.hidden = !failed;
     elements.stop.hidden = !collecting;
-    elements.openViewer.hidden = collecting;
+    elements.openViewer.hidden = collecting || failed;
 }
 
 async function refresh() {
@@ -134,6 +145,18 @@ elements.resume.addEventListener('click', async () => {
     if (!response || !response.ok) {
         showMessage('The FYP collection tab could not be reopened.', 'error');
         setBusy(elements.resume, false);
+        return;
+    }
+    window.close();
+});
+
+elements.retry.addEventListener('click', async () => {
+    clearMessage();
+    setBusy(elements.retry, true);
+    const response = await send({ type: Core.MESSAGE_TYPES.START_SESSION });
+    if (!response || !response.ok) {
+        showMessage('A fresh background session could not be started.', 'error');
+        setBusy(elements.retry, false);
         return;
     }
     window.close();

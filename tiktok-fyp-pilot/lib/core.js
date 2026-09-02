@@ -7,19 +7,25 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
     'use strict';
 
-    const SCHEMA_VERSION = 1;
+    const SCHEMA_VERSION = 2;
+    const LEGACY_SCHEMA_VERSION = 1;
     const TIKTOK_ORIGIN = 'https://www.tiktok.com';
     const TIKTOK_FYP_URL = `${TIKTOK_ORIGIN}/foryou`;
     const CONTENT_SCRIPT_ID = 'tiktok-fyp-pilot-collector';
     const MIN_SAFE_AHEAD = 1;
 
+    const COLLECTION_MODE = Object.freeze({
+        AUTOMATED_BACKGROUND: 'automated_background',
+        LEGACY_MANUAL: 'legacy_manual',
+    });
+
     const DEFAULT_SETTINGS = Object.freeze({
-        durationSeconds: 60,
+        harvestTimeoutSeconds: 90,
         targetUnseenCount: 5,
     });
 
     const SETTING_LIMITS = Object.freeze({
-        durationSeconds: Object.freeze({ min: 1, max: 3600 }),
+        harvestTimeoutSeconds: Object.freeze({ min: 15, max: 600 }),
         targetUnseenCount: Object.freeze({ min: 1, max: 50 }),
     });
 
@@ -34,6 +40,11 @@
         MARK_EXPOSED: 'MARK_EXPOSED',
         EXCLUDE_VIDEO: 'EXCLUDE_VIDEO',
         RESERVE_VIDEO: 'RESERVE_VIDEO',
+        CONFIRM_RESERVATION: 'CONFIRM_RESERVATION',
+        COLLECTOR_READY: 'COLLECTOR_READY',
+        HARVEST_STEP: 'HARVEST_STEP',
+        HARVEST_FAIL: 'HARVEST_FAIL',
+        RETRY_HARVEST: 'RETRY_HARVEST',
         INVALIDATE_VIDEO: 'INVALIDATE_VIDEO',
         RECORD_DIAGNOSTIC: 'RECORD_DIAGNOSTIC',
         GET_VIEWER_SESSION: 'GET_VIEWER_SESSION',
@@ -52,6 +63,7 @@
         VIEWING: 'viewing',
         VIEWED: 'viewed',
         STOPPED: 'stopped',
+        FAILED: 'failed',
     });
 
     const PLAYER_MESSAGE_TYPES = new Set([
@@ -80,6 +92,19 @@
     const EXCLUSION_CLASSIFICATIONS = new Set([
         'ever_exposed',
         'ambiguous_card',
+        'automation_driver',
+    ]);
+
+    const HARVEST_PHASES = new Set([
+        'starting',
+        'waiting_driver',
+        'waiting_candidate',
+        'reserving',
+        'settling',
+        'advancing',
+        'waiting_hydration',
+        'complete',
+        'failed',
     ]);
 
     function toBoundedInteger(value, minimum, maximum, fallback) {
@@ -93,11 +118,11 @@
     function sanitizeSettings(value) {
         const input = value && typeof value === 'object' ? value : {};
         return {
-            durationSeconds: toBoundedInteger(
-                input.durationSeconds,
-                SETTING_LIMITS.durationSeconds.min,
-                SETTING_LIMITS.durationSeconds.max,
-                DEFAULT_SETTINGS.durationSeconds
+            harvestTimeoutSeconds: toBoundedInteger(
+                input.harvestTimeoutSeconds,
+                SETTING_LIMITS.harvestTimeoutSeconds.min,
+                SETTING_LIMITS.harvestTimeoutSeconds.max,
+                DEFAULT_SETTINGS.harvestTimeoutSeconds
             ),
             targetUnseenCount: toBoundedInteger(
                 input.targetUnseenCount,
@@ -105,6 +130,14 @@
                 SETTING_LIMITS.targetUnseenCount.max,
                 DEFAULT_SETTINGS.targetUnseenCount
             ),
+        };
+    }
+
+    function sanitizeLegacySettings(value) {
+        const input = value && typeof value === 'object' ? value : {};
+        return {
+            durationSeconds: toBoundedInteger(input.durationSeconds, 1, 3600, 60),
+            targetUnseenCount: toBoundedInteger(input.targetUnseenCount, 1, 50, 5),
         };
     }
 
@@ -123,7 +156,25 @@
             : fallback;
     }
 
-    function normalizePersistedSession(raw) {
+    function sanitizeHarvestStep(raw, fallbackAt) {
+        if (!raw || typeof raw !== 'object' || !HARVEST_PHASES.has(raw.phase)) {
+            return null;
+        }
+        const step = {
+            phase: raw.phase,
+            at: persistedNumber(raw.at, 0, 1e15, fallbackAt),
+            visibility: raw.visibility === 'hidden' ? 'hidden' : 'visible',
+            timerDelayMs: toBoundedInteger(raw.timerDelayMs, 0, 60000, 0),
+            hydrationLatencyMs: toBoundedInteger(raw.hydrationLatencyMs, 0, 60000, 0),
+            advanceAttempt: toBoundedInteger(raw.advanceAttempt, 0, 3, 0),
+        };
+        if (isVideoId(raw.driverVideoId)) {
+            step.driverVideoId = raw.driverVideoId;
+        }
+        return step;
+    }
+
+    function normalizePersistedSession(raw, legacyInput) {
         if (!raw || typeof raw !== 'object') {
             return null;
         }
@@ -202,7 +253,7 @@
                 seenIds.has(record.videoId) ||
                 excludedIds.has(record.videoId) ||
                 reservedIds.has(record.videoId) ||
-                !['reserved', 'invalidated'].includes(record.state)
+                !['prepared', 'reserved', 'invalidated'].includes(record.state)
             ) {
                 return null;
             }
@@ -227,6 +278,14 @@
                     ? record.viewerStatus
                     : 'pending',
             };
+            if (record.state === 'reserved') {
+                clean.concealedAt = persistedNumber(
+                    record.concealedAt,
+                    0,
+                    1e15,
+                    clean.interceptedAt
+                );
+            }
             if (record.state === 'invalidated') {
                 clean.invalidatedAt = persistedNumber(record.invalidatedAt, 0, 1e15, startedAt);
                 clean.invalidReason = sanitizeToken(record.invalidReason, 'ambiguous_exposure');
@@ -287,8 +346,25 @@
                 }
             });
 
+        const collectionMode = legacyInput || raw.collectionMode === COLLECTION_MODE.LEGACY_MANUAL
+            ? COLLECTION_MODE.LEGACY_MANUAL
+            : COLLECTION_MODE.AUTOMATED_BACKGROUND;
+        const lockedSettings = collectionMode === COLLECTION_MODE.LEGACY_MANUAL
+            ? sanitizeLegacySettings(raw.lockedSettings)
+            : sanitizeSettings(raw.lockedSettings);
+        const harvestSteps = [];
+        if (collectionMode === COLLECTION_MODE.AUTOMATED_BACKGROUND) {
+            for (const step of (Array.isArray(raw.harvestSteps) ? raw.harvestSteps : []).slice(-500)) {
+                const cleanStep = sanitizeHarvestStep(step, startedAt);
+                if (cleanStep) {
+                    harvestSteps.push(cleanStep);
+                }
+            }
+        }
+
         const session = {
             id,
+            collectionMode,
             seed: sanitizeSeed(raw.seed),
             startedAt,
             updatedAt: persistedNumber(raw.updatedAt, 0, 1e15, startedAt),
@@ -302,8 +378,26 @@
                     : persistedNumber(raw.viewerTabOpenedAt, 0, 1e15, null),
             status: raw.status,
             targetTabId: Number.isInteger(raw.targetTabId) ? raw.targetTabId : null,
-            lockedSettings: sanitizeSettings(raw.lockedSettings),
+            lockedSettings,
             qualifiedMs: persistedNumber(raw.qualifiedMs, 0, 86400000, 0),
+            harvestStartedAt: collectionMode === COLLECTION_MODE.AUTOMATED_BACKGROUND
+                ? persistedNumber(raw.harvestStartedAt, 0, 1e15, startedAt)
+                : null,
+            harvestDeadlineAt: collectionMode === COLLECTION_MODE.AUTOMATED_BACKGROUND
+                ? persistedNumber(
+                    raw.harvestDeadlineAt,
+                    startedAt,
+                    1e15,
+                    startedAt + lockedSettings.harvestTimeoutSeconds * 1000
+                )
+                : null,
+            harvestPhase: collectionMode === COLLECTION_MODE.AUTOMATED_BACKGROUND &&
+                HARVEST_PHASES.has(raw.harvestPhase)
+                ? raw.harvestPhase
+                : collectionMode === COLLECTION_MODE.AUTOMATED_BACKGROUND
+                    ? 'starting'
+                    : null,
+            harvestSteps,
             batchCounter: toBoundedInteger(raw.batchCounter, 0, 1000000, 0),
             seen,
             excluded,
@@ -315,7 +409,9 @@
                     at: record.invalidatedAt,
                     reason: record.invalidReason,
                 })),
-            tombstones: reserved.map((record) => record.videoId),
+            tombstones: reserved
+                .filter((record) => record.state !== 'prepared')
+                .map((record) => record.videoId),
             diagnostics,
             viewerEvents,
             sourceSequences,
@@ -327,9 +423,19 @@
         if (stopReason) {
             session.stopReason = stopReason;
         }
+        const failedAt = persistedNumber(raw.failedAt, 0, 1e15, null);
+        if (failedAt !== null) {
+            session.failedAt = failedAt;
+        }
         if ([SESSION_STATUS.COMPLETE, SESSION_STATUS.VIEWING, SESSION_STATUS.VIEWED].includes(session.status)) {
             const progress = sessionProgress(session);
-            if (!progress.timeComplete || !progress.unseenComplete) {
+            if (
+                !progress.unseenComplete ||
+                (
+                    collectionMode === COLLECTION_MODE.LEGACY_MANUAL &&
+                    !progress.timeComplete
+                )
+            ) {
                 return null;
             }
         }
@@ -337,25 +443,36 @@
     }
 
     function normalizeState(raw) {
-        if (!raw || typeof raw !== 'object' || raw.schemaVersion !== SCHEMA_VERSION) {
+        if (!raw || typeof raw !== 'object') {
+            return createDefaultState();
+        }
+        const legacyInput = raw.schemaVersion === LEGACY_SCHEMA_VERSION;
+        if (!legacyInput && raw.schemaVersion !== SCHEMA_VERSION) {
             return createDefaultState();
         }
         const sessions = [];
         for (const rawSession of Array.isArray(raw.sessions) ? raw.sessions : []) {
-            const session = normalizePersistedSession(rawSession);
+            const session = normalizePersistedSession(rawSession, legacyInput);
             if (!session || sessions.some((existing) => existing.id === session.id)) {
                 return createDefaultState();
+            }
+            if (legacyInput && session.status === SESSION_STATUS.COLLECTING) {
+                stopSession(session, Date.now(), 'legacy_mode_replaced');
+                session.targetTabId = null;
             }
             sessions.push(session);
         }
         const state = {
             schemaVersion: SCHEMA_VERSION,
-            settings: sanitizeSettings(raw.settings),
+            settings: legacyInput ? { ...DEFAULT_SETTINGS } : sanitizeSettings(raw.settings),
             activeSessionId:
                 typeof raw.activeSessionId === 'string' ? raw.activeSessionId : null,
             sessions,
         };
-        if (!state.sessions.some((session) => session.id === state.activeSessionId)) {
+        if (!state.sessions.some((session) =>
+            session.id === state.activeSessionId &&
+            session.status !== SESSION_STATUS.STOPPED
+        )) {
             state.activeSessionId = null;
         }
         return state;
@@ -404,8 +521,10 @@
 
     function createSession(settings, metadata) {
         const now = sanitizeTimestamp(metadata && metadata.startedAt, Date.now());
+        const lockedSettings = sanitizeSettings(settings);
         return {
             id: sanitizeToken(metadata && metadata.id, `session-${now}`),
+            collectionMode: COLLECTION_MODE.AUTOMATED_BACKGROUND,
             seed: sanitizeSeed(metadata && metadata.seed),
             startedAt: now,
             updatedAt: now,
@@ -418,8 +537,12 @@
             targetTabId: Number.isInteger(metadata && metadata.targetTabId)
                 ? metadata.targetTabId
                 : null,
-            lockedSettings: sanitizeSettings(settings),
+            lockedSettings,
             qualifiedMs: 0,
+            harvestStartedAt: now,
+            harvestDeadlineAt: now + lockedSettings.harvestTimeoutSeconds * 1000,
+            harvestPhase: 'starting',
+            harvestSteps: [],
             batchCounter: 0,
             seen: [],
             excluded: [],
@@ -446,22 +569,37 @@
     }
 
     function validReservedVideos(session) {
-        return session.reserved.filter((record) => record.state !== 'invalidated');
+        return session.reserved.filter((record) => record.state === 'reserved');
     }
 
-    function sessionProgress(session) {
+    function sessionProgress(session, at) {
         if (!session) {
             return null;
         }
-        const targetMs = session.lockedSettings.durationSeconds * 1000;
+        const automated = session.collectionMode === COLLECTION_MODE.AUTOMATED_BACKGROUND;
+        const now = sanitizeTimestamp(at, Date.now());
+        const timeoutMs = automated
+            ? session.lockedSettings.harvestTimeoutSeconds * 1000
+            : session.lockedSettings.durationSeconds * 1000;
+        const harvestElapsedMs = automated
+            ? Math.min(timeoutMs, Math.max(0, now - session.harvestStartedAt))
+            : 0;
         return {
             id: session.id,
             status: session.status,
-            durationSeconds: session.lockedSettings.durationSeconds,
+            collectionMode: session.collectionMode,
+            durationSeconds: automated ? null : session.lockedSettings.durationSeconds,
+            harvestTimeoutSeconds: automated
+                ? session.lockedSettings.harvestTimeoutSeconds
+                : null,
+            harvestElapsedMs,
+            harvestRemainingMs: automated ? Math.max(0, timeoutMs - harvestElapsedMs) : null,
+            harvestPhase: automated ? session.harvestPhase : null,
+            timedOut: automated ? now >= session.harvestDeadlineAt : false,
             targetUnseenCount: session.lockedSettings.targetUnseenCount,
             qualifiedMs: session.qualifiedMs,
             qualifiedSeconds: Math.floor(session.qualifiedMs / 1000),
-            timeComplete: session.qualifiedMs >= targetMs,
+            timeComplete: automated ? false : session.qualifiedMs >= timeoutMs,
             unseenCount: validReservedVideos(session).length,
             unseenComplete:
                 validReservedVideos(session).length >=
@@ -735,6 +873,24 @@
         return eligible[hash % eligible.length];
     }
 
+    function selectImmediateSafeCandidate(seed, batchId, candidates) {
+        const input = Array.isArray(candidates) ? candidates : [];
+        const minimumAhead = input.reduce((minimum, candidate) => {
+            return candidate && Number.isInteger(candidate.aheadBy) &&
+                candidate.aheadBy >= MIN_SAFE_AHEAD
+                ? Math.min(minimum, candidate.aheadBy)
+                : minimum;
+        }, Infinity);
+        if (!Number.isFinite(minimumAhead)) {
+            return null;
+        }
+        return selectSafeCandidate(
+            seed,
+            batchId,
+            input.filter((candidate) => candidate.aheadBy === minimumAhead)
+        );
+    }
+
     function reserveVideo(session, payload) {
         if (!session || session.status !== SESSION_STATUS.COLLECTING) {
             return { applied: false, reason: 'not_collecting' };
@@ -768,10 +924,13 @@
             return { applied: false, reason: 'unsafe_evidence' };
         }
         const now = sanitizeTimestamp(payload.at, Date.now());
-        session.tombstones.push(videoId);
+        const automated = session.collectionMode === COLLECTION_MODE.AUTOMATED_BACKGROUND;
+        if (!automated) {
+            session.tombstones.push(videoId);
+        }
         session.reserved.push({
             videoId,
-            state: 'reserved',
+            state: automated ? 'prepared' : 'reserved',
             order: session.reserved.length + 1,
             batchId: sanitizeToken(payload.batchId, `batch-${session.reserved.length + 1}`),
             interceptedAt: now,
@@ -790,16 +949,60 @@
         return { applied: true };
     }
 
+    function confirmReservation(session, videoId, at) {
+        if (
+            !session ||
+            session.status !== SESSION_STATUS.COLLECTING ||
+            session.collectionMode !== COLLECTION_MODE.AUTOMATED_BACKGROUND
+        ) {
+            return { applied: false, reason: 'not_collecting' };
+        }
+        if (!isVideoId(videoId)) {
+            return { applied: false, reason: 'invalid_video_id' };
+        }
+        const record = findReserved(session, videoId);
+        if (!record) {
+            return { applied: false, reason: 'reservation_not_prepared' };
+        }
+        if (record.state === 'reserved') {
+            return { applied: true, duplicate: true };
+        }
+        if (record.state !== 'prepared') {
+            return { applied: false, reason: 'reservation_invalidated' };
+        }
+        if (findSeen(session, videoId) || findExcluded(session, videoId)) {
+            invalidateReservation(session, videoId, 'unsafe_before_concealment', at);
+            return { applied: false, reason: 'reservation_became_unsafe' };
+        }
+        const now = sanitizeTimestamp(at, Date.now());
+        record.state = 'reserved';
+        record.concealedAt = now;
+        if (!session.tombstones.includes(videoId)) {
+            session.tombstones.push(videoId);
+        }
+        session.updatedAt = now;
+        return { applied: true };
+    }
+
     function evaluateCompletion(session, at) {
         if (!session || session.status !== SESSION_STATUS.COLLECTING) {
             return false;
         }
-        const progress = sessionProgress(session);
-        if (!progress.timeComplete || !progress.unseenComplete) {
+        const progress = sessionProgress(session, at);
+        if (
+            !progress.unseenComplete ||
+            (
+                session.collectionMode === COLLECTION_MODE.LEGACY_MANUAL &&
+                !progress.timeComplete
+            )
+        ) {
             return false;
         }
         const now = sanitizeTimestamp(at, Date.now());
         session.status = SESSION_STATUS.COMPLETE;
+        if (session.collectionMode === COLLECTION_MODE.AUTOMATED_BACKGROUND) {
+            session.harvestPhase = 'complete';
+        }
         session.completedAt = now;
         session.updatedAt = now;
         return true;
@@ -813,6 +1016,28 @@
         session.status = SESSION_STATUS.STOPPED;
         session.stoppedAt = now;
         session.stopReason = sanitizeToken(reason, 'participant_stopped');
+        session.updatedAt = now;
+        return true;
+    }
+
+    function failHarvest(session, at, reason) {
+        if (
+            !session ||
+            session.status !== SESSION_STATUS.COLLECTING ||
+            session.collectionMode !== COLLECTION_MODE.AUTOMATED_BACKGROUND
+        ) {
+            return false;
+        }
+        const now = sanitizeTimestamp(at, Date.now());
+        session.reserved.forEach((record) => {
+            if (record.state !== 'invalidated') {
+                invalidateReservation(session, record.videoId, 'partial_bank_rejected', now);
+            }
+        });
+        session.status = SESSION_STATUS.FAILED;
+        session.failedAt = now;
+        session.stopReason = sanitizeToken(reason, 'harvest_failed');
+        session.harvestPhase = 'failed';
         session.updatedAt = now;
         return true;
     }
@@ -863,6 +1088,39 @@
             session.diagnostics.splice(0, session.diagnostics.length - 200);
         }
         return true;
+    }
+
+    function recordHarvestStep(session, payload, at) {
+        if (
+            !session ||
+            session.status !== SESSION_STATUS.COLLECTING ||
+            session.collectionMode !== COLLECTION_MODE.AUTOMATED_BACKGROUND
+        ) {
+            return { applied: false, reason: 'not_collecting' };
+        }
+        const now = sanitizeTimestamp(at, Date.now());
+        const step = sanitizeHarvestStep({ ...payload, at: now }, now);
+        if (!step) {
+            return { applied: false, reason: 'invalid_harvest_step' };
+        }
+        if (step.driverVideoId) {
+            const exclusion = excludeVideo(session, {
+                videoId: step.driverVideoId,
+                classification: 'automation_driver',
+                feedOrder: payload.feedOrder,
+                at: now,
+            });
+            if (!exclusion.applied) {
+                return { applied: false, reason: exclusion.reason };
+            }
+        }
+        session.harvestPhase = step.phase;
+        session.harvestSteps.push(step);
+        if (session.harvestSteps.length > 500) {
+            session.harvestSteps.splice(0, session.harvestSteps.length - 500);
+        }
+        session.updatedAt = now;
+        return { applied: true };
     }
 
     function sanitizeViewerValue(type, value) {
@@ -1083,6 +1341,7 @@
 
     return Object.freeze({
         SCHEMA_VERSION,
+        COLLECTION_MODE,
         TIKTOK_ORIGIN,
         TIKTOK_FYP_URL,
         CONTENT_SCRIPT_ID,
@@ -1115,11 +1374,15 @@
         applyActivity,
         hashString,
         selectSafeCandidate,
+        selectImmediateSafeCandidate,
         reserveVideo,
+        confirmReservation,
         invalidateReservation,
         evaluateCompletion,
         stopSession,
+        failHarvest,
         recordDiagnostic,
+        recordHarvestStep,
         applyViewerEvent,
         finishViewer,
         viewerQueue,

@@ -13,6 +13,16 @@ html.ttfp-booting::before {
     pointer-events: none !important;
 }
 
+#ttfp-harvest-overlay-host {
+    all: initial !important;
+    display: block !important;
+    position: fixed !important;
+    inset: 0 !important;
+    z-index: 2147483647 !important;
+    pointer-events: auto !important;
+    isolation: isolate !important;
+}
+
 .ttfp-banner {
     position: fixed;
     right: 18px;

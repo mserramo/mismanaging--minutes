@@ -82,6 +82,8 @@ function makeTable(headers, rows) {
 }
 
 function renderSession(session, initiallyOpen) {
+    const automated = session.collectionMode === Core.COLLECTION_MODE.AUTOMATED_BACKGROUND;
+    const progress = Core.sessionProgress(session);
     const details = node('details', 'card session-card');
     details.open = initiallyOpen;
     const summary = node('summary');
@@ -95,9 +97,21 @@ function renderSession(session, initiallyOpen) {
     const body = node('div', 'session-body');
     const meta = node('div', 'metadata-grid');
     meta.append(
-        metadataItem('Locked target', `${session.lockedSettings.durationSeconds}s`),
+        metadataItem('Mode', automated ? 'Automated background' : 'Legacy manual'),
+        metadataItem(
+            'Locked timeout',
+            automated ? `${session.lockedSettings.harvestTimeoutSeconds}s` : '—'
+        ),
         metadataItem('Unseen target', String(session.lockedSettings.targetUnseenCount)),
-        metadataItem('Qualified time', formatMs(session.qualifiedMs)),
+        metadataItem(
+            automated ? 'Harvest elapsed' : 'Qualified time',
+            automated ? formatMs(progress.harvestElapsedMs) : formatMs(session.qualifiedMs)
+        ),
+        metadataItem('Harvest phase', automated ? session.harvestPhase : '—'),
+        metadataItem(
+            'Deadline',
+            automated ? formatDate(session.harvestDeadlineAt) : '—'
+        ),
         metadataItem('Selection seed', String(session.seed)),
         metadataItem('Seen IDs', String(session.seen.length)),
         metadataItem('Excluded IDs', String(session.excluded.length)),
@@ -106,6 +120,22 @@ function renderSession(session, initiallyOpen) {
         metadataItem('Viewer events', String(session.viewerEvents.length))
     );
     body.appendChild(meta);
+
+    if (automated) {
+        body.appendChild(node('h3', 'section-heading', 'Automated harvest steps'));
+        body.appendChild(makeTable(
+            ['Phase', 'Time', 'Visibility', 'Timer delay', 'Hydration', 'Attempt', 'Driver ID'],
+            session.harvestSteps.map((record) => [
+                record.phase,
+                formatDate(record.at),
+                record.visibility,
+                `${record.timerDelayMs}ms`,
+                `${record.hydrationLatencyMs}ms`,
+                record.advanceAttempt,
+                record.driverVideoId || '—',
+            ])
+        ));
+    }
 
     body.appendChild(node('h3', 'section-heading', 'Seen videos'));
     body.appendChild(makeTable(
@@ -180,7 +210,8 @@ async function refresh() {
     elements.sessionCount.textContent = String(state.sessions.length);
     elements.permission.textContent = response.permissionGranted ? 'Granted' : 'Not granted';
     elements.settings.textContent =
-        `${state.settings.durationSeconds}s + ${state.settings.targetUnseenCount} videos`;
+        `${state.settings.harvestTimeoutSeconds}s timeout + ` +
+        `${state.settings.targetUnseenCount} videos`;
     elements.revoke.disabled = !response.permissionGranted;
     elements.sessions.replaceChildren();
     elements.empty.hidden = state.sessions.length !== 0;

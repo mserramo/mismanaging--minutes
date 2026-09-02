@@ -6,6 +6,8 @@ importScripts('lib/core.js');
 const Core = TikTokPilotCore;
 const STATE_KEY = 'pilotState';
 const BROWSER_SESSION_MARKER = 'viewerLeaseEpochInitialized';
+const RETURN_TABS_KEY = 'harvestReturnTabs';
+const HARVEST_ALARM_PREFIX = 'harvest-deadline:';
 const STARTUP_VIEWER_RECOVERY_MS = 1500;
 let mutationQueue = Promise.resolve();
 let registrationQueue = Promise.resolve();
@@ -128,8 +130,91 @@ async function initializeBrowserLifetime() {
         });
         return { ok: true };
     });
-    await chrome.storage.session.set({ [BROWSER_SESSION_MARKER]: true });
+    await chrome.storage.session.set({
+        [BROWSER_SESSION_MARKER]: true,
+        [RETURN_TABS_KEY]: {},
+    });
     return { freshBrowserLifetime: true };
+}
+
+async function readReturnTabs() {
+    const stored = await chrome.storage.session.get(RETURN_TABS_KEY);
+    const input = stored[RETURN_TABS_KEY];
+    return input && typeof input === 'object' ? input : {};
+}
+
+async function rememberReturnTab(sessionId, tabId) {
+    if (!Number.isInteger(tabId)) {
+        return;
+    }
+    const tabs = await readReturnTabs();
+    tabs[sessionId] = tabId;
+    await chrome.storage.session.set({ [RETURN_TABS_KEY]: tabs });
+}
+
+async function forgetReturnTab(sessionId) {
+    const tabs = await readReturnTabs();
+    delete tabs[sessionId];
+    await chrome.storage.session.set({ [RETURN_TABS_KEY]: tabs });
+}
+
+async function forgetReturnTabs() {
+    await chrome.storage.session.set({ [RETURN_TABS_KEY]: {} });
+}
+
+async function focusTab(tabId) {
+    if (!Number.isInteger(tabId)) {
+        return false;
+    }
+    try {
+        const tab = await chrome.tabs.update(tabId, { active: true });
+        if (tab && Number.isInteger(tab.windowId)) {
+            await chrome.windows.update(tab.windowId, { focused: true }).catch(() => undefined);
+        }
+        return true;
+    } catch (_error) {
+        return false;
+    }
+}
+
+function harvestAlarmName(sessionId) {
+    return `${HARVEST_ALARM_PREFIX}${sessionId}`;
+}
+
+async function scheduleHarvestAlarm(session) {
+    if (
+        !session ||
+        session.collectionMode !== Core.COLLECTION_MODE.AUTOMATED_BACKGROUND ||
+        session.status !== Core.SESSION_STATUS.COLLECTING
+    ) {
+        return;
+    }
+    await chrome.alarms.create(harvestAlarmName(session.id), {
+        when: Math.max(Date.now(), session.harvestDeadlineAt),
+    });
+}
+
+async function clearHarvestAlarm(sessionId) {
+    if (typeof sessionId === 'string') {
+        await chrome.alarms.clear(harvestAlarmName(sessionId));
+    }
+}
+
+async function clearAllHarvestAlarms() {
+    const alarms = await chrome.alarms.getAll();
+    await Promise.all(
+        alarms
+            .filter((alarm) => alarm.name.startsWith(HARVEST_ALARM_PREFIX))
+            .map((alarm) => chrome.alarms.clear(alarm.name))
+    );
+}
+
+async function ensureActiveHarvestAlarm() {
+    const state = await readState();
+    const active = Core.getActiveSession(state);
+    if (active && active.status === Core.SESSION_STATUS.COLLECTING) {
+        await scheduleHarvestAlarm(active);
+    }
 }
 
 // Every message waits for this once-per-browser-lifetime reset. storage.session
@@ -185,9 +270,17 @@ function unregisterCollector() {
     });
 }
 
-function registerCollector() {
+function registerCollector(force) {
     return queueRegistration(async () => {
-        if (!(await hasTikTokPermission())) {
+        const state = await readState();
+        const active = Core.getActiveSession(state);
+        const needsCollector = Boolean(active && [
+            Core.SESSION_STATUS.COLLECTING,
+            Core.SESSION_STATUS.COMPLETE,
+            Core.SESSION_STATUS.VIEWING,
+            Core.SESSION_STATUS.FAILED,
+        ].includes(active.status));
+        if (!(await hasTikTokPermission()) || (!force && !needsCollector)) {
             const registered = await chrome.scripting.getRegisteredContentScripts({
                 ids: [Core.CONTENT_SCRIPT_ID],
             });
@@ -234,7 +327,15 @@ async function findReusableTikTokTab() {
     }) || null;
 }
 
-async function createOrReuseTargetTab() {
+async function createOrReuseTargetTab(preferredTabId) {
+    if (Number.isInteger(preferredTabId)) {
+        try {
+            await chrome.tabs.get(preferredTabId);
+            return { tabId: preferredTabId, created: false };
+        } catch (_error) {
+            // A failed-session lease may refer to a tab the participant closed.
+        }
+    }
     const existing = await findReusableTikTokTab();
     if (existing && Number.isInteger(existing.id)) {
         return { tabId: existing.id, created: false };
@@ -253,7 +354,7 @@ async function startSession() {
     if (!(await hasTikTokPermission())) {
         return { ok: false, error: 'tiktok_permission_required' };
     }
-    await registerCollector();
+    await registerCollector(true);
     const initialState = await readState();
     const initialActive = Core.getActiveSession(initialState);
     if (initialActive && [
@@ -263,7 +364,20 @@ async function startSession() {
     ].includes(initialActive.status)) {
         return { ok: false, error: 'active_session_exists', sessionId: initialActive.id };
     }
-    const target = await createOrReuseTargetTab();
+    const activeTabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+    const previousFailed = initialActive && initialActive.status === Core.SESSION_STATUS.FAILED
+        ? initialActive
+        : null;
+    const returnTabs = await readReturnTabs();
+    const currentReturnTabId = activeTabs.length && Number.isInteger(activeTabs[0].id)
+        ? activeTabs[0].id
+        : null;
+    const returnTabId = previousFailed && Number.isInteger(returnTabs[previousFailed.id])
+        ? returnTabs[previousFailed.id]
+        : currentReturnTabId;
+    const target = await createOrReuseTargetTab(
+        previousFailed && previousFailed.targetTabId
+    );
     const tabId = target.tabId;
     const metadata = {
         id: crypto.randomUUID(),
@@ -291,7 +405,13 @@ async function startSession() {
         }
         return mutation.result;
     }
-    if (target.created) {
+    if (previousFailed) {
+        await forgetReturnTab(previousFailed.id);
+        await clearHarvestAlarm(previousFailed.id);
+    }
+    await rememberReturnTab(mutation.result.sessionId, returnTabId);
+    await scheduleHarvestAlarm(Core.getSession(mutation.state, mutation.result.sessionId));
+    if (target.created || previousFailed) {
         await chrome.tabs.update(tabId, { url: Core.TIKTOK_FYP_URL, active: true });
     } else {
         await chrome.tabs.reload(tabId);
@@ -304,7 +424,7 @@ async function resumeSession() {
     if (!(await hasTikTokPermission())) {
         return { ok: false, error: 'tiktok_permission_required' };
     }
-    await registerCollector();
+    await registerCollector(true);
     const target = await createOrReuseTargetTab();
     const tabId = target.tabId;
     let oldTabId = null;
@@ -325,6 +445,7 @@ async function resumeSession() {
         }
         return mutation.result;
     }
+    await scheduleHarvestAlarm(Core.getSession(mutation.state, mutation.result.sessionId));
     if (Number.isInteger(oldTabId) && oldTabId !== tabId) {
         await chrome.tabs.sendMessage(oldTabId, {
             type: Core.MESSAGE_TYPES.SHUTDOWN_COLLECTOR,
@@ -395,8 +516,8 @@ async function activateTombstoneGuards() {
     }));
 }
 
-function collectorSessionForMessage(state, sender, sessionId, allowedStatuses) {
-    if (!isTikTokFypCollector(sender)) {
+function boundTikTokSessionForMessage(state, sender, sessionId, allowedStatuses) {
+    if (!isTikTokCollector(sender)) {
         return null;
     }
     const session = Core.getSession(state, sessionId);
@@ -408,6 +529,13 @@ function collectorSessionForMessage(state, sender, sessionId, allowedStatuses) {
         return null;
     }
     return session;
+}
+
+function collectorSessionForMessage(state, sender, sessionId, allowedStatuses) {
+    if (!isTikTokFypCollector(sender)) {
+        return null;
+    }
+    return boundTikTokSessionForMessage(state, sender, sessionId, allowedStatuses);
 }
 
 function currentViewerRecord(session) {
@@ -552,6 +680,7 @@ async function getContentContext(sender) {
             Core.SESSION_STATUS.COLLECTING,
             Core.SESSION_STATUS.COMPLETE,
             Core.SESSION_STATUS.VIEWING,
+            Core.SESSION_STATUS.FAILED,
         ].includes(session.status)) {
             return { ok: true, active: false };
         }
@@ -571,11 +700,17 @@ async function getContentContext(sender) {
             mode:
                 boundTab && session.status === Core.SESSION_STATUS.COLLECTING
                     ? 'collecting'
+                    : boundTab && session.status === Core.SESSION_STATUS.FAILED
+                        ? 'failed'
                     : 'guard',
             session: {
                 id: session.id,
+                collectionMode: session.collectionMode,
                 seed: session.seed,
                 startedAt: session.startedAt,
+                harvestStartedAt: session.harvestStartedAt,
+                harvestDeadlineAt: session.harvestDeadlineAt,
+                harvestPhase: session.harvestPhase,
                 status: session.status,
                 boundTab,
                 lockedSettings: session.lockedSettings,
@@ -644,6 +779,79 @@ async function dispatchMessage(message, sender) {
             : { ok: false, error: 'untrusted_sender' };
     }
 
+    if (message.type === Core.MESSAGE_TYPES.COLLECTOR_READY) {
+        const mutation = await mutateState((state) => {
+            const session = boundTikTokSessionForMessage(
+                state,
+                sender,
+                message.sessionId,
+                [Core.SESSION_STATUS.COLLECTING]
+            );
+            if (!session) {
+                return { ok: false, error: 'wrong_session_or_tab' };
+            }
+            if (!Core.acceptSourceEvent(session, message.sourceId, message.sequence)) {
+                return { ok: true, duplicate: true };
+            }
+            const step = Core.recordHarvestStep(session, {
+                phase: 'starting',
+                visibility: message.visibility,
+                timerDelayMs: message.timerDelayMs,
+                hydrationLatencyMs: 0,
+                advanceAttempt: 0,
+            }, Date.now());
+            return { ok: step.applied, error: step.reason || null };
+        });
+        if (!mutation.result.ok) {
+            return mutation.result;
+        }
+        const returnTabs = await readReturnTabs();
+        const returnTabId = returnTabs[message.sessionId];
+        const returned = returnTabId === sender.tab.id
+            ? false
+            : await focusTab(returnTabId);
+        return { ok: true, returned };
+    }
+
+    if (message.type === Core.MESSAGE_TYPES.RETRY_HARVEST) {
+        if (!isTikTokCollector(sender) || !sender.tab) {
+            return { ok: false, error: 'untrusted_sender' };
+        }
+        const returnTabs = await readReturnTabs();
+        const returnTabId = returnTabs[message.sessionId];
+        const mutation = await mutateState((state) => {
+            const previous = Core.getSession(state, message.sessionId);
+            if (
+                !previous ||
+                previous.status !== Core.SESSION_STATUS.FAILED ||
+                previous.targetTabId !== sender.tab.id
+            ) {
+                return { ok: false, error: 'retry_not_available' };
+            }
+            const session = Core.createSession(state.settings, {
+                id: crypto.randomUUID(),
+                seed: randomSeed(),
+                startedAt: Date.now(),
+                targetTabId: sender.tab.id,
+            });
+            state.sessions.push(session);
+            state.activeSessionId = session.id;
+            return { ok: true, sessionId: session.id };
+        });
+        if (!mutation.result.ok) {
+            return mutation.result;
+        }
+        await forgetReturnTab(message.sessionId);
+        await rememberReturnTab(mutation.result.sessionId, returnTabId);
+        await clearHarvestAlarm(message.sessionId);
+        await scheduleHarvestAlarm(Core.getSession(mutation.state, mutation.result.sessionId));
+        await chrome.tabs.update(sender.tab.id, {
+            url: Core.TIKTOK_FYP_URL,
+            active: true,
+        });
+        return mutation.result;
+    }
+
     if (message.type === Core.MESSAGE_TYPES.STOP_SESSION) {
         const fromPopup = isPopup(sender);
         const fromCollector = isTikTokCollector(sender);
@@ -655,21 +863,29 @@ async function dispatchMessage(message, sender) {
             if (!session) {
                 return { ok: false, error: 'session_not_found' };
             }
-            if (session.status !== Core.SESSION_STATUS.COLLECTING) {
+            if (![Core.SESSION_STATUS.COLLECTING, Core.SESSION_STATUS.FAILED]
+                .includes(session.status)) {
                 return { ok: false, error: 'not_collecting' };
             }
             if (fromCollector && session.targetTabId !== sender.tab.id) {
                 return { ok: false, error: 'wrong_tab' };
             }
-            if (!Core.stopSession(session, Date.now(), 'participant_stopped')) {
-                return { ok: false, error: 'not_collecting' };
+            if (session.status === Core.SESSION_STATUS.COLLECTING) {
+                if (!Core.stopSession(session, Date.now(), 'participant_stopped')) {
+                    return { ok: false, error: 'not_collecting' };
+                }
             }
             if (state.activeSessionId === session.id) {
                 state.activeSessionId = null;
             }
-            return { ok: true };
+            return { ok: true, sessionId: session.id };
         });
         await sendShutdownToInjectedCollectors();
+        await unregisterCollector();
+        if (mutation.result.sessionId) {
+            await forgetReturnTab(mutation.result.sessionId);
+            await clearHarvestAlarm(mutation.result.sessionId);
+        }
         return mutation.result;
     }
 
@@ -703,7 +919,7 @@ async function dispatchMessage(message, sender) {
 
     if (message.type === Core.MESSAGE_TYPES.EXCLUDE_VIDEO) {
         const mutation = await mutateState((state) => {
-            const session = collectorSessionForMessage(
+            const session = boundTikTokSessionForMessage(
                 state,
                 sender,
                 message.sessionId,
@@ -769,6 +985,80 @@ async function dispatchMessage(message, sender) {
         return mutation.result;
     }
 
+    if (message.type === Core.MESSAGE_TYPES.HARVEST_STEP) {
+        const mutation = await mutateState((state) => {
+            const session = collectorSessionForMessage(
+                state,
+                sender,
+                message.sessionId,
+                [Core.SESSION_STATUS.COLLECTING]
+            );
+            if (!session) {
+                return { ok: false, error: 'wrong_session_or_tab' };
+            }
+            if (!Core.acceptSourceEvent(session, message.sourceId, message.sequence)) {
+                return { ok: true, duplicate: true, progress: Core.sessionProgress(session) };
+            }
+            const now = Date.now();
+            if (now >= session.harvestDeadlineAt) {
+                Core.recordDiagnostic(session, 'harvest_timeout', now, {
+                    elapsedMs: now - session.harvestStartedAt,
+                });
+                Core.failHarvest(session, now, 'harvest_timeout');
+                return {
+                    ok: false,
+                    error: 'harvest_timeout',
+                    failed: true,
+                    progress: Core.sessionProgress(session, now),
+                };
+            }
+            const step = Core.recordHarvestStep(session, message, now);
+            return {
+                ok: step.applied,
+                error: step.reason || null,
+                progress: Core.sessionProgress(session, now),
+            };
+        });
+        if (mutation.result.failed) {
+            await clearHarvestAlarm(message.sessionId);
+            await focusTab(sender.tab.id);
+        }
+        return mutation.result;
+    }
+
+    if (message.type === Core.MESSAGE_TYPES.HARVEST_FAIL) {
+        const mutation = await mutateState((state) => {
+            const session = boundTikTokSessionForMessage(
+                state,
+                sender,
+                message.sessionId,
+                [Core.SESSION_STATUS.COLLECTING]
+            );
+            if (!session) {
+                return { ok: false, error: 'wrong_session_or_tab' };
+            }
+            if (!Core.acceptSourceEvent(session, message.sourceId, message.sequence)) {
+                return { ok: true, duplicate: true, progress: Core.sessionProgress(session) };
+            }
+            const now = Date.now();
+            const reason = typeof message.reason === 'string'
+                ? message.reason
+                : 'harvest_failed';
+            Core.recordDiagnostic(session, reason, now, message.detail);
+            const applied = Core.failHarvest(session, now, reason);
+            return {
+                ok: applied,
+                error: applied ? null : 'not_collecting',
+                progress: Core.sessionProgress(session, now),
+            };
+        });
+        if (mutation.result.ok) {
+            await clearHarvestAlarm(message.sessionId);
+            await focusTab(sender.tab.id);
+        }
+        return mutation.result;
+    }
+
     if (message.type === Core.MESSAGE_TYPES.RESERVE_VIDEO) {
         const mutation = await mutateState((state) => {
             const session = collectorSessionForMessage(
@@ -785,7 +1075,9 @@ async function dispatchMessage(message, sender) {
             }
             const receiptAt = Date.now();
             const reservation = Core.reserveVideo(session, { ...message, at: receiptAt });
-            const completed = reservation.applied && Core.evaluateCompletion(session, receiptAt);
+            const automated = session.collectionMode === Core.COLLECTION_MODE.AUTOMATED_BACKGROUND;
+            const completed = reservation.applied && !automated &&
+                Core.evaluateCompletion(session, receiptAt);
             if (completed && session.viewerTabOpenedAt === null) {
                 session.viewerTabOpenedAt = 0;
             }
@@ -801,6 +1093,54 @@ async function dispatchMessage(message, sender) {
         });
         if (mutation.result.shouldActivateGuards) {
             await activateTombstoneGuards();
+        }
+        if (mutation.result.viewerSessionId) {
+            await clearHarvestAlarm(mutation.result.viewerSessionId);
+        }
+        await maybeOpenViewer(mutation);
+        return mutation.result;
+    }
+
+    if (message.type === Core.MESSAGE_TYPES.CONFIRM_RESERVATION) {
+        const mutation = await mutateState((state) => {
+            const session = collectorSessionForMessage(
+                state,
+                sender,
+                message.sessionId,
+                [Core.SESSION_STATUS.COLLECTING, Core.SESSION_STATUS.COMPLETE]
+            );
+            if (!session) {
+                return { ok: false, error: 'wrong_session_or_tab' };
+            }
+            if (!Core.acceptSourceEvent(session, message.sourceId, message.sequence)) {
+                return { ok: true, duplicate: true, progress: Core.sessionProgress(session) };
+            }
+            const receiptAt = Date.now();
+            const confirmation = Core.confirmReservation(
+                session,
+                message.videoId,
+                receiptAt
+            );
+            const completed = confirmation.applied &&
+                Core.evaluateCompletion(session, receiptAt);
+            if (completed && session.viewerTabOpenedAt === null) {
+                session.viewerTabOpenedAt = 0;
+            }
+            return {
+                ok: confirmation.applied,
+                error: confirmation.applied ? null : confirmation.reason,
+                progress: Core.sessionProgress(session, receiptAt),
+                tombstones: session.tombstones.slice(),
+                shouldActivateGuards:
+                    confirmation.applied && session.tombstones.length === 1,
+                viewerSessionId: completed ? session.id : null,
+            };
+        });
+        if (mutation.result.shouldActivateGuards) {
+            await activateTombstoneGuards();
+        }
+        if (mutation.result.viewerSessionId) {
+            await clearHarvestAlarm(mutation.result.viewerSessionId);
         }
         await maybeOpenViewer(mutation);
         return mutation.result;
@@ -965,9 +1305,14 @@ async function dispatchMessage(message, sender) {
             if (applied && state.activeSessionId === session.id) {
                 state.activeSessionId = null;
             }
-            return { ok: applied };
+            return { ok: applied, sessionId: session.id };
         });
         await sendShutdownToInjectedCollectors();
+        await clearAllHarvestAlarms();
+        await unregisterCollector();
+        if (mutation.result.sessionId) {
+            await forgetReturnTab(mutation.result.sessionId);
+        }
         return mutation.result;
     }
 
@@ -976,6 +1321,8 @@ async function dispatchMessage(message, sender) {
             return { ok: false, error: 'untrusted_sender' };
         }
         await sendShutdownToInjectedCollectors();
+        await clearAllHarvestAlarms();
+        await unregisterCollector();
         const mutation = await mutateState((state) => {
             const cleared = Core.clearCollectedData(state);
             state.schemaVersion = cleared.schemaVersion;
@@ -984,6 +1331,7 @@ async function dispatchMessage(message, sender) {
             state.sessions = [];
             return { ok: true };
         });
+        await forgetReturnTabs();
         return mutation.result;
     }
 
@@ -992,6 +1340,7 @@ async function dispatchMessage(message, sender) {
             return { ok: false, error: 'untrusted_sender' };
         }
         await sendShutdownToInjectedCollectors();
+        await clearAllHarvestAlarms();
         await mutateState((state) => {
             const active = Core.getActiveSession(state);
             if (active) {
@@ -1000,6 +1349,7 @@ async function dispatchMessage(message, sender) {
             }
             return { ok: true };
         });
+        await forgetReturnTabs();
         await unregisterCollector();
         const removed = await chrome.permissions.remove({
             origins: ['https://www.tiktok.com/*'],
@@ -1030,12 +1380,50 @@ chrome.runtime.onInstalled.addListener(() => {
         await writeState(state);
     }).catch(() => undefined);
     registerCollector().catch(() => undefined);
+    ensureActiveHarvestAlarm().catch(() => undefined);
 });
 
 chrome.runtime.onStartup.addListener(() => {
     const registration = registerCollector().catch(() => undefined);
     const viewerRecovery = recoverViewerAfterBrowserStart().catch(() => undefined);
-    return Promise.all([registration, viewerRecovery]);
+    const harvestAlarm = ensureActiveHarvestAlarm().catch(() => undefined);
+    return Promise.all([registration, viewerRecovery, harvestAlarm]);
+});
+
+chrome.alarms.onAlarm.addListener((alarm) => {
+    if (!alarm || !alarm.name.startsWith(HARVEST_ALARM_PREFIX)) {
+        return;
+    }
+    const sessionId = alarm.name.slice(HARVEST_ALARM_PREFIX.length);
+    mutateState((state) => {
+        const session = Core.getSession(state, sessionId);
+        if (
+            !session ||
+            session.status !== Core.SESSION_STATUS.COLLECTING ||
+            Date.now() < session.harvestDeadlineAt
+        ) {
+            return { ok: false, error: 'alarm_not_due' };
+        }
+        const now = Date.now();
+        Core.recordDiagnostic(session, 'harvest_timeout', now, {
+            elapsedMs: now - session.harvestStartedAt,
+        });
+        Core.failHarvest(session, now, 'harvest_timeout');
+        return {
+            ok: true,
+            tabId: session.targetTabId,
+            progress: Core.sessionProgress(session, now),
+        };
+    }).then(async (mutation) => {
+        if (!mutation.result.ok || !Number.isInteger(mutation.result.tabId)) {
+            return;
+        }
+        await chrome.tabs.sendMessage(mutation.result.tabId, {
+            type: Core.MESSAGE_TYPES.STATE_UPDATED,
+            progress: mutation.result.progress,
+        }).catch(() => undefined);
+        await focusTab(mutation.result.tabId);
+    }).catch(() => undefined);
 });
 
 chrome.permissions.onRemoved.addListener((permissions) => {
@@ -1044,6 +1432,7 @@ chrome.permissions.onRemoved.addListener((permissions) => {
         return;
     }
     sendShutdownToInjectedCollectors()
+        .then(() => clearAllHarvestAlarms())
         .then(() => unregisterCollector())
         .then(() => mutateState((state) => {
             const active = Core.getActiveSession(state);
@@ -1071,9 +1460,19 @@ chrome.tabs.onRemoved.addListener((tabId) => {
         ) {
             active.targetTabId = null;
             Core.recordDiagnostic(active, 'target_tab_closed', Date.now());
+            if (active.collectionMode === Core.COLLECTION_MODE.AUTOMATED_BACKGROUND) {
+                Core.failHarvest(active, Date.now(), 'target_tab_closed');
+            }
         }
-        return { ok: true };
-    }).catch(() => undefined);
+        return {
+            ok: true,
+            failedSessionId:
+                active && active.status === Core.SESSION_STATUS.FAILED
+                    ? active.id
+                    : null,
+        };
+    }).then((mutation) => clearHarvestAlarm(mutation.result.failedSessionId))
+        .catch(() => undefined);
 });
 
 chrome.storage.local.setAccessLevel({ accessLevel: 'TRUSTED_CONTEXTS' }).catch(() => undefined);
@@ -1083,3 +1482,4 @@ chrome.storage.session.setAccessLevel({ accessLevel: 'TRUSTED_CONTEXTS' }).catch
 // the dynamic registration self-healing whenever this worker is instantiated,
 // while registerCollector's queue still deduplicates concurrent callers.
 registerCollector().catch(() => undefined);
+ensureActiveHarvestAlarm().catch(() => undefined);
