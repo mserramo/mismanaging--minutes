@@ -14,10 +14,10 @@ This package connects the unpacked Chrome extension to one Qualtrics question. T
 1. Reload `tiktok-fyp-pilot/` on `chrome://extensions` after updating the source and confirm Chrome shows version **0.4.5**.
 2. Copy the extension's 32-letter ID.
 3. Open the extension popup, accept the disclosure, and select **Grant TikTok access**. This popup no longer exposes a standalone Start action; collection can begin only from the survey. A normal website cannot trigger that permission prompt on the extension's behalf.
-4. Import the freshly generated `TikTok_FYP_Qualtrics_Pilot.qsf` into Stanford Qualtrics as a new survey and keep it inactive. Confirm its name is **TikTok FYP Qualtrics Bridge Pilot v0.4.5 - QSF r3**. This build deliberately uses Qualtrics-safe JavaScript, Qualtrics' default completion message, no Prolific redirect, and a full-height iframe mount for the 9:16 player.
+4. Import the freshly generated `TikTok_FYP_Qualtrics_Pilot.qsf` into Stanford Qualtrics as a new survey and keep it inactive. Confirm its name is **TikTok FYP Qualtrics Bridge Pilot v0.4.5 - QSF r5**. This build deliberately uses Qualtrics-safe JavaScript, Qualtrics' default completion message, no Prolific redirect, a full-height iframe mount for the 9:16 player, and participant setup instructions on the connection screen.
 5. Preview the survey in desktop Chrome. Paste the extension ID into the setup field and select **Connect**. Alternatively, append `ttfp_extension_id=EXTENSION_ID` to the survey link after declaring that Embedded Data field, taking care to use `?` or `&` correctly.
 6. Select **Start harvest**. TikTok opens covered, the survey regains focus, and the survey polls the extension every 500 ms.
-7. After the configured harvest window, play or navigate through the returned queue. The normal Qualtrics Next button appears only after **Finish**.
+7. After the configured harvest window, click the video surface to play or pause and use the arrow buttons or keyboard arrows to navigate. Mouse-wheel scrolling does not change videos. The normal Qualtrics Next button appears only after **Finish**.
 
 If collection opens an extension viewer tab, the session was not started by this survey. Stop and clear the old session from the extension, reload version 0.4.5, and restart using the survey's **Start harvest** button. The survey rejects old bridge builds and standalone-session conflicts with an explicit message.
 

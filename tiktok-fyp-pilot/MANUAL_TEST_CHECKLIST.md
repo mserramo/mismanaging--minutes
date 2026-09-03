@@ -63,10 +63,10 @@ Use a research-development TikTok account/profile. Record date, Chrome version, 
 - [ ] Confirm one iframe is created at a time using `https://www.tiktok.com/player/v1/{numeric_id}`.
 - [ ] Confirm the video is centered and the status/transport interface is a compact bar immediately below it.
 - [ ] Confirm description, music information, progress UI, and native controls are hidden.
-- [ ] Confirm the participant must select **Play** once; subsequent videos attempt autoplay and expose Play again if autoplay is blocked.
-- [ ] Confirm **Pause/Resume** and Space work without changing videos.
+- [ ] Confirm the participant clicks the video surface to start; subsequent videos attempt autoplay and another video-surface click remains available if autoplay is blocked.
+- [ ] Confirm clicking the video toggles pause/resume and Space provides the same behavior without changing videos; confirm there is no separate Play/Pause button.
 - [ ] Confirm a genuine end advances automatically to the next video.
-- [ ] Confirm previous/next buttons, arrow keys, up/down keys, Page Up/Page Down, and mouse-wheel directions move backward and forward.
+- [ ] Confirm previous/next buttons, arrow keys, up/down keys, and Page Up/Page Down move backward and forward; confirm mouse-wheel scrolling never changes the video.
 - [ ] Confirm navigating away early records `participant_skip`, and returning backward replays without adding the video to the queue twice.
 - [ ] Confirm an unavailable/private/deleted embed records a local error or bounded timeout and allows Next.
 - [ ] Confirm a copied second viewer cannot claim or mutate the session.
@@ -82,7 +82,7 @@ Use a research-development TikTok account/profile. Record date, Chrome version, 
 ## 8. Qualtrics bridge
 
 - [ ] Import `qualtrics/TikTok_FYP_Qualtrics_Pilot.qsf` into the Stanford brand and keep it inactive.
-- [ ] Confirm the imported survey name ends in `v0.4.5 - QSF r3`, uses Qualtrics' default completion message, and has no Prolific redirect.
+- [ ] Confirm the imported survey name ends in `v0.4.5 - QSF r5`, shows the five setup/collection/viewing steps above the extension-ID field, uses Qualtrics' default completion message, and has no Prolific redirect.
 - [ ] Confirm a non-Qualtrics page cannot connect and the Stanford Qualtrics respondent hostname can connect only when given the exact installed extension ID.
 - [ ] Confirm both an anonymous survey top frame and the same-origin iframe used by Qualtrics Preview can connect.
 - [ ] Confirm TikTok access must already have been granted from the extension popup.
@@ -92,7 +92,7 @@ Use a research-development TikTok account/profile. Record date, Chrome version, 
 - [ ] Start from the survey and confirm focus returns to the same survey tab after the covered collector initializes.
 - [ ] Confirm live count/time progress updates and no extension viewer opens at the deadline.
 - [ ] Force a failed run, select **Continue to Qualtrics (testing)**, and confirm the survey regains focus, records `ttfp_test_bypass=1`, preserves the failure code, and permits Next with an empty queue.
-- [ ] Confirm the finalized numeric ID queue appears once in traversal order in the survey viewer.
+- [ ] Confirm the finalized numeric ID queue appears once in traversal order in the survey viewer, without a video-count label or separate Play/Pause button.
 - [ ] Confirm player messages from the wrong origin or iframe source do not affect the survey.
 - [ ] Finish the task and confirm `ttfp_video_ids_json`, the bounded playback log, count, session ID, and completion status are present in the Qualtrics response.
 - [ ] Exercise an anonymous survey link in addition to Preview; document any Stanford Qualtrics CSP or custom-JavaScript restriction.

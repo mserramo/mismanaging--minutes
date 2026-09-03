@@ -6,7 +6,6 @@
     const MIN_BRIDGE_VERSION = 2;
     const TIKTOK_ORIGIN = 'https://www.tiktok.com';
     const POLL_MS = 500;
-    const WHEEL_DEBOUNCE_MS = 650;
     let teardown = function () {};
 
     Qualtrics.SurveyEngine.addOnReady(function () {
@@ -31,7 +30,6 @@
         let pollTimer = null;
         let iframeReadyTimer = null;
         let autoAdvanceTimer = null;
-        let lastWheelAt = 0;
         let destroyed = false;
         const pending = new Map();
         const playbackEvents = [];
@@ -75,6 +73,13 @@
             .ttfpq-title { margin: 0 0 8px; font-size: clamp(25px, 4vw, 34px); line-height: 1.12; }
             .ttfpq-copy { margin: 0 0 16px; color: #56627a; }
             .ttfpq-card { padding: 18px; border: 1px solid #d7deeb; border-radius: 16px; background: #fff; box-shadow: 0 10px 30px rgba(23,32,51,.07); }
+            .ttfpq-guide { margin: 0 0 18px; padding: 15px 16px; border: 1px solid #e0e4f2; border-radius: 12px; background: #f7f8fc; }
+            .ttfpq-guide h3 { margin: 0 0 10px; font-size: 15px; }
+            .ttfpq-steps { margin: 0; padding-left: 22px; color: #344054; }
+            .ttfpq-steps li { padding-left: 3px; }
+            .ttfpq-steps li + li { margin-top: 8px; }
+            .ttfpq-steps strong { color: #172033; }
+            .ttfpq-connect { padding-top: 16px; border-top: 1px solid #e2e6ee; }
             .ttfpq-row { display: flex; gap: 9px; align-items: end; }
             .ttfpq-field { flex: 1; min-width: 0; }
             .ttfpq-field label { display: block; margin-bottom: 5px; font-size: 12px; font-weight: 750; }
@@ -91,17 +96,17 @@
             .ttfpq-note { margin: 14px 0 0; padding-top: 13px; border-top: 1px solid #e2e6ee; color: #667085; font-size: 12px; }
             .ttfpq-viewer[hidden], .ttfpq-setup[hidden] { display: none !important; }
             .ttfpq-viewer { width: min(430px, 100%); margin: 0 auto; }
-            .ttfpq-player { position: relative; width: min(100%, 360px); margin: 0 auto; aspect-ratio: 9 / 16; overflow: hidden; border-radius: 18px; background: #0f1115; box-shadow: 0 20px 48px rgba(15,17,21,.2); }
+            .ttfpq-player { position: relative; width: min(100%, 360px); margin: 0 auto; aspect-ratio: 9 / 16; overflow: hidden; border-radius: 18px; outline: none; background: #0f1115; box-shadow: 0 20px 48px rgba(15,17,21,.2); cursor: pointer; }
+            .ttfpq-player:focus-visible { box-shadow: 0 0 0 4px rgba(89,94,232,.28), 0 20px 48px rgba(15,17,21,.2); }
             .ttfpq-player-mount { position: absolute; inset: 0; width: 100%; height: 100%; }
             .ttfpq-player iframe { display: block; width: 100%; height: 100%; border: 0; pointer-events: none; }
             .ttfpq-placeholder { position: absolute; inset: 0; display: grid; place-content: center; padding: 24px; background: #111522; color: #d0d5dd; text-align: center; }
             .ttfpq-placeholder[hidden] { display: none; }
-            .ttfpq-controls { display: grid; grid-template-columns: 44px minmax(0,1fr) auto 44px; gap: 8px; align-items: center; margin-top: 10px; padding: 8px; border: 1px solid #d7deeb; border-radius: 14px; background: #fff; }
+            .ttfpq-controls { display: grid; grid-template-columns: 44px minmax(0,1fr) 44px; gap: 8px; align-items: center; margin-top: 10px; padding: 8px; border: 1px solid #d7deeb; border-radius: 14px; background: #fff; }
             .ttfpq-nav { min-width: 0; padding: 7px; font-size: 20px; }
             .ttfpq-control-copy { min-width: 0; }
             .ttfpq-control-copy strong, .ttfpq-control-copy span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
             .ttfpq-control-copy span { color: #667085; font-size: 11px; }
-            .ttfpq-counter { margin: 0 0 9px; color: #667085; font-size: 12px; font-weight: 750; text-align: center; }
             .ttfpq-finished { padding: 28px; text-align: center; }
             @media (max-width: 520px) { .ttfpq-row { align-items: stretch; flex-direction: column; } .ttfpq-player { width: min(100%, 330px); } }
         `;
@@ -111,8 +116,39 @@
         const setup = element('div', 'ttfpq-setup');
         const eyebrow = element('p', 'ttfpq-eyebrow', 'Research pilot');
         const title = element('h2', 'ttfpq-title', 'Personalized TikTok video task');
-        const copy = element('p', 'ttfpq-copy', 'The installed research extension will cover TikTok, source recommendations for its configured collection window, and return them to this survey.');
+        const copy = element('p', 'ttfpq-copy', 'Complete these steps in desktop Chrome. The videos will appear on this same survey page.');
         const card = element('div', 'ttfpq-card');
+        const guide = element('section', 'ttfpq-guide');
+        const guideTitle = element('h3', null, 'Before you begin');
+        const steps = element('ol', 'ttfpq-steps');
+        [
+            [
+                'Load the extension. ',
+                'Open chrome://extensions, turn on Developer mode, select Load unpacked, and choose the supplied tiktok-fyp-pilot folder containing manifest.json. Open the extension, accept the disclosure, and grant TikTok access.'
+            ],
+            [
+                'Copy the extension code. ',
+                'On chrome://extensions, copy the 32-letter ID shown on the TikTok FYP Research Pilot card.'
+            ],
+            [
+                'Start collection. ',
+                'Paste the ID below, select Connect, and then select Start harvest.'
+            ],
+            [
+                'Wait for collection. ',
+                'TikTok will open behind a protective cover and this survey will regain focus. Keep both tabs open until the timer finishes.'
+            ],
+            [
+                'Watch the videos. ',
+                'The collected videos will appear here automatically. Click the video to play or pause, and use the arrow controls below it to move between videos.'
+            ],
+        ].forEach(([heading, detail]) => {
+            const item = element('li');
+            item.append(element('strong', null, heading), document.createTextNode(detail));
+            steps.appendChild(item);
+        });
+        guide.append(guideTitle, steps);
+        const connectArea = element('div', 'ttfpq-connect');
         const row = element('div', 'ttfpq-row');
         const field = element('div', 'ttfpq-field');
         const label = element('label', null, 'Chrome extension ID');
@@ -126,7 +162,7 @@
         extensionInput.id = 'ttfpq-extension-id';
         field.append(label, extensionInput);
         const connectButton = button('Connect', 'ttfpq-button');
-        const status = element('p', 'ttfpq-status', 'Enter the ID shown on chrome://extensions, then connect.');
+        const status = element('p', 'ttfpq-status', 'Complete steps 1–2, paste the extension ID, and then connect.');
         const progress = element('div', 'ttfpq-progress');
         const progressFill = element('div', 'ttfpq-progress-fill');
         progress.appendChild(progressFill);
@@ -136,13 +172,16 @@
         actions.appendChild(startButton);
         const note = element('p', 'ttfpq-note', 'This pilot sends numeric TikTok post IDs and the playback log into this Qualtrics response. TikTok separately receives normal embed-player requests and playback signals.');
         row.append(field, connectButton);
-        card.append(row, status, progress, actions, note);
+        connectArea.append(row, status, progress, actions, note);
+        card.append(guide, connectArea);
         setup.append(eyebrow, title, copy, card);
 
         const viewer = element('div', 'ttfpq-viewer');
         viewer.hidden = true;
-        const counter = element('p', 'ttfpq-counter');
         const player = element('div', 'ttfpq-player');
+        player.tabIndex = 0;
+        player.setAttribute('role', 'button');
+        player.setAttribute('aria-label', 'Play video');
         const playerMount = element('div', 'ttfpq-player-mount');
         const placeholder = element('div', 'ttfpq-placeholder', 'Preparing the TikTok player…');
         player.append(playerMount, placeholder);
@@ -153,12 +192,10 @@
         const controlTitle = element('strong', null, 'Preparing video');
         const controlStatus = element('span', null, 'Waiting for the player.');
         controlCopy.append(controlTitle, controlStatus);
-        const playButton = button('Play', 'ttfpq-button primary');
-        playButton.disabled = true;
         const nextButton = button('→', 'ttfpq-button ttfpq-nav');
         nextButton.setAttribute('aria-label', 'Next video');
-        controls.append(previousButton, controlCopy, playButton, nextButton);
-        viewer.append(counter, player, controls);
+        controls.append(previousButton, controlCopy, nextButton);
+        viewer.append(player, controls);
         shell.append(setup, viewer);
         root.appendChild(shell);
 
@@ -387,7 +424,6 @@
             nextButton.disabled = currentIndex < 0;
             nextButton.textContent = currentIndex === queue.length - 1 ? '✓' : '→';
             nextButton.setAttribute('aria-label', currentIndex === queue.length - 1 ? 'Finish task' : 'Next video');
-            counter.textContent = 'Video ' + (currentIndex + 1) + ' of ' + queue.length;
             if (message) {
                 controlStatus.textContent = message;
             }
@@ -400,9 +436,9 @@
             playerReady = true;
             clearTimeout(iframeReadyTimer);
             placeholder.hidden = true;
-            playButton.disabled = false;
             controlTitle.textContent = 'Ready to watch';
-            controlStatus.textContent = message || 'Press Play to begin.';
+            controlStatus.textContent = (message ? message + ' ' : '') + 'Click the video to play.';
+            player.setAttribute('aria-label', 'Play video');
             if (autoplayUnlocked) {
                 postPlayerCommand('unMute');
                 postPlayerCommand('play');
@@ -417,8 +453,7 @@
             playerReady = false;
             playing = false;
             terminal = false;
-            playButton.disabled = true;
-            playButton.textContent = 'Play';
+            player.setAttribute('aria-label', 'Video loading');
             controlTitle.textContent = 'Preparing video';
             controlStatus.textContent = 'Waiting for the TikTok player.';
             placeholder.hidden = false;
@@ -479,19 +514,19 @@
                 if (event.data.value === 1) {
                     playing = true;
                     controlTitle.textContent = 'Now playing';
-                    controlStatus.textContent = 'The next video opens automatically when this ends.';
-                    playButton.textContent = 'Pause';
+                    controlStatus.textContent = 'Click the video to pause. It advances automatically when it ends.';
+                    player.setAttribute('aria-label', 'Pause video');
                     rememberEvent('playing');
                 } else if (event.data.value === 2) {
                     playing = false;
                     controlTitle.textContent = 'Paused';
-                    controlStatus.textContent = 'Press Resume or Space.';
-                    playButton.textContent = 'Resume';
+                    controlStatus.textContent = 'Click the video or press Space to resume.';
+                    player.setAttribute('aria-label', 'Resume video');
                     rememberEvent('paused');
                 } else if (event.data.value === 0 && !terminal) {
                     terminal = true;
                     playing = false;
-                    playButton.disabled = true;
+                    player.setAttribute('aria-label', 'Video ended');
                     controlTitle.textContent = 'Video ended';
                     controlStatus.textContent = currentIndex === queue.length - 1 ? 'Press ✓ to finish.' : 'Opening the next video…';
                     rememberEvent('ended');
@@ -504,7 +539,7 @@
             if ((event.data.type === 'onPlayerError' || event.data.type === 'onError') && !terminal) {
                 terminal = true;
                 playing = false;
-                playButton.disabled = true;
+                player.setAttribute('aria-label', 'Video unavailable');
                 controlTitle.textContent = 'Video unavailable';
                 controlStatus.textContent = 'Use Next to continue.';
                 rememberEvent('player_error');
@@ -528,7 +563,6 @@
             }
             nextButton.disabled = true;
             previousButton.disabled = true;
-            playButton.disabled = true;
             request('finish', { sessionId }).then((response) => {
                 if (!response || !response.ok) {
                     throw new Error((response && response.error) || 'finish_failed');
@@ -570,7 +604,7 @@
                 setStatus(message, 'error');
             });
         });
-        playButton.addEventListener('click', () => {
+        function togglePlayback() {
             if (!playerReady || terminal) {
                 return;
             }
@@ -582,10 +616,12 @@
                 postPlayerCommand('play');
                 controlTitle.textContent = 'Starting';
                 controlStatus.textContent = 'Waiting for playback…';
-                playButton.textContent = 'Pause';
+                player.setAttribute('aria-label', 'Pause video');
                 rememberEvent('play_command');
             }
-        });
+        }
+
+        player.addEventListener('click', togglePlayback);
         previousButton.addEventListener('click', () => move(-1, 'button'));
         nextButton.addEventListener('click', () => move(1, 'button'));
 
@@ -601,21 +637,14 @@
                 move(1, 'keyboard');
             } else if (event.code === 'Space') {
                 event.preventDefault();
-                playButton.click();
+                togglePlayback();
+            } else if (event.key === 'Enter' && event.target === player) {
+                event.preventDefault();
+                togglePlayback();
             }
-        }
-
-        function wheelHandler(event) {
-            if (viewer.hidden || Math.abs(event.deltaY) < 18 || Date.now() - lastWheelAt < WHEEL_DEBOUNCE_MS) {
-                return;
-            }
-            event.preventDefault();
-            lastWheelAt = Date.now();
-            move(event.deltaY > 0 ? 1 : -1, 'wheel');
         }
 
         window.addEventListener('keydown', keyHandler);
-        viewer.addEventListener('wheel', wheelHandler, { passive: false });
         if (extensionInput.value) {
             connect();
         }
@@ -632,7 +661,7 @@
             }
             window.removeEventListener('message', handlePlayerMessage);
             window.removeEventListener('keydown', keyHandler);
-            viewer.removeEventListener('wheel', wheelHandler);
+            player.removeEventListener('click', togglePlayback);
             style.remove();
         };
     });
