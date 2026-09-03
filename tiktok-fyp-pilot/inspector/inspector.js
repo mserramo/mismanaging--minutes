@@ -98,13 +98,16 @@ function renderSession(session, initiallyOpen) {
     const meta = node('div', 'metadata-grid');
     meta.append(
         metadataItem('Mode', automated ? 'Automated background' : 'Legacy manual'),
+        metadataItem('Capture strategy', session.captureStrategy || 'Legacy / unknown'),
+        metadataItem('Delivery target', session.deliveryTarget || 'Local viewer'),
+        metadataItem('Stop reason', session.stopReason || '—'),
         metadataItem(
             'Locked harvest window',
             automated ? `${session.lockedSettings.harvestDurationSeconds}s` : '—'
         ),
         metadataItem(
             automated ? 'Collection rule' : 'Unseen target',
-            automated ? 'All safe videos in window' : String(session.lockedSettings.targetUnseenCount)
+            automated ? 'Every safely identified covered item' : String(session.lockedSettings.targetUnseenCount)
         ),
         metadataItem(
             automated ? 'Harvest elapsed' : 'Qualified time',
@@ -165,10 +168,11 @@ function renderSession(session, initiallyOpen) {
 
     body.appendChild(node('h3', 'section-heading', 'Reserved and invalidated videos'));
     body.appendChild(makeTable(
-        ['Video ID', 'State', 'Intercepted', 'Ahead by', 'Feed order', 'Viewer'],
+        ['Video ID', 'State', 'Capture', 'Intercepted', 'Ahead by', 'Feed order', 'Viewer'],
         session.reserved.map((record) => [
             record.videoId,
             record.state,
+            record.captureMethod || 'offscreen_successor',
             formatDate(record.interceptedAt),
             record.aheadBy,
             record.feedOrder,

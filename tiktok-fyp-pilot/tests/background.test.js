@@ -40,19 +40,24 @@ function createHarness(options = {}) {
     let stored = clone(options.state || Core.createDefaultState());
     let sessionStored = options.browserInitialized === false
         ? {}
-        : { viewerLeaseEpochInitialized: true };
+        : {
+            viewerLeaseEpochInitialized: true,
+            ...(options.sessionStored || {}),
+        };
     let permissionGranted = options.permissionGranted !== false;
     let nextTabId = 100;
     const registered = clone(options.registered || []);
     const tabs = clone(options.tabs || []);
     const log = [];
     const runtimeMessage = eventSlot();
+    const runtimeConnectExternal = eventSlot();
     const runtimeInstalled = eventSlot();
     const runtimeStartup = eventSlot();
     const permissionRemoved = eventSlot();
     const tabRemoved = eventSlot();
     const alarmEvent = eventSlot();
     const alarms = new Map();
+    let externalSequence = 0;
 
     const chrome = {
         runtime: {
@@ -61,7 +66,11 @@ function createHarness(options = {}) {
             getURL(relativePath) {
                 return `chrome-extension://${extensionId}/${relativePath}`;
             },
+            getManifest() {
+                return { version: '0.4.4' };
+            },
             onMessage: runtimeMessage,
+            onConnectExternal: runtimeConnectExternal,
             onInstalled: runtimeInstalled,
             onStartup: runtimeStartup,
         },
@@ -237,8 +246,34 @@ function createHarness(options = {}) {
         });
     }
 
+    function externalRequest(message, sender) {
+        const portMessage = eventSlot();
+        const portDisconnect = eventSlot();
+        externalSequence += 1;
+        const requestId = `external-${externalSequence}`;
+        return new Promise((resolve) => {
+            const port = {
+                name: 'tiktok-fyp-qualtrics-v1',
+                sender,
+                onMessage: portMessage,
+                onDisconnect: portDisconnect,
+                postMessage(response) {
+                    resolve(response);
+                },
+                disconnect() {
+                    resolve({ ok: false, error: 'disconnected' });
+                },
+            };
+            runtimeConnectExternal.listeners[0](port);
+            if (portMessage.listeners[0]) {
+                portMessage.listeners[0]({ ...message, requestId });
+            }
+        });
+    }
+
     return {
         dispatch,
+        externalRequest,
         async emitStartup() {
             await Promise.all(runtimeStartup.listeners.map((listener) => listener()));
         },
@@ -293,6 +328,18 @@ function viewerSender(sessionId, tabId) {
         url: `chrome-extension://${extensionId}/viewer/viewer.html?session=${sessionId}`,
         tab: { id: tabId },
         frameId: 0,
+    };
+}
+
+function qualtricsSender(
+    tabId = 7,
+    hostname = 'stanforduniversity.qualtrics.com',
+    frameId = 0
+) {
+    return {
+        url: `https://${hostname}/jfe/form/SV_test`,
+        tab: { id: tabId },
+        frameId,
     };
 }
 
@@ -482,6 +529,192 @@ test('collector readiness records hidden state and restores the originating tab'
     assert.equal(step.visibility, 'hidden');
 });
 
+test('allowlisted Qualtrics page starts a bound session and reads confirmed IDs live', async () => {
+    const harness = createHarness({
+        tabs: [
+            { id: 7, windowId: 1, active: true, url: 'https://stanforduniversity.qualtrics.com/jfe/form/SV_test' },
+            { id: 42, windowId: 1, active: false, url: Core.TIKTOK_FYP_URL },
+        ],
+    });
+    const started = await harness.externalRequest({ type: 'start' }, qualtricsSender(7));
+    assert.equal(started.ok, true);
+    assert.equal(started.bridgeVersion, 4);
+    assert.equal(started.extensionVersion, '0.4.4');
+    const state = harness.getState();
+    assert.equal(state.sessions[0].deliveryTarget, Core.DELIVERY_TARGET.QUALTRICS);
+
+    const prepared = await harness.dispatch({
+        type: Core.MESSAGE_TYPES.RESERVE_VIDEO,
+        sessionId: started.sessionId,
+        sourceId: 'source-qualtrics-live',
+        sequence: 1,
+        videoId: '7311111111111111111',
+        batchId: 'covered-1',
+        batchNumber: 1,
+        evidence: {
+            captureMethod: 'covered_feed_item',
+            feedOrder: 1,
+            aheadBy: 0,
+            intersectionRatio: 0.9,
+            belowViewport: false,
+            everIntersected: true,
+            connected: true,
+            occurrenceCount: 1,
+            overlayOpaque: true,
+            mediaMuted: true,
+        },
+    }, collectorSender(42));
+    assert.equal(prepared.ok, true);
+    assert.equal((await harness.dispatch({
+        type: Core.MESSAGE_TYPES.CONFIRM_RESERVATION,
+        sessionId: started.sessionId,
+        sourceId: 'source-qualtrics-live',
+        sequence: 2,
+        videoId: '7311111111111111111',
+    }, collectorSender(42))).ok, true);
+
+    const status = await harness.externalRequest(
+        { type: 'status', sessionId: started.sessionId },
+        qualtricsSender(7)
+    );
+    assert.equal(status.ok, true);
+    assert.equal(status.session.deliveryTarget, Core.DELIVERY_TARGET.QUALTRICS);
+    assert.deepEqual(clone(status.session.queue), [{
+        videoId: '7311111111111111111',
+        order: 1,
+    }]);
+});
+
+test('Stanford Qualtrics Preview can connect from its same-origin survey iframe', async () => {
+    const harness = createHarness();
+    const response = await harness.externalRequest(
+        { type: 'hello' },
+        qualtricsSender(7, 'stanforduniversity.qualtrics.com', 1)
+    );
+    assert.equal(response.ok, true);
+    assert.equal(response.bridgeVersion, 4);
+});
+
+test('a new Qualtrics start replaces a failed session lease with the requesting tab', async () => {
+    const state = collectingState();
+    const failed = state.sessions[0];
+    failed.deliveryTarget = Core.DELIVERY_TARGET.QUALTRICS;
+    Core.failHarvest(failed, Date.now(), 'login_or_fyp_absent');
+    const harness = createHarness({
+        state,
+        sessionStored: { harvestReturnTabs: { [failed.id]: 7 } },
+        tabs: [
+            { id: 7, windowId: 1, active: false, url: 'https://stanforduniversity.qualtrics.com/jfe/preview/old' },
+            { id: 8, windowId: 1, active: true, url: 'https://stanforduniversity.qualtrics.com/jfe/preview/current' },
+            { id: 42, windowId: 1, active: false, url: Core.TIKTOK_FYP_URL },
+        ],
+    });
+    const started = await harness.externalRequest({ type: 'start' }, qualtricsSender(8));
+    assert.equal(started.ok, true);
+    const currentStatus = await harness.externalRequest(
+        { type: 'status', sessionId: started.sessionId },
+        qualtricsSender(8)
+    );
+    assert.equal(currentStatus.session.id, started.sessionId);
+    const oldStatus = await harness.externalRequest(
+        { type: 'status', sessionId: started.sessionId },
+        qualtricsSender(7)
+    );
+    assert.equal(oldStatus.session, null);
+});
+
+test('Qualtrics refuses to claim a standalone session bound to the same return tab', async () => {
+    const state = collectingState();
+    const session = state.sessions[0];
+    session.deliveryTarget = Core.DELIVERY_TARGET.LOCAL_VIEWER;
+    const harness = createHarness({
+        state,
+        sessionStored: { harvestReturnTabs: { [session.id]: 7 } },
+        tabs: [
+            { id: 7, windowId: 1, active: true, url: 'https://stanforduniversity.qualtrics.com/jfe/form/SV_test' },
+            { id: 42, windowId: 1, active: false, url: Core.TIKTOK_FYP_URL },
+        ],
+    });
+    const status = await harness.externalRequest({ type: 'hello' }, qualtricsSender(7));
+    assert.equal(status.ok, true);
+    assert.equal(status.session, null);
+    assert.equal(status.conflict.reason, 'standalone_session_active');
+});
+
+test('non-allowlisted pages cannot connect to the Qualtrics bridge', async () => {
+    const harness = createHarness();
+    const response = await harness.externalRequest(
+        { type: 'hello' },
+        qualtricsSender(7, 'example.com')
+    );
+    assert.equal(response.ok, false);
+    assert.equal(response.error, 'disconnected');
+});
+
+test('Qualtrics-targeted completion returns to the survey instead of opening a local viewer', async () => {
+    const state = collectingState();
+    const session = state.sessions[0];
+    session.deliveryTarget = Core.DELIVERY_TARGET.QUALTRICS;
+    reserveOne(session);
+    session.startedAt = Date.now() - 100000;
+    session.harvestStartedAt = session.startedAt;
+    session.harvestDeadlineAt = Date.now() - 1;
+    const harness = createHarness({
+        state,
+        sessionStored: { harvestReturnTabs: { [session.id]: 7 } },
+        tabs: [
+            { id: 7, windowId: 1, active: false, url: 'https://stanforduniversity.qualtrics.com/jfe/form/SV_test' },
+            { id: 42, windowId: 1, active: true, url: Core.TIKTOK_FYP_URL },
+        ],
+    });
+    const response = await harness.dispatch({
+        type: Core.MESSAGE_TYPES.HARVEST_STEP,
+        sessionId: session.id,
+        sourceId: 'source-qualtrics-deadline',
+        sequence: 1,
+        phase: 'waiting_hydration',
+        visibility: 'hidden',
+        timerDelayMs: 1000,
+        hydrationLatencyMs: 8000,
+        advanceAttempt: 3,
+    }, collectorSender(42));
+    assert.equal(response.failed, false);
+    assert.equal(harness.tabs.some((tab) => tab.url.includes('/viewer/viewer.html')), false);
+    assert.equal(harness.log.includes('tabs.update:7'), true);
+});
+
+test('the bound Qualtrics page alone can finish and release its completed session', async () => {
+    const state = completeState();
+    const session = state.sessions[0];
+    session.deliveryTarget = Core.DELIVERY_TARGET.QUALTRICS;
+    const harness = createHarness({
+        state,
+        sessionStored: { harvestReturnTabs: { [session.id]: 7 } },
+        registered: [{ id: Core.CONTENT_SCRIPT_ID }],
+        tabs: [
+            { id: 7, windowId: 1, active: true, url: 'https://stanforduniversity.qualtrics.com/jfe/form/SV_test' },
+            { id: 42, windowId: 1, active: false, url: Core.TIKTOK_FYP_URL },
+        ],
+    });
+
+    const wrongTab = await harness.externalRequest(
+        { type: 'finish', sessionId: session.id },
+        qualtricsSender(8)
+    );
+    assert.equal(wrongTab.ok, false);
+    assert.equal(wrongTab.error, 'wrong_qualtrics_tab');
+
+    const finished = await harness.externalRequest(
+        { type: 'finish', sessionId: session.id },
+        qualtricsSender(7)
+    );
+    assert.equal(finished.ok, true);
+    assert.equal(harness.getState().sessions[0].status, Core.SESSION_STATUS.VIEWED);
+    assert.equal(harness.getState().activeSessionId, null);
+    assert.equal(harness.registered.length, 0);
+    assert.equal(harness.log.includes('tabs.sendMessage:42:SHUTDOWN_COLLECTOR'), true);
+});
+
 test('window end accepts the confirmed pool and opens the viewer', async () => {
     const state = collectingState();
     reserveOne(state.sessions[0]);
@@ -596,6 +829,78 @@ test('popup retry reuses the failed bound tab but creates a fresh empty session'
     assert.equal(nextState.sessions[1].reserved.length, 0);
     assert.equal(nextState.sessions[1].targetTabId, 42);
     assert.equal(harness.tabs.find((tab) => tab.id === 42).url, Core.TIKTOK_FYP_URL);
+});
+
+test('a covered-tab retry preserves Qualtrics delivery and moves the tab lease', async () => {
+    const state = collectingState();
+    const failed = state.sessions[0];
+    failed.deliveryTarget = Core.DELIVERY_TARGET.QUALTRICS;
+    Core.failHarvest(failed, Date.now(), 'harvest_stalled');
+    const harness = createHarness({
+        state,
+        sessionStored: { harvestReturnTabs: { [failed.id]: 7 } },
+        tabs: [
+            { id: 7, windowId: 1, active: false, url: 'https://stanforduniversity.qualtrics.com/jfe/form/SV_test' },
+            { id: 42, windowId: 1, active: true, url: Core.TIKTOK_FYP_URL },
+        ],
+    });
+
+    const retry = await harness.dispatch({
+        type: Core.MESSAGE_TYPES.RETRY_HARVEST,
+        sessionId: failed.id,
+    }, collectorSender(42));
+    assert.equal(retry.ok, true);
+    const next = harness.getState().sessions[1];
+    assert.equal(next.deliveryTarget, Core.DELIVERY_TARGET.QUALTRICS);
+    const status = await harness.externalRequest(
+        { type: 'status', sessionId: next.id },
+        qualtricsSender(7)
+    );
+    assert.equal(status.ok, true);
+    assert.equal(status.session.id, next.id);
+});
+
+test('a failed Qualtrics harvest can return to its bound survey tab for testing', async () => {
+    const state = collectingState();
+    const failed = state.sessions[0];
+    failed.deliveryTarget = Core.DELIVERY_TARGET.QUALTRICS;
+    Core.failHarvest(failed, Date.now(), 'login_or_fyp_absent');
+    const harness = createHarness({
+        state,
+        sessionStored: { harvestReturnTabs: { [failed.id]: 7 } },
+        tabs: [
+            { id: 7, windowId: 1, active: false, url: 'https://stanforduniversity.qualtrics.com/jfe/form/SV_test' },
+            { id: 42, windowId: 1, active: true, url: Core.TIKTOK_FYP_URL },
+        ],
+    });
+
+    const response = await harness.dispatch({
+        type: Core.MESSAGE_TYPES.CONTINUE_TO_QUALTRICS,
+        sessionId: failed.id,
+    }, collectorSender(42));
+    assert.equal(response.ok, true);
+    assert.equal(response.returned, true);
+    assert.equal(harness.log.includes('tabs.update:7'), true);
+    assert.equal(
+        harness.getState().sessions[0].diagnostics.at(-1).code,
+        'testing_continue_to_qualtrics'
+    );
+});
+
+test('failed standalone harvests cannot use the Qualtrics testing return', async () => {
+    const state = collectingState();
+    const failed = state.sessions[0];
+    Core.failHarvest(failed, Date.now(), 'harvest_stalled');
+    const harness = createHarness({
+        state,
+        tabs: [{ id: 42, windowId: 1, active: true, url: Core.TIKTOK_FYP_URL }],
+    });
+    const response = await harness.dispatch({
+        type: Core.MESSAGE_TYPES.CONTINUE_TO_QUALTRICS,
+        sessionId: failed.id,
+    }, collectorSender(42));
+    assert.equal(response.ok, false);
+    assert.equal(response.error, 'qualtrics_return_not_available');
 });
 
 test('browser restart invalidates the old collection-tab capability until explicit resume', async () => {

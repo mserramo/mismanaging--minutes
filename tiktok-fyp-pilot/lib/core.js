@@ -7,9 +7,10 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
     'use strict';
 
-    const SCHEMA_VERSION = 3;
+    const SCHEMA_VERSION = 4;
     const LEGACY_SCHEMA_VERSION = 1;
     const TARGET_BANK_SCHEMA_VERSION = 2;
+    const ONE_AHEAD_SCHEMA_VERSION = 3;
     const TIKTOK_ORIGIN = 'https://www.tiktok.com';
     const TIKTOK_FYP_URL = `${TIKTOK_ORIGIN}/foryou`;
     const CONTENT_SCRIPT_ID = 'tiktok-fyp-pilot-collector';
@@ -18,6 +19,16 @@
     const COLLECTION_MODE = Object.freeze({
         AUTOMATED_BACKGROUND: 'automated_background',
         LEGACY_MANUAL: 'legacy_manual',
+    });
+
+    const DELIVERY_TARGET = Object.freeze({
+        LOCAL_VIEWER: 'local_viewer',
+        QUALTRICS: 'qualtrics',
+    });
+
+    const CAPTURE_STRATEGY = Object.freeze({
+        COVERED_EVERY_ITEM: 'covered_every_item',
+        OFFSCREEN_SUCCESSOR: 'offscreen_successor',
     });
 
     const DEFAULT_SETTINGS = Object.freeze({
@@ -44,6 +55,7 @@
         HARVEST_STEP: 'HARVEST_STEP',
         HARVEST_FAIL: 'HARVEST_FAIL',
         RETRY_HARVEST: 'RETRY_HARVEST',
+        CONTINUE_TO_QUALTRICS: 'CONTINUE_TO_QUALTRICS',
         INVALIDATE_VIDEO: 'INVALIDATE_VIDEO',
         RECORD_DIAGNOSTIC: 'RECORD_DIAGNOSTIC',
         GET_VIEWER_SESSION: 'GET_VIEWER_SESSION',
@@ -103,6 +115,7 @@
         'settling',
         'advancing',
         'waiting_hydration',
+        'waiting_deadline',
         'complete',
         'failed',
     ]);
@@ -164,6 +177,9 @@
         };
         if (isVideoId(raw.driverVideoId)) {
             step.driverVideoId = raw.driverVideoId;
+        }
+        if (raw.retainDriver === true) {
+            step.retainDriver = true;
         }
         return step;
     }
@@ -253,6 +269,13 @@
                 return null;
             }
             reservedIds.add(record.videoId);
+            const captureMethod = record.captureMethod === 'covered_feed_item'
+                ? 'covered_feed_item'
+                : 'offscreen_successor';
+            const coveredCapture = captureMethod === 'covered_feed_item';
+            if (coveredCapture && (record.overlayOpaque !== true || record.mediaMuted !== true)) {
+                return null;
+            }
             const clean = {
                 videoId: record.videoId,
                 state: record.state,
@@ -260,19 +283,26 @@
                 batchId: sanitizeToken(record.batchId, `batch-${reserved.length + 1}`),
                 interceptedAt: persistedNumber(record.interceptedAt, 0, 1e15, startedAt),
                 feedOrder: toBoundedInteger(record.feedOrder, 1, 1000000, reserved.length + 1),
+                captureMethod,
                 aheadBy: toBoundedInteger(
                     record.aheadBy,
-                    MIN_SAFE_AHEAD,
+                    coveredCapture ? 0 : MIN_SAFE_AHEAD,
                     1000000,
-                    MIN_SAFE_AHEAD
+                    coveredCapture ? 0 : MIN_SAFE_AHEAD
                 ),
-                intersectionRatio: 0,
-                belowViewport: true,
-                everIntersected: false,
+                intersectionRatio: coveredCapture
+                    ? persistedNumber(record.intersectionRatio, 0, 1, 0)
+                    : 0,
+                belowViewport: coveredCapture ? record.belowViewport === true : true,
+                everIntersected: coveredCapture ? record.everIntersected === true : false,
                 viewerStatus: viewerStatuses.has(record.viewerStatus)
                     ? record.viewerStatus
                     : 'pending',
             };
+            if (coveredCapture) {
+                clean.overlayOpaque = record.overlayOpaque === true;
+                clean.mediaMuted = record.mediaMuted === true;
+            }
             if (record.state === 'reserved') {
                 clean.concealedAt = persistedNumber(
                     record.concealedAt,
@@ -380,6 +410,14 @@
         const session = {
             id,
             collectionMode,
+            captureStrategy:
+                raw.captureStrategy === CAPTURE_STRATEGY.COVERED_EVERY_ITEM
+                    ? CAPTURE_STRATEGY.COVERED_EVERY_ITEM
+                    : CAPTURE_STRATEGY.OFFSCREEN_SUCCESSOR,
+            deliveryTarget:
+                raw.deliveryTarget === DELIVERY_TARGET.QUALTRICS
+                    ? DELIVERY_TARGET.QUALTRICS
+                    : DELIVERY_TARGET.LOCAL_VIEWER,
             seed: sanitizeSeed(raw.seed),
             startedAt,
             updatedAt: persistedNumber(raw.updatedAt, 0, 1e15, startedAt),
@@ -458,7 +496,11 @@
             return createDefaultState();
         }
         const sourceSchemaVersion = raw.schemaVersion;
-        const migratable = [LEGACY_SCHEMA_VERSION, TARGET_BANK_SCHEMA_VERSION]
+        const migratable = [
+            LEGACY_SCHEMA_VERSION,
+            TARGET_BANK_SCHEMA_VERSION,
+            ONE_AHEAD_SCHEMA_VERSION,
+        ]
             .includes(sourceSchemaVersion);
         if (!migratable && sourceSchemaVersion !== SCHEMA_VERSION) {
             return createDefaultState();
@@ -477,7 +519,10 @@
         }
         const state = {
             schemaVersion: SCHEMA_VERSION,
-            settings: migratable ? { ...DEFAULT_SETTINGS } : sanitizeSettings(raw.settings),
+            settings: [LEGACY_SCHEMA_VERSION, TARGET_BANK_SCHEMA_VERSION]
+                .includes(sourceSchemaVersion)
+                ? { ...DEFAULT_SETTINGS }
+                : sanitizeSettings(raw.settings),
             activeSessionId:
                 typeof raw.activeSessionId === 'string' ? raw.activeSessionId : null,
             sessions,
@@ -538,6 +583,11 @@
         return {
             id: sanitizeToken(metadata && metadata.id, `session-${now}`),
             collectionMode: COLLECTION_MODE.AUTOMATED_BACKGROUND,
+            captureStrategy: CAPTURE_STRATEGY.COVERED_EVERY_ITEM,
+            deliveryTarget:
+                metadata && metadata.deliveryTarget === DELIVERY_TARGET.QUALTRICS
+                    ? DELIVERY_TARGET.QUALTRICS
+                    : DELIVERY_TARGET.LOCAL_VIEWER,
             seed: sanitizeSeed(metadata && metadata.seed),
             startedAt: now,
             updatedAt: now,
@@ -600,6 +650,7 @@
         return {
             id: session.id,
             status: session.status,
+            stopReason: session.stopReason || null,
             collectionMode: session.collectionMode,
             durationSeconds: automated ? null : session.lockedSettings.durationSeconds,
             harvestDurationSeconds: automated
@@ -930,15 +981,31 @@
         const evidence = payload.evidence && typeof payload.evidence === 'object'
             ? payload.evidence
             : {};
-        if (
+        const captureMethod = evidence.captureMethod === 'covered_feed_item'
+            ? 'covered_feed_item'
+            : 'offscreen_successor';
+        const unsafeOffscreen =
             !Number.isInteger(evidence.aheadBy) ||
             evidence.aheadBy < MIN_SAFE_AHEAD ||
             Number(evidence.intersectionRatio) !== 0 ||
             evidence.belowViewport !== true ||
-            evidence.everIntersected !== false ||
+            evidence.everIntersected !== false;
+        const intersectionRatio = Number(evidence.intersectionRatio);
+        const safeCovered =
+            evidence.overlayOpaque === true &&
+            evidence.mediaMuted === true &&
+            Number.isInteger(evidence.aheadBy) &&
+            evidence.aheadBy >= 0 &&
+            Number.isFinite(intersectionRatio) &&
+            intersectionRatio >= 0 &&
+            intersectionRatio <= 1 &&
+            typeof evidence.belowViewport === 'boolean' &&
+            typeof evidence.everIntersected === 'boolean';
+        if (
             evidence.connected !== true ||
             evidence.occurrenceCount !== 1 ||
-            !Number.isInteger(evidence.feedOrder)
+            !Number.isInteger(evidence.feedOrder) ||
+            (captureMethod === 'covered_feed_item' ? !safeCovered : unsafeOffscreen)
         ) {
             return { applied: false, reason: 'unsafe_evidence' };
         }
@@ -954,12 +1021,22 @@
             batchId: sanitizeToken(payload.batchId, `batch-${session.reserved.length + 1}`),
             interceptedAt: now,
             feedOrder: evidence.feedOrder,
+            captureMethod,
             aheadBy: evidence.aheadBy,
-            intersectionRatio: 0,
-            belowViewport: true,
-            everIntersected: false,
+            intersectionRatio: captureMethod === 'covered_feed_item' ? intersectionRatio : 0,
+            belowViewport: captureMethod === 'covered_feed_item'
+                ? evidence.belowViewport
+                : true,
+            everIntersected: captureMethod === 'covered_feed_item'
+                ? evidence.everIntersected
+                : false,
             viewerStatus: 'pending',
         });
+        if (captureMethod === 'covered_feed_item') {
+            const record = session.reserved[session.reserved.length - 1];
+            record.overlayOpaque = true;
+            record.mediaMuted = true;
+        }
         session.batchCounter = Math.max(
             session.batchCounter,
             toBoundedInteger(payload.batchNumber, 1, 1000000, session.batchCounter + 1)
@@ -1145,7 +1222,7 @@
         if (!step) {
             return { applied: false, reason: 'invalid_harvest_step' };
         }
-        if (step.driverVideoId) {
+        if (step.driverVideoId && step.retainDriver !== true) {
             const exclusion = excludeVideo(session, {
                 videoId: step.driverVideoId,
                 classification: 'automation_driver',
@@ -1388,6 +1465,8 @@
     return Object.freeze({
         SCHEMA_VERSION,
         COLLECTION_MODE,
+        DELIVERY_TARGET,
+        CAPTURE_STRATEGY,
         TIKTOK_ORIGIN,
         TIKTOK_FYP_URL,
         CONTENT_SCRIPT_ID,

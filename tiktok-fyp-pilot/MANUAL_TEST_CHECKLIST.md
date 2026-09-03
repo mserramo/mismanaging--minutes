@@ -4,13 +4,14 @@ Use a research-development TikTok account/profile. Record date, Chrome version, 
 
 ## 1. Clean installation and consent
 
-- [ ] Load this directory from `chrome://extensions` and confirm version 0.3.0.
+- [ ] Load this directory from `chrome://extensions` and confirm version 0.4.4.
 - [ ] Confirm required permissions are `alarms`, `storage`, and `scripting`; confirm only TikTok access is optional.
 - [ ] Before consent, open TikTok and confirm there is no injected overlay or collector.
-- [ ] Leave consent unchecked and confirm Start is disabled.
+- [ ] Leave consent unchecked and confirm the permission action is disabled.
 - [ ] Deny the optional TikTok request once and confirm no session is created.
-- [ ] Grant on a second attempt and confirm access is only `https://www.tiktok.com/*`.
-- [ ] Confirm the disclosure explains local-only data and recommendation effects from automatic skipping/watch time.
+- [ ] Grant on a second attempt and confirm access is only `https://www.tiktok.com/*` and no session starts merely from granting access.
+- [ ] After permission is granted, confirm the popup tells the participant to return to Qualtrics and exposes no standalone Start action.
+- [ ] Confirm the disclosure explains the Qualtrics data boundary and recommendation effects from automatic skipping/watch time.
 
 ## 2. Overlay and tab flow
 
@@ -18,7 +19,7 @@ Use a research-development TikTok account/profile. Record date, Chrome version, 
 - [ ] Confirm `/foryou` opens or reloads with an opaque full-page cover before TikTok content becomes visible.
 - [ ] Confirm no sound is audible while the page is covered.
 - [ ] Confirm pointer, wheel, touch, and keyboard input do not reach TikTok; overlay controls still work.
-- [ ] Confirm focus automatically returns to the originating experiment tab after collector readiness.
+- [ ] Confirm TikTok stays foregrounded but fully covered until the first video is confirmed, then focus automatically returns to the originating experiment tab.
 - [ ] Confirm the inspector never stores the experiment tab's URL or title.
 - [ ] Select **Stop session** during a run; confirm the overlay is removed and prior media mute/pause state is restored.
 
@@ -27,13 +28,12 @@ Use a research-development TikTok account/profile. Record date, Chrome version, 
 - [ ] Set a 30-second harvest window before starting.
 - [ ] Change settings after Start and confirm the active session retains its original locked window.
 - [ ] Reload the bound TikTok tab and confirm phase, confirmed count, classifications, and tombstones restore.
-- [ ] If old fixture data is available, confirm completed schema-1/manual and schema-2/background sessions remain readable and an old collecting session stops with `collection_rule_replaced`.
+- [ ] If old fixture data is available, confirm completed schema-1/manual and schema-2/schema-3 background sessions remain readable and an old collecting session stops with `collection_rule_replaced`.
 
 ## 4. Automated harvesting safety
 
-- [ ] Confirm each driver is stored as `automation_driver` and never enters the viewer queue.
-- [ ] Confirm each target has one numeric ID, is at least one complete feed position ahead, is fully below the viewport, and has zero overlap.
-- [ ] In the inspector, confirm each target first appears as a persisted reservation and is then confirmed only after concealment.
+- [ ] Confirm each traversed card has one numeric ID and is retained with `captureMethod=covered_feed_item` while the opaque overlay is mounted and its media is muted.
+- [ ] In the inspector, confirm each card first appears as a persisted reservation and is then confirmed only after the overlay/media/identity recheck and concealment.
 - [ ] Confirm the structural target node remains mounted but removed from layout/accessibility.
 - [ ] Confirm at least 750 ms separates confirmation from the next advancement attempt.
 - [ ] Confirm a replacement hydrates automatically or the relevant scroll container advances programmatically.
@@ -48,8 +48,9 @@ Use a research-development TikTok account/profile. Record date, Chrome version, 
 - [ ] Repeat the hidden-tab run several times; record success rate and timer/hydration delays rather than treating one success as a guarantee.
 - [ ] Force a hydration stall and confirm no more than three advancement attempts occur for an eight-second stage.
 - [ ] Confirm the deadline opens a viewer containing every confirmed reservation, even when the count is below five.
-- [ ] Confirm a zero-video window or explicit stall opens no viewer; an explicit failure invalidates its partial reservation set.
+- [ ] Confirm a zero-video window opens no viewer. If TikTok stalls after at least one confirmed video, confirm the extension keeps that pool until the deadline and returns it to the viewer rather than rejecting it.
 - [ ] Confirm failure focuses the still-covered TikTok tab and shows retry plus uncover controls.
+- [ ] Confirm the failure screen shows the exact failure code and a recent diagnostic log with phase, visibility, timer delay, hydration latency, and attempt number.
 - [ ] Select **Try a fresh session** and confirm a new session ID, seed, deadline, and empty bank are created.
 - [ ] While logged out or at a login/CAPTCHA/rate-limit/unsupported page, confirm the extension fails without attempting to bypass it.
 - [ ] Select **Stop and uncover TikTok** after failure and confirm the participant can address login or leave normally.
@@ -78,7 +79,25 @@ Use a research-development TikTok account/profile. Record date, Chrome version, 
 - [ ] Confirm Revoke preserves stored records.
 - [ ] Clear after Revoke and confirm no records, active session, injected collector, or TikTok permission remain.
 
-## 8. Result record
+## 8. Qualtrics bridge
+
+- [ ] Import `qualtrics/TikTok_FYP_Qualtrics_Pilot.qsf` into the Stanford brand and keep it inactive.
+- [ ] Confirm the imported survey name ends in `v0.4.2 - QSF r2`, uses Qualtrics' default completion message, and has no Prolific redirect.
+- [ ] Confirm a non-Qualtrics page cannot connect and the Stanford Qualtrics respondent hostname can connect only when given the exact installed extension ID.
+- [ ] Confirm both an anonymous survey top frame and the same-origin iframe used by Qualtrics Preview can connect.
+- [ ] Confirm TikTok access must already have been granted from the extension popup.
+- [ ] Confirm granting access does not create a competing standalone session before the survey starts its own session.
+- [ ] After a failed Preview run, start again from a newly opened Preview tab and confirm progress, completion return, and testing continuation bind to the new requesting tab rather than the prior Preview.
+- [ ] Confirm an older extension build is rejected with an instruction to reload it, and any legacy standalone session is reported as a conflict rather than claimed by the survey.
+- [ ] Start from the survey and confirm focus returns to the same survey tab after the covered collector initializes.
+- [ ] Confirm live count/time progress updates and no extension viewer opens at the deadline.
+- [ ] Force a failed run, select **Continue to Qualtrics (testing)**, and confirm the survey regains focus, records `ttfp_test_bypass=1`, preserves the failure code, and permits Next with an empty queue.
+- [ ] Confirm the finalized numeric ID queue appears once in traversal order in the survey viewer.
+- [ ] Confirm player messages from the wrong origin or iframe source do not affect the survey.
+- [ ] Finish the task and confirm `ttfp_video_ids_json`, the bounded playback log, count, session ID, and completion status are present in the Qualtrics response.
+- [ ] Exercise an anonymous survey link in addition to Preview; document any Stanford Qualtrics CSP or custom-JavaScript restriction.
+
+## 9. Result record
 
 - [ ] `npm run check` result recorded.
 - [ ] `npm test` result and test count recorded.

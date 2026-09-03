@@ -21,7 +21,9 @@ test('manifest has narrow MV3 permissions and no static TikTok injection', () =>
     assert.deepEqual(manifest.optional_host_permissions, ['https://www.tiktok.com/*']);
     assert.equal(manifest.host_permissions, undefined);
     assert.equal(manifest.content_scripts, undefined);
-    assert.equal(manifest.externally_connectable, undefined);
+    assert.deepEqual(manifest.externally_connectable, {
+        matches: ['https://stanforduniversity.qualtrics.com/*'],
+    });
     const serialized = JSON.stringify(manifest);
     ['cookies', 'history', 'webRequest', '<all_urls>', 'storage.sync'].forEach((forbidden) => {
         assert.equal(serialized.includes(forbidden), false);
@@ -36,6 +38,15 @@ test('manifest entry points exist and CSP allows only the TikTok frame', () => {
     assert.match(csp, /script-src 'self'/);
     assert.match(csp, /frame-src https:\/\/www\.tiktok\.com/);
     assert.doesNotMatch(csp, /unsafe-eval|unsafe-inline/);
+});
+
+test('participant popup grants access but cannot accidentally start a standalone run', () => {
+    const popupHtml = fs.readFileSync(path.join(root, 'popup/popup.html'), 'utf8');
+    const popupJs = fs.readFileSync(path.join(root, 'popup/popup.js'), 'utf8');
+    assert.match(popupHtml, /Grant TikTok access/);
+    assert.match(popupHtml, /Return to the Qualtrics survey/);
+    assert.doesNotMatch(popupHtml, /Start standalone session/);
+    assert.doesNotMatch(popupJs, /MESSAGE_TYPES\.START_SESSION/);
 });
 
 test('dynamic collector is document_start and JavaScript avoids unsafe rendering', () => {
@@ -79,6 +90,11 @@ test('collector and service worker retain fail-closed runtime guards', () => {
     assert.match(collector, /SETTLE_DELAY_MS = 750/);
     assert.match(collector, /STAGE_TIMEOUT_MS = 8000/);
     assert.match(collector, /MAX_ADVANCE_ATTEMPTS = 3/);
+    assert.match(collector, /Continue to Qualtrics \(testing\)/);
+    assert.match(collector, /Recent diagnostic log/);
+    assert.match(collector, /reportCollectorReady/);
+    assert.match(collector, /waiting_deadline/);
+    assert.match(collector, /validUnseenCount > 0/);
     assert.match(collector, /excludeAmbiguousRecords/);
     assert.match(collector, /ttfp-reserved-card/);
     assert.doesNotMatch(collector, /record\.element\.remove\(\)/);

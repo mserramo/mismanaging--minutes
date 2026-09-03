@@ -1,0 +1,337 @@
+{
+  "SurveyEntry": {
+    "SurveyID": "SV_07McTW65bCwKmGi",
+    "SurveyName": "TikTok FYP Qualtrics Bridge Pilot v0.4.2 - QSF r2",
+    "SurveyDescription": null,
+    "SurveyOwnerID": "UR_cZPMLrEO6JJWxpk",
+    "SurveyBrandID": "stanforduniversity",
+    "DivisionID": null,
+    "SurveyLanguage": "EN",
+    "SurveyActiveResponseSet": "RS_2o559o4WwUGDI6q",
+    "SurveyStatus": "Inactive",
+    "SurveyStartDate": "0000-00-00 00:00:00",
+    "SurveyExpirationDate": "0000-00-00 00:00:00",
+    "SurveyCreationDate": "2026-05-14 23:54:33",
+    "CreatorID": "UR_cZPMLrEO6JJWxpk",
+    "LastModified": "2026-08-10 06:24:49",
+    "LastAccessed": "0000-00-00 00:00:00",
+    "LastActivated": "0000-00-00 00:00:00",
+    "Deleted": null
+  },
+  "SurveyElements": [
+    {
+      "SurveyID": "SV_07McTW65bCwKmGi",
+      "Element": "BL",
+      "PrimaryAttribute": "Survey Blocks",
+      "SecondaryAttribute": null,
+      "TertiaryAttribute": null,
+      "Payload": {
+        "0": {
+          "Type": "Trash",
+          "Description": "Trash / Unused Questions",
+          "ID": "BL_ttfp_trash",
+          "BlockElements": [],
+          "Options": {
+            "BlockLocking": "false",
+            "RandomizeQuestions": "false",
+            "BlockVisibility": "Expanded"
+          }
+        },
+        "1": {
+          "Type": "Standard",
+          "Description": "TikTok FYP Qualtrics Pilot",
+          "ID": "BL_ttfp_task",
+          "BlockElements": [
+            {
+              "Type": "Question",
+              "QuestionID": "QID1"
+            }
+          ],
+          "Options": {
+            "BlockLocking": "false",
+            "RandomizeQuestions": "false",
+            "BlockVisibility": "Expanded"
+          },
+          "SubType": ""
+        }
+      }
+    },
+    {
+      "SurveyID": "SV_07McTW65bCwKmGi",
+      "Element": "FL",
+      "PrimaryAttribute": "Survey Flow",
+      "SecondaryAttribute": null,
+      "TertiaryAttribute": null,
+      "Payload": {
+        "Type": "Root",
+        "FlowID": "FL_1",
+        "Flow": [
+          {
+            "Type": "EmbeddedData",
+            "FlowID": "FL_2",
+            "EmbeddedData": [
+              {
+                "Description": "ttfp_extension_id",
+                "Type": "Recipient",
+                "Field": "ttfp_extension_id",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "ttfp_bridge_version",
+                "Type": "Recipient",
+                "Field": "ttfp_bridge_version",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "ttfp_session_id",
+                "Type": "Recipient",
+                "Field": "ttfp_session_id",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "ttfp_harvest_status",
+                "Type": "Recipient",
+                "Field": "ttfp_harvest_status",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "ttfp_failure_reason",
+                "Type": "Recipient",
+                "Field": "ttfp_failure_reason",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "ttfp_video_count",
+                "Type": "Recipient",
+                "Field": "ttfp_video_count",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "ttfp_video_ids_json",
+                "Type": "Recipient",
+                "Field": "ttfp_video_ids_json",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "ttfp_playback_events_json",
+                "Type": "Recipient",
+                "Field": "ttfp_playback_events_json",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "ttfp_test_bypass",
+                "Type": "Custom",
+                "Field": "ttfp_test_bypass",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false,
+                "Value": "0"
+              },
+              {
+                "Description": "ttfp_completed",
+                "Type": "Custom",
+                "Field": "ttfp_completed",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false,
+                "Value": "0"
+              }
+            ]
+          },
+          {
+            "Type": "Standard",
+            "FlowID": "FL_3",
+            "ID": "BL_ttfp_task",
+            "Autofill": []
+          }
+        ],
+        "Properties": {
+          "Count": 3
+        }
+      }
+    },
+    {
+      "SurveyID": "SV_07McTW65bCwKmGi",
+      "Element": "PL",
+      "PrimaryAttribute": "Preview Link",
+      "SecondaryAttribute": null,
+      "TertiaryAttribute": null,
+      "Payload": {
+        "PreviewType": "Brand",
+        "PreviewID": "a65c044a-ce6d-4d31-bfa1-152041cc2f9d"
+      }
+    },
+    {
+      "SurveyID": "SV_07McTW65bCwKmGi",
+      "Element": "PROJ",
+      "PrimaryAttribute": "CORE",
+      "SecondaryAttribute": null,
+      "TertiaryAttribute": "1.1.0",
+      "Payload": {
+        "ProjectCategory": "CORE",
+        "SchemaVersion": "1.1.0"
+      }
+    },
+    {
+      "SurveyID": "SV_07McTW65bCwKmGi",
+      "Element": "QC",
+      "PrimaryAttribute": "Survey Question Count",
+      "SecondaryAttribute": "1",
+      "TertiaryAttribute": null,
+      "Payload": null
+    },
+    {
+      "SurveyID": "SV_07McTW65bCwKmGi",
+      "Element": "RS",
+      "PrimaryAttribute": "RS_2o559o4WwUGDI6q",
+      "SecondaryAttribute": "Default Response Set",
+      "TertiaryAttribute": null,
+      "Payload": null
+    },
+    {
+      "SurveyID": "SV_07McTW65bCwKmGi",
+      "Element": "SCO",
+      "PrimaryAttribute": "Scoring",
+      "SecondaryAttribute": null,
+      "TertiaryAttribute": null,
+      "Payload": {
+        "ScoringCategories": [],
+        "ScoringCategoryGroups": [],
+        "ScoringSummaryCategory": null,
+        "ScoringSummaryAfterQuestions": 0,
+        "ScoringSummaryAfterSurvey": 0,
+        "DefaultScoringCategory": null,
+        "AutoScoringCategory": null
+      }
+    },
+    {
+      "SurveyID": "SV_07McTW65bCwKmGi",
+      "Element": "SO",
+      "PrimaryAttribute": "Survey Options",
+      "SecondaryAttribute": null,
+      "TertiaryAttribute": null,
+      "Payload": {
+        "BackButton": "false",
+        "SaveAndContinue": "false",
+        "SurveyProtection": "PublicSurvey",
+        "BallotBoxStuffingPrevention": "false",
+        "NoIndex": "Yes",
+        "SecureResponseFiles": "true",
+        "SurveyExpiration": "None",
+        "SurveyTermination": "DefaultMessage",
+        "Header": "",
+        "Footer": "",
+        "ProgressBarDisplay": "None",
+        "PartialData": "+1 week",
+        "ValidationMessage": null,
+        "PreviousButton": "",
+        "NextButton": "",
+        "SurveyTitle": "TikTok FYP Qualtrics Bridge Pilot v0.4.2 - QSF r2",
+        "SkinLibrary": "stanforduniversity",
+        "SkinType": "templated",
+        "Skin": {
+          "brandingId": "5236136929",
+          "templateId": "*base",
+          "overrides": null
+        },
+        "NewScoring": 1,
+        "SurveyMetaDescription": "The most powerful, simple and trusted way to gather experience data. Start your journey to experience management and try a free account today.",
+        "SurveyName": "TikTok FYP Qualtrics Bridge Pilot v0.4.2 - QSF r2",
+        "EOSMessage": null,
+        "ShowExportTags": "false",
+        "CollectGeoLocation": "false",
+        "PasswordProtection": "No",
+        "AnonymizeResponse": "No",
+        "RefererCheck": "No",
+        "BallotBoxStuffingPreventionBehavior": null,
+        "BallotBoxStuffingPreventionMessage": null,
+        "BallotBoxStuffingPreventionMessageLibrary": null,
+        "BallotBoxStuffingPreventionURL": null,
+        "RecaptchaV3": "false",
+        "ConfirmStart": false,
+        "AutoConfirmStart": false,
+        "RelevantID": "false",
+        "RelevantIDLockoutPeriod": "+30 days",
+        "UseCustomSurveyLinkCompletedMessage": null,
+        "SurveyLinkCompletedMessage": null,
+        "SurveyLinkCompletedMessageLibrary": null,
+        "ResponseSummary": "No",
+        "EOSMessageLibrary": null,
+        "EOSRedirectURL": null,
+        "EmailThankYou": "false",
+        "ThankYouEmailMessageLibrary": null,
+        "ThankYouEmailMessage": null,
+        "ValidateMessage": "false",
+        "ValidationMessageLibrary": null,
+        "InactiveSurvey": null,
+        "PartialDeletion": null,
+        "PartialDataCloseAfter": "LastActivity",
+        "InactiveMessageLibrary": null,
+        "InactiveMessage": null,
+        "AvailableLanguages": {
+          "EN": []
+        },
+        "ProtectSelectionIds": true
+      }
+    },
+    {
+      "SurveyID": "SV_07McTW65bCwKmGi",
+      "Element": "SQ",
+      "PrimaryAttribute": "QID1",
+      "SecondaryAttribute": "TikTok FYP extension bridge and embedded video viewer",
+      "TertiaryAttribute": null,
+      "Payload": {
+        "QuestionText": "<div id=\"ttfp-qualtrics-root\">Loading the TikTok video task…</div><noscript>This task requires JavaScript and desktop Chrome.</noscript>",
+        "DataExportTag": "ttfp_video_task",
+        "QuestionID": "QID1",
+        "QuestionType": "DB",
+        "Selector": "TB",
+        "QuestionDescription": "TikTok FYP extension bridge and embedded video viewer",
+        "Validation": {
+          "Settings": {
+            "Type": "None"
+          }
+        },
+        "Language": [],
+        "DataVisibility": {
+          "Private": false,
+          "Hidden": false
+        },
+        "Configuration": {
+          "QuestionDescriptionOption": "UseText"
+        },
+        "ChoiceOrder": [],
+        "NextChoiceId": 1,
+        "NextAnswerId": 1,
+        "QuestionJS": "/* global Qualtrics */\n'use strict';\n\n(function () {\n    const BRIDGE_NAME = 'tiktok-fyp-qualtrics-v1';\n    const MIN_BRIDGE_VERSION = 2;\n    const TIKTOK_ORIGIN = 'https://www.tiktok.com';\n    const POLL_MS = 500;\n    const WHEEL_DEBOUNCE_MS = 650;\n    let teardown = function () {};\n\n    Qualtrics.SurveyEngine.addOnReady(function () {\n        const question = this;\n        const root = document.getElementById('ttfp-qualtrics-root');\n        if (!root) {\n            return;\n        }\n        question.hideNextButton();\n        root.replaceChildren();\n\n        let port = null;\n        let requestSequence = 0;\n        let sessionId = cleanSessionId('${e://Field/ttfp_session_id}');\n        let queue = [];\n        let currentIndex = -1;\n        let currentIframe = null;\n        let playerReady = false;\n        let playing = false;\n        let terminal = false;\n        let autoplayUnlocked = false;\n        let pollTimer = null;\n        let iframeReadyTimer = null;\n        let autoAdvanceTimer = null;\n        let lastWheelAt = 0;\n        let destroyed = false;\n        const pending = new Map();\n        const playbackEvents = [];\n\n        function cleanSessionId(value) {\n            return typeof value === 'string' && /^[A-Za-z0-9:_-]{1,120}$/.test(value)\n                ? value\n                : null;\n        }\n\n        function configuredExtensionId() {\n            const piped = '${e://Field/ttfp_extension_id}';\n            const fromQuery = new URLSearchParams(location.search).get('ttfp_extension_id');\n            const remembered = sessionStorage.getItem('ttfp_extension_id');\n            return [fromQuery, piped, remembered].find((value) => /^[a-p]{32}$/.test(value || '')) || '';\n        }\n\n        function element(tag, className, text) {\n            const node = document.createElement(tag);\n            if (className) {\n                node.className = className;\n            }\n            if (text !== undefined) {\n                node.textContent = text;\n            }\n            return node;\n        }\n\n        function button(text, className) {\n            const node = element('button', className, text);\n            node.type = 'button';\n            return node;\n        }\n\n        const style = element('style');\n        style.textContent = `\n            #ttfp-qualtrics-root, #ttfp-qualtrics-root * { box-sizing: border-box; }\n            #ttfp-qualtrics-root { color: #172033; font: 15px/1.45 -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif; }\n            .ttfpq-shell { width: min(680px, 100%); margin: 0 auto; }\n            .ttfpq-eyebrow { margin: 0 0 7px; color: #595ee8; font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }\n            .ttfpq-title { margin: 0 0 8px; font-size: clamp(25px, 4vw, 34px); line-height: 1.12; }\n            .ttfpq-copy { margin: 0 0 16px; color: #56627a; }\n            .ttfpq-card { padding: 18px; border: 1px solid #d7deeb; border-radius: 16px; background: #fff; box-shadow: 0 10px 30px rgba(23,32,51,.07); }\n            .ttfpq-row { display: flex; gap: 9px; align-items: end; }\n            .ttfpq-field { flex: 1; min-width: 0; }\n            .ttfpq-field label { display: block; margin-bottom: 5px; font-size: 12px; font-weight: 750; }\n            .ttfpq-field input { width: 100%; min-height: 42px; padding: 9px 11px; border: 1px solid #b9c2d3; border-radius: 9px; font: 13px ui-monospace, SFMono-Regular, Menlo, monospace; }\n            .ttfpq-button { min-height: 42px; padding: 9px 15px; border: 1px solid #c6cede; border-radius: 9px; background: #fff; color: #172033; cursor: pointer; font: inherit; font-weight: 750; }\n            .ttfpq-button.primary { border-color: #595ee8; background: #595ee8; color: #fff; }\n            .ttfpq-button:disabled { cursor: not-allowed; opacity: .48; }\n            .ttfpq-status { margin: 14px 0 0; min-height: 23px; color: #56627a; }\n            .ttfpq-status.error { color: #b42318; }\n            .ttfpq-status.success { color: #067647; }\n            .ttfpq-progress { height: 8px; margin-top: 12px; overflow: hidden; border-radius: 999px; background: #e8ebf4; }\n            .ttfpq-progress-fill { height: 100%; width: 0; background: #595ee8; transition: width .2s ease; }\n            .ttfpq-actions { display: flex; justify-content: center; margin-top: 15px; }\n            .ttfpq-note { margin: 14px 0 0; padding-top: 13px; border-top: 1px solid #e2e6ee; color: #667085; font-size: 12px; }\n            .ttfpq-viewer[hidden], .ttfpq-setup[hidden] { display: none !important; }\n            .ttfpq-viewer { width: min(430px, 100%); margin: 0 auto; }\n            .ttfpq-player { position: relative; width: min(100%, 360px); margin: 0 auto; aspect-ratio: 9 / 16; overflow: hidden; border-radius: 18px; background: #0f1115; box-shadow: 0 20px 48px rgba(15,17,21,.2); }\n            .ttfpq-player iframe { display: block; width: 100%; height: 100%; border: 0; pointer-events: none; }\n            .ttfpq-placeholder { position: absolute; inset: 0; display: grid; place-content: center; padding: 24px; background: #111522; color: #d0d5dd; text-align: center; }\n            .ttfpq-placeholder[hidden] { display: none; }\n            .ttfpq-controls { display: grid; grid-template-columns: 44px minmax(0,1fr) auto 44px; gap: 8px; align-items: center; margin-top: 10px; padding: 8px; border: 1px solid #d7deeb; border-radius: 14px; background: #fff; }\n            .ttfpq-nav { min-width: 0; padding: 7px; font-size: 20px; }\n            .ttfpq-control-copy { min-width: 0; }\n            .ttfpq-control-copy strong, .ttfpq-control-copy span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }\n            .ttfpq-control-copy span { color: #667085; font-size: 11px; }\n            .ttfpq-counter { margin: 0 0 9px; color: #667085; font-size: 12px; font-weight: 750; text-align: center; }\n            .ttfpq-finished { padding: 28px; text-align: center; }\n            @media (max-width: 520px) { .ttfpq-row { align-items: stretch; flex-direction: column; } .ttfpq-player { width: min(100%, 330px); } }\n        `;\n        document.head.appendChild(style);\n\n        const shell = element('section', 'ttfpq-shell');\n        const setup = element('div', 'ttfpq-setup');\n        const eyebrow = element('p', 'ttfpq-eyebrow', 'Research pilot');\n        const title = element('h2', 'ttfpq-title', 'Personalized TikTok video task');\n        const copy = element('p', 'ttfpq-copy', 'The installed research extension will cover TikTok, source recommendations for its configured collection window, and return them to this survey.');\n        const card = element('div', 'ttfpq-card');\n        const row = element('div', 'ttfpq-row');\n        const field = element('div', 'ttfpq-field');\n        const label = element('label', null, 'Chrome extension ID');\n        const extensionInput = element('input');\n        extensionInput.type = 'text';\n        extensionInput.autocomplete = 'off';\n        extensionInput.spellcheck = false;\n        extensionInput.maxLength = 32;\n        extensionInput.value = configuredExtensionId();\n        label.htmlFor = 'ttfpq-extension-id';\n        extensionInput.id = 'ttfpq-extension-id';\n        field.append(label, extensionInput);\n        const connectButton = button('Connect', 'ttfpq-button');\n        const status = element('p', 'ttfpq-status', 'Enter the ID shown on chrome://extensions, then connect.');\n        const progress = element('div', 'ttfpq-progress');\n        const progressFill = element('div', 'ttfpq-progress-fill');\n        progress.appendChild(progressFill);\n        const actions = element('div', 'ttfpq-actions');\n        const startButton = button('Start harvest', 'ttfpq-button primary');\n        startButton.disabled = true;\n        actions.appendChild(startButton);\n        const note = element('p', 'ttfpq-note', 'This pilot sends numeric TikTok post IDs and the playback log into this Qualtrics response. TikTok separately receives normal embed-player requests and playback signals.');\n        row.append(field, connectButton);\n        card.append(row, status, progress, actions, note);\n        setup.append(eyebrow, title, copy, card);\n\n        const viewer = element('div', 'ttfpq-viewer');\n        viewer.hidden = true;\n        const counter = element('p', 'ttfpq-counter');\n        const player = element('div', 'ttfpq-player');\n        const playerMount = element('div');\n        const placeholder = element('div', 'ttfpq-placeholder', 'Preparing the TikTok player…');\n        player.append(playerMount, placeholder);\n        const controls = element('div', 'ttfpq-controls');\n        const previousButton = button('←', 'ttfpq-button ttfpq-nav');\n        previousButton.setAttribute('aria-label', 'Previous video');\n        const controlCopy = element('div', 'ttfpq-control-copy');\n        const controlTitle = element('strong', null, 'Preparing video');\n        const controlStatus = element('span', null, 'Waiting for the player.');\n        controlCopy.append(controlTitle, controlStatus);\n        const playButton = button('Play', 'ttfpq-button primary');\n        playButton.disabled = true;\n        const nextButton = button('→', 'ttfpq-button ttfpq-nav');\n        nextButton.setAttribute('aria-label', 'Next video');\n        controls.append(previousButton, controlCopy, playButton, nextButton);\n        viewer.append(counter, player, controls);\n        shell.append(setup, viewer);\n        root.appendChild(shell);\n\n        function setStatus(message, kind) {\n            status.textContent = message;\n            status.className = 'ttfpq-status' + (kind ? ' ' + kind : '');\n        }\n\n        function setEmbeddedData(name, value) {\n            Qualtrics.SurveyEngine.setEmbeddedData(name, value === null ? '' : String(value));\n        }\n\n        function rememberEvent(type, detail) {\n            playbackEvents.push({\n                video: currentIndex + 1,\n                type,\n                at: Date.now(),\n                detail: detail || null,\n            });\n            if (playbackEvents.length > 200) {\n                playbackEvents.splice(0, playbackEvents.length - 200);\n            }\n            setEmbeddedData('ttfp_playback_events_json', JSON.stringify(playbackEvents));\n        }\n\n        function rejectPending(reason) {\n            pending.forEach((entry) => {\n                clearTimeout(entry.timer);\n                entry.reject(new Error(reason));\n            });\n            pending.clear();\n        }\n\n        function request(type, payload) {\n            return new Promise((resolve, reject) => {\n                if (!port) {\n                    reject(new Error('bridge_disconnected'));\n                    return;\n                }\n                requestSequence += 1;\n                const requestId = 'q-' + Date.now() + '-' + requestSequence;\n                const timer = setTimeout(() => {\n                    pending.delete(requestId);\n                    reject(new Error('bridge_timeout'));\n                }, 8000);\n                pending.set(requestId, { resolve, reject, timer });\n                port.postMessage({ ...payload, type, requestId });\n            });\n        }\n\n        function connect() {\n            const extensionId = extensionInput.value.trim();\n            if (!/^[a-p]{32}$/.test(extensionId)) {\n                setStatus('The extension ID must be the 32-letter ID shown on chrome://extensions.', 'error');\n                return;\n            }\n            if (!window.chrome || !chrome.runtime || typeof chrome.runtime.connect !== 'function') {\n                setStatus('Chrome did not expose the extension bridge on this survey domain.', 'error');\n                return;\n            }\n            if (port) {\n                port.disconnect();\n            }\n            sessionStorage.setItem('ttfp_extension_id', extensionId);\n            setEmbeddedData('ttfp_extension_id', extensionId);\n            setStatus('Connecting to the research extension…');\n            try {\n                port = chrome.runtime.connect(extensionId, { name: BRIDGE_NAME });\n            } catch (_error) {\n                port = null;\n                setStatus('The extension could not be reached. Confirm its ID and reload it.', 'error');\n                return;\n            }\n            port.onMessage.addListener((message) => {\n                const entry = message && pending.get(message.requestId);\n                if (!entry) {\n                    return;\n                }\n                pending.delete(message.requestId);\n                clearTimeout(entry.timer);\n                entry.resolve(message);\n            });\n            port.onDisconnect.addListener(() => {\n                port = null;\n                rejectPending('bridge_disconnected');\n                if (!destroyed && viewer.hidden) {\n                    startButton.disabled = true;\n                    setStatus('Extension connection closed. Press Connect to retry.', 'error');\n                }\n            });\n            request('hello', { sessionId }).then(handleStatus).catch(() => {\n                setStatus('The extension did not answer. Confirm its ID and reload it.', 'error');\n            });\n        }\n\n        function schedulePoll() {\n            clearTimeout(pollTimer);\n            if (!destroyed && port && sessionId) {\n                pollTimer = setTimeout(pollStatus, POLL_MS);\n            }\n        }\n\n        function pollStatus() {\n            request('status', { sessionId }).then(handleStatus).catch(() => {\n                if (!destroyed) {\n                    setStatus('Waiting to reconnect to the extension…', 'error');\n                }\n            });\n        }\n\n        function handleStatus(response) {\n            if (!response || !response.ok) {\n                setStatus(\n                    'Extension error: ' + ((response && response.error) || 'unknown_error') + '.',\n                    'error'\n                );\n                return;\n            }\n            const bridgeVersion = Number(response.bridgeVersion || 0);\n            const extensionVersion = response.extensionVersion || 'unknown';\n            setEmbeddedData('ttfp_bridge_version', bridgeVersion);\n            if (bridgeVersion < MIN_BRIDGE_VERSION) {\n                startButton.disabled = true;\n                setStatus(\n                    'Extension v' + extensionVersion + ' is outdated for this survey. ' +\n                    'Open chrome://extensions, reload TikTok FYP Research Pilot, then press Connect again.',\n                    'error'\n                );\n                return;\n            }\n            if (!response.permissionGranted) {\n                startButton.disabled = true;\n                setStatus('Open the extension, accept the disclosure, and grant TikTok access. Then press Connect again.', 'error');\n                return;\n            }\n            if (response.conflict) {\n                startButton.disabled = true;\n                setStatus(\n                    'A standalone extension session is active and cannot be transferred into this survey. ' +\n                    'Open the extension, stop and clear that session, then press Connect again.',\n                    'error'\n                );\n                return;\n            }\n            if (!response.session) {\n                startButton.disabled = false;\n                setStatus(\n                    'Extension v' + extensionVersion + ' connected. TikTok access is ready.',\n                    'success'\n                );\n                return;\n            }\n            if (response.session.deliveryTarget !== 'qualtrics') {\n                startButton.disabled = true;\n                setStatus('This session is not owned by Qualtrics and cannot be shown in this survey.', 'error');\n                return;\n            }\n            sessionId = response.session.id;\n            setEmbeddedData('ttfp_session_id', sessionId);\n            setEmbeddedData('ttfp_harvest_status', response.session.status);\n            const progressData = response.session.progress || {};\n            const durationMs = Math.max(1, Number(progressData.harvestDurationSeconds || 30) * 1000);\n            const elapsedMs = Math.max(0, Number(progressData.harvestElapsedMs || 0));\n            progressFill.style.width = Math.min(100, elapsedMs / durationMs * 100) + '%';\n            const count = Array.isArray(response.session.queue) ? response.session.queue.length : 0;\n            if (response.session.status === 'collecting') {\n                const remaining = Math.max(0, Math.ceil(Number(progressData.harvestRemainingMs || 0) / 1000));\n                startButton.disabled = true;\n                setStatus(\n                    'Harvesting behind the covered TikTok tab: ' + count +\n                    ' sourced, ' + remaining + 's remaining.'\n                );\n                schedulePoll();\n                return;\n            }\n            if (response.session.status === 'failed' || response.session.status === 'stopped') {\n                setEmbeddedData('ttfp_failure_reason', response.session.stopReason || response.session.status);\n                setEmbeddedData('ttfp_video_count', '0');\n                setEmbeddedData('ttfp_video_ids_json', '[]');\n                setEmbeddedData('ttfp_playback_events_json', '[]');\n                setEmbeddedData('ttfp_test_bypass', '1');\n                actions.hidden = true;\n                setStatus(\n                    'Harvest stopped: ' +\n                    (response.session.stopReason || response.session.status) + '. ' +\n                    'Testing bypass is enabled; use the Qualtrics Next button to continue.',\n                    'error'\n                );\n                question.showNextButton();\n                return;\n            }\n            if (['complete', 'viewing'].includes(response.session.status)) {\n                queue = response.session.queue || [];\n                if (!queue.length) {\n                    setStatus('The completed session did not contain playable video IDs.', 'error');\n                    return;\n                }\n                setEmbeddedData('ttfp_video_count', queue.length);\n                setEmbeddedData('ttfp_video_ids_json', JSON.stringify(queue.map((record) => record.videoId)));\n                showViewer();\n            }\n        }\n\n        function embedUrl(videoId) {\n            const parameters = new URLSearchParams({\n                controls: '0', progress_bar: '0', play_button: '0', volume_control: '0',\n                fullscreen_button: '0', timestamp: '0', loop: '0',\n                autoplay: autoplayUnlocked ? '1' : '0', music_info: '0',\n                description: '0', rel: '0', native_context_menu: '0', closed_caption: '0',\n            });\n            return TIKTOK_ORIGIN + '/player/v1/' + videoId + '?' + parameters.toString();\n        }\n\n        function postPlayerCommand(type) {\n            if (!currentIframe || !currentIframe.contentWindow) {\n                return;\n            }\n            currentIframe.contentWindow.postMessage(\n                { type, value: null, 'x-tiktok-player': true },\n                TIKTOK_ORIGIN\n            );\n        }\n\n        function updateControls(message) {\n            previousButton.disabled = currentIndex <= 0;\n            nextButton.disabled = currentIndex < 0;\n            nextButton.textContent = currentIndex === queue.length - 1 ? '✓' : '→';\n            nextButton.setAttribute('aria-label', currentIndex === queue.length - 1 ? 'Finish task' : 'Next video');\n            counter.textContent = 'Video ' + (currentIndex + 1) + ' of ' + queue.length;\n            if (message) {\n                controlStatus.textContent = message;\n            }\n        }\n\n        function markReady(message) {\n            if (playerReady) {\n                return;\n            }\n            playerReady = true;\n            clearTimeout(iframeReadyTimer);\n            placeholder.hidden = true;\n            playButton.disabled = false;\n            controlTitle.textContent = 'Ready to watch';\n            controlStatus.textContent = message || 'Press Play to begin.';\n            if (autoplayUnlocked) {\n                postPlayerCommand('unMute');\n                postPlayerCommand('play');\n            }\n        }\n\n        function loadVideo(index, source) {\n            clearTimeout(iframeReadyTimer);\n            clearTimeout(autoAdvanceTimer);\n            currentIndex = index;\n            currentIframe = null;\n            playerReady = false;\n            playing = false;\n            terminal = false;\n            playButton.disabled = true;\n            playButton.textContent = 'Play';\n            controlTitle.textContent = 'Preparing video';\n            controlStatus.textContent = 'Waiting for the TikTok player.';\n            placeholder.hidden = false;\n            playerMount.replaceChildren();\n            const iframe = document.createElement('iframe');\n            iframe.title = 'Personalized TikTok video ' + (currentIndex + 1);\n            iframe.src = embedUrl(queue[currentIndex].videoId);\n            iframe.allow = 'autoplay; fullscreen';\n            iframe.referrerPolicy = 'no-referrer';\n            currentIframe = iframe;\n            iframe.addEventListener('load', () => {\n                if (iframe !== currentIframe) {\n                    return;\n                }\n                iframeReadyTimer = setTimeout(() => markReady('Player loaded.'), 900);\n            }, { once: true });\n            playerMount.appendChild(iframe);\n            rememberEvent('navigate', source || 'initial');\n            updateControls();\n        }\n\n        function move(delta, source) {\n            if (!queue.length) {\n                return;\n            }\n            if (delta > 0 && currentIndex === queue.length - 1) {\n                if (!terminal) {\n                    rememberEvent('skip', source || 'navigation');\n                }\n                finishTask();\n                return;\n            }\n            const nextIndex = Math.max(0, Math.min(queue.length - 1, currentIndex + delta));\n            if (nextIndex === currentIndex) {\n                return;\n            }\n            if (!terminal) {\n                rememberEvent('skip', source || 'navigation');\n            }\n            loadVideo(nextIndex, source || 'navigation');\n        }\n\n        function handlePlayerMessage(event) {\n            if (\n                event.origin !== TIKTOK_ORIGIN ||\n                !currentIframe ||\n                event.source !== currentIframe.contentWindow ||\n                !event.data ||\n                event.data['x-tiktok-player'] !== true\n            ) {\n                return;\n            }\n            if (event.data.type === 'onPlayerReady') {\n                markReady('Player ready.');\n                return;\n            }\n            if (event.data.type === 'onStateChange' && Number.isInteger(event.data.value)) {\n                if (event.data.value === 1) {\n                    playing = true;\n                    controlTitle.textContent = 'Now playing';\n                    controlStatus.textContent = 'The next video opens automatically when this ends.';\n                    playButton.textContent = 'Pause';\n                    rememberEvent('playing');\n                } else if (event.data.value === 2) {\n                    playing = false;\n                    controlTitle.textContent = 'Paused';\n                    controlStatus.textContent = 'Press Resume or Space.';\n                    playButton.textContent = 'Resume';\n                    rememberEvent('paused');\n                } else if (event.data.value === 0 && !terminal) {\n                    terminal = true;\n                    playing = false;\n                    playButton.disabled = true;\n                    controlTitle.textContent = 'Video ended';\n                    controlStatus.textContent = currentIndex === queue.length - 1 ? 'Press ✓ to finish.' : 'Opening the next video…';\n                    rememberEvent('ended');\n                    if (currentIndex < queue.length - 1) {\n                        autoAdvanceTimer = setTimeout(() => move(1, 'automatic'), 450);\n                    }\n                }\n                return;\n            }\n            if ((event.data.type === 'onPlayerError' || event.data.type === 'onError') && !terminal) {\n                terminal = true;\n                playing = false;\n                playButton.disabled = true;\n                controlTitle.textContent = 'Video unavailable';\n                controlStatus.textContent = 'Use Next to continue.';\n                rememberEvent('player_error');\n            }\n        }\n\n        function showViewer() {\n            if (!viewer.hidden) {\n                return;\n            }\n            setup.hidden = true;\n            viewer.hidden = false;\n            window.addEventListener('message', handlePlayerMessage);\n            loadVideo(0, 'initial');\n        }\n\n        function finishTask() {\n            if (!sessionId || !port) {\n                controlStatus.textContent = 'Reconnect the extension before finishing.';\n                return;\n            }\n            nextButton.disabled = true;\n            previousButton.disabled = true;\n            playButton.disabled = true;\n            request('finish', { sessionId }).then((response) => {\n                if (!response || !response.ok) {\n                    throw new Error((response && response.error) || 'finish_failed');\n                }\n                setEmbeddedData('ttfp_completed', '1');\n                setEmbeddedData('ttfp_test_bypass', '0');\n                setEmbeddedData('ttfp_harvest_status', 'viewed');\n                playerMount.replaceChildren();\n                controls.replaceChildren(element('div', 'ttfpq-finished', 'Video task complete. Continue with the survey.'));\n                question.showNextButton();\n            }).catch(() => {\n                nextButton.disabled = false;\n                controlStatus.textContent = 'The completion status could not be saved. Try ✓ again.';\n            });\n        }\n\n        connectButton.addEventListener('click', connect);\n        startButton.addEventListener('click', () => {\n            startButton.disabled = true;\n            setStatus('Starting the covered TikTok collector…');\n            request('start', {}).then((response) => {\n                if (!response || !response.ok) {\n                    throw new Error((response && response.error) || 'start_failed');\n                }\n                if (Number(response.bridgeVersion || 0) < MIN_BRIDGE_VERSION) {\n                    throw new Error('outdated_extension');\n                }\n                sessionId = response.sessionId;\n                setEmbeddedData('ttfp_session_id', sessionId);\n                setEmbeddedData('ttfp_harvest_status', 'collecting');\n                schedulePoll();\n            }).catch((error) => {\n                startButton.disabled = false;\n                const message = error.message === 'active_session_exists'\n                    ? 'Another extension session is active. Stop and clear it, then start again from this survey.'\n                    : error.message === 'outdated_extension'\n                        ? 'Reload TikTok FYP Research Pilot on chrome://extensions, reconnect, and try again.'\n                        : 'Could not start: ' + error.message + '.';\n                setStatus(message, 'error');\n            });\n        });\n        playButton.addEventListener('click', () => {\n            if (!playerReady || terminal) {\n                return;\n            }\n            autoplayUnlocked = true;\n            if (playing) {\n                postPlayerCommand('pause');\n            } else {\n                postPlayerCommand('unMute');\n                postPlayerCommand('play');\n                controlTitle.textContent = 'Starting';\n                controlStatus.textContent = 'Waiting for playback…';\n                playButton.textContent = 'Pause';\n                rememberEvent('play_command');\n            }\n        });\n        previousButton.addEventListener('click', () => move(-1, 'button'));\n        nextButton.addEventListener('click', () => move(1, 'button'));\n\n        function keyHandler(event) {\n            if (viewer.hidden || /INPUT|TEXTAREA|SELECT/.test(event.target.tagName)) {\n                return;\n            }\n            if (event.key === 'ArrowLeft' || event.key === 'ArrowUp' || event.key === 'PageUp') {\n                event.preventDefault();\n                move(-1, 'keyboard');\n            } else if (event.key === 'ArrowRight' || event.key === 'ArrowDown' || event.key === 'PageDown') {\n                event.preventDefault();\n                move(1, 'keyboard');\n            } else if (event.code === 'Space') {\n                event.preventDefault();\n                playButton.click();\n            }\n        }\n\n        function wheelHandler(event) {\n            if (viewer.hidden || Math.abs(event.deltaY) < 18 || Date.now() - lastWheelAt < WHEEL_DEBOUNCE_MS) {\n                return;\n            }\n            event.preventDefault();\n            lastWheelAt = Date.now();\n            move(event.deltaY > 0 ? 1 : -1, 'wheel');\n        }\n\n        window.addEventListener('keydown', keyHandler);\n        viewer.addEventListener('wheel', wheelHandler, { passive: false });\n        if (extensionInput.value) {\n            connect();\n        }\n\n        teardown = function () {\n            destroyed = true;\n            clearTimeout(pollTimer);\n            clearTimeout(iframeReadyTimer);\n            clearTimeout(autoAdvanceTimer);\n            rejectPending('page_unloaded');\n            if (port) {\n                port.disconnect();\n                port = null;\n            }\n            window.removeEventListener('message', handlePlayerMessage);\n            window.removeEventListener('keydown', keyHandler);\n            viewer.removeEventListener('wheel', wheelHandler);\n            style.remove();\n        };\n    });\n\n    Qualtrics.SurveyEngine.addOnUnload(function () {\n        teardown();\n    });\n})();\n"
+      }
+    },
+    {
+      "SurveyID": "SV_07McTW65bCwKmGi",
+      "Element": "STAT",
+      "PrimaryAttribute": "Survey Statistics",
+      "SecondaryAttribute": null,
+      "TertiaryAttribute": null,
+      "Payload": {
+        "MobileCompatible": true,
+        "ID": "Survey Statistics"
+      }
+    }
+  ]
+}

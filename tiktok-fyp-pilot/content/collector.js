@@ -40,6 +40,8 @@
     let overlay = null;
     let failurePending = false;
     let contextRequestInFlight = false;
+    let collectorReadyReported = false;
+    let lastHarvestTelemetry = null;
 
     const seenIds = new Set();
     const excludedIds = new Set();
@@ -219,6 +221,10 @@
             h1 { font-size: 28px; line-height: 1.15; margin: 0 0 12px; }
             .progress { font-size: 18px; font-weight: 750; margin: 22px 0 8px; }
             .status { color: #56627a; min-height: 46px; margin: 0; }
+            .failure-code { color: #b42318; font: 700 12px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; margin: 10px 0 0; }
+            .diagnostics { margin: 12px 0 0; text-align: left; }
+            .diagnostics summary { color: #475467; cursor: pointer; font-size: 12px; font-weight: 700; text-align: center; }
+            .diagnostics pre { background: #f7f8fb; border: 1px solid #e2e6ee; border-radius: 9px; color: #344054; font: 11px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace; margin: 8px 0 0; max-height: 150px; overflow: auto; padding: 10px; white-space: pre-wrap; }
             .track { background: #e8ebf4; border-radius: 999px; height: 8px; margin: 18px 0 0; overflow: hidden; }
             .fill { background: #595ee8; height: 100%; transition: width .2s ease; width: 0; }
             .actions { display: flex; gap: 10px; justify-content: center; margin-top: 22px; }
@@ -246,6 +252,13 @@
             'status',
             'TikTok is covered while the extension sources recommendations.'
         );
+        const failureCode = createShadowElement('p', 'failure-code');
+        failureCode.hidden = true;
+        const diagnostics = createShadowElement('details', 'diagnostics');
+        diagnostics.hidden = true;
+        const diagnosticsSummary = createShadowElement('summary', null, 'Recent diagnostic log');
+        const diagnosticsLog = createShadowElement('pre');
+        diagnostics.append(diagnosticsSummary, diagnosticsLog);
         const track = createShadowElement('div', 'track');
         const fill = createShadowElement('div', 'fill');
         track.appendChild(fill);
@@ -265,6 +278,37 @@
             }).catch(() => {
                 retry.disabled = false;
                 retry.textContent = 'Try a fresh session';
+            });
+        });
+        const continueToQualtrics = createShadowElement(
+            'button',
+            null,
+            'Continue to Qualtrics (testing)'
+        );
+        continueToQualtrics.type = 'button';
+        continueToQualtrics.hidden = true;
+        continueToQualtrics.addEventListener('click', (event) => {
+            if (!event.isTrusted || mode !== 'failed') {
+                return;
+            }
+            continueToQualtrics.disabled = true;
+            continueToQualtrics.textContent = 'Returning to Qualtrics…';
+            runtimeMessage({
+                type: Core.MESSAGE_TYPES.CONTINUE_TO_QUALTRICS,
+                sessionId: session.id,
+            }).then((response) => {
+                if (response && response.ok) {
+                    return;
+                }
+                continueToQualtrics.disabled = false;
+                continueToQualtrics.textContent = 'Continue to Qualtrics (testing)';
+                status.textContent = `Could not return to Qualtrics: ${
+                    response && response.error ? response.error : 'unknown_error'
+                }.`;
+            }).catch(() => {
+                continueToQualtrics.disabled = false;
+                continueToQualtrics.textContent = 'Continue to Qualtrics (testing)';
+                status.textContent = 'Could not contact the extension to return to Qualtrics.';
             });
         });
         const stop = createShadowElement('button', null, 'Stop session');
@@ -287,13 +331,33 @@
                 stop.disabled = false;
             });
         });
-        actions.append(retry, stop);
-        panel.append(eyebrow, title, progress, status, track, actions);
+        actions.append(retry, continueToQualtrics, stop);
+        panel.append(
+            eyebrow,
+            title,
+            progress,
+            status,
+            failureCode,
+            diagnostics,
+            track,
+            actions
+        );
         screen.appendChild(panel);
         shadow.append(style, screen);
         document.documentElement.appendChild(host);
         overlayHost = host;
-        overlay = { title, progress, status, fill, retry, stop };
+        overlay = {
+            title,
+            progress,
+            status,
+            failureCode,
+            diagnostics,
+            diagnosticsLog,
+            fill,
+            retry,
+            continueToQualtrics,
+            stop,
+        };
         installInteractionBlockers();
         updateOverlay();
     }
@@ -308,14 +372,55 @@
         const labels = {
             starting: 'Starting the protected collector…',
             waiting_driver: 'Waiting for TikTok to load the current feed card…',
-            waiting_candidate: 'Waiting for the next recommendation…',
-            reserving: 'Saving an unseen recommendation locally…',
+            waiting_candidate: 'Checking the current covered recommendation…',
+            reserving: 'Saving the covered recommendation locally…',
             settling: 'Waiting for the feed to replenish…',
             advancing: 'Advancing the covered feed…',
             waiting_hydration: 'Waiting for TikTok to hydrate another recommendation…',
+            waiting_deadline: 'TikTok paused new recommendations. Keeping the confirmed pool until the collection window ends…',
             complete: 'Collection complete. Opening the viewer…',
         };
         return labels[phase] || 'Collecting personalized recommendations…';
+    }
+
+    function failureExplanation(reason) {
+        const explanations = {
+            harvest_empty: 'TikTok did not yield a safely confirmed video before the collection window ended.',
+            login_or_fyp_absent: 'No unique current FYP video was detected before the stage timed out.',
+            unsupported_page_state: 'The covered TikTok tab was no longer on a supported For You page.',
+            harvest_stalled: 'TikTok did not hydrate a replacement card after three advancement attempts.',
+            reservation_persist_failed: 'The video ID could not be safely persisted before concealment.',
+            reservation_confirm_failed: 'The concealed video could not be confirmed in extension storage.',
+            concealment_failed: 'The identified TikTok card changed before it could be concealed.',
+            collector_ready_failed: 'The collector could not establish its return-to-experiment handshake.',
+            local_storage_error: 'The extension could not persist its collection state.',
+            collector_exception: 'The collector encountered an unexpected internal error.',
+        };
+        return explanations[reason] || 'Collection stopped before a usable video pool was created.';
+    }
+
+    function formatFailureDiagnostics() {
+        const lines = [];
+        const recentSteps = session.recentHarvestSteps || [];
+        const telemetry = lastHarvestTelemetry || recentSteps[recentSteps.length - 1];
+        if (telemetry) {
+            lines.push(`last phase: ${telemetry.phase || 'unknown'}`);
+            lines.push(`tab visibility: ${telemetry.visibility || 'unknown'}`);
+            lines.push(`timer delay: ${Number(telemetry.timerDelayMs) || 0}ms`);
+            lines.push(`hydration latency: ${Number(telemetry.hydrationLatencyMs) || 0}ms`);
+            lines.push(`advance attempt: ${Number(telemetry.advanceAttempt) || 0}`);
+        }
+        if (session.failureDetail && Object.keys(session.failureDetail).length) {
+            lines.push(`failure detail: ${JSON.stringify(session.failureDetail)}`);
+        }
+        (session.recentDiagnostics || []).slice(-3).forEach((entry) => {
+            lines.push(`diagnostic: ${entry.code}${
+                entry.detail && Object.keys(entry.detail).length
+                    ? ` ${JSON.stringify(entry.detail)}`
+                    : ''
+            }`);
+        });
+        return lines.length ? lines.join('\n') : 'No additional diagnostic fields were recorded.';
     }
 
     function updateOverlay() {
@@ -333,14 +438,23 @@
         overlay.progress.textContent = `${validUnseenCount} videos sourced · ${remaining}s remaining`;
         overlay.fill.style.width = `${fraction * 100}%`;
         if (mode === 'failed') {
+            const reason = session.stopReason || 'unknown_failure';
             overlay.title.textContent = 'Collection could not finish';
-            overlay.status.textContent =
-                'No partial viewer was opened. Try a fresh session or stop and return to the experiment.';
+            overlay.status.textContent = failureExplanation(reason);
+            overlay.failureCode.textContent = `Failure code: ${reason}`;
+            overlay.failureCode.hidden = false;
+            overlay.diagnosticsLog.textContent = formatFailureDiagnostics();
+            overlay.diagnostics.hidden = false;
             overlay.retry.hidden = false;
+            overlay.continueToQualtrics.hidden =
+                session.deliveryTarget !== Core.DELIVERY_TARGET.QUALTRICS;
             overlay.stop.textContent = 'Stop and uncover TikTok';
             overlay.stop.hidden = false;
             return;
         }
+        overlay.failureCode.hidden = true;
+        overlay.diagnostics.hidden = true;
+        overlay.continueToQualtrics.hidden = true;
         if (mode === 'guard') {
             overlay.title.textContent = 'Collection complete';
             overlay.status.textContent = 'Opening the research viewer…';
@@ -434,58 +548,18 @@
         return visible.length === 1 ? visible[0].record : null;
     }
 
-    function safeCandidate(records, driver) {
-        const eligibleRecords = records
-            .filter((record) =>
-                record.videoId &&
-                record.videoId !== driver.videoId &&
-                !seenIds.has(record.videoId) &&
-                !excludedIds.has(record.videoId) &&
-                !tombstones.has(record.videoId) &&
-                !pendingReservations.has(record.videoId)
-            );
-        const candidates = eligibleRecords
-            .map((record) => {
-                const rect = record.element.getBoundingClientRect();
-                return {
-                    videoId: record.videoId,
-                    feedOrder: ensureFeedOrder(record),
-                    aheadBy: record.liveIndex - driver.liveIndex,
-                    intersectionRatio: Dom.rectOverlapsViewport(rect, innerWidth, innerHeight) ? 1 : 0,
-                    belowViewport: Dom.isBelowViewport(rect, innerHeight),
-                    everIntersected: false,
-                    connected: record.element.isConnected,
-                    occurrenceCount: record.occurrenceCount,
-                };
-            });
-        const batchId = `batch-${batchSequence + 1}`;
-        return Core.selectImmediateSafeCandidate(session.seed, batchId, candidates);
-    }
-
-    function recheckCandidate(videoId, driverVideoId) {
-        const records = snapshot();
-        sweepTombstones(records);
-        const driver = records.find((record) => record.videoId === driverVideoId);
-        const candidate = records.find((record) => record.videoId === videoId);
-        if (!driver || !candidate || !candidate.element.isConnected) {
-            return null;
-        }
-        const rect = candidate.element.getBoundingClientRect();
-        const evidence = {
-            feedOrder: ensureFeedOrder(candidate),
-            aheadBy: candidate.liveIndex - driver.liveIndex,
-            intersectionRatio: Dom.rectOverlapsViewport(rect, innerWidth, innerHeight) ? 1 : 0,
-            belowViewport: Dom.isBelowViewport(rect, innerHeight),
-            everIntersected: false,
-            connected: true,
-            occurrenceCount: records.filter((record) => record.videoId === videoId).length,
-        };
-        return Core.selectSafeCandidate(session.seed, 'final-recheck', [{ videoId, ...evidence }])
-            ? { record: candidate, evidence }
-            : null;
-    }
-
     function phaseChanged(phase, driverVideoId, detail) {
+        const telemetry = {
+            phase,
+            driverVideoId: driverVideoId || null,
+            retainDriver: Boolean(detail && detail.retainDriver),
+            feedOrder: driverVideoId ? ensureVideoFeedOrder(driverVideoId) : null,
+            visibility: document.visibilityState === 'hidden' ? 'hidden' : 'visible',
+            timerDelayMs: detail && detail.timerDelayMs || 0,
+            hydrationLatencyMs: detail && detail.hydrationLatencyMs || 0,
+            advanceAttempt: detail && detail.advanceAttempt || 0,
+        };
+        lastHarvestTelemetry = telemetry;
         const signature = `${phase}:${driverVideoId || ''}:${detail && detail.advanceAttempt || 0}`;
         if (signature === lastReportedPhase) {
             return Promise.resolve({ ok: true, duplicate: true });
@@ -495,13 +569,7 @@
         updateOverlay();
         return queueSequencedMessage(Core.MESSAGE_TYPES.HARVEST_STEP, {
             sessionId: session.id,
-            phase,
-            driverVideoId: driverVideoId || null,
-            feedOrder: driverVideoId ? ensureVideoFeedOrder(driverVideoId) : null,
-            visibility: document.visibilityState === 'hidden' ? 'hidden' : 'visible',
-            timerDelayMs: detail && detail.timerDelayMs || 0,
-            hydrationLatencyMs: detail && detail.hydrationLatencyMs || 0,
-            advanceAttempt: detail && detail.advanceAttempt || 0,
+            ...telemetry,
         }, 3);
     }
 
@@ -524,6 +592,9 @@
         if (progress.harvestPhase) {
             session.harvestPhase = progress.harvestPhase;
         }
+        if (progress.stopReason) {
+            session.stopReason = progress.stopReason;
+        }
         if (progress.status === Core.SESSION_STATUS.COMPLETE) {
             mode = 'guard';
             stopHarvestTimer();
@@ -533,6 +604,21 @@
             stopHarvestTimer();
         }
         updateOverlay();
+    }
+
+    async function reportCollectorReady(timerDelayMs) {
+        if (collectorReadyReported) {
+            return { ok: true, duplicate: true };
+        }
+        const ready = await queueSequencedMessage(Core.MESSAGE_TYPES.COLLECTOR_READY, {
+            sessionId: session.id,
+            visibility: document.visibilityState === 'hidden' ? 'hidden' : 'visible',
+            timerDelayMs: Math.max(0, Number(timerDelayMs) || 0),
+        }, 3).catch(() => null);
+        if (ready && ready.ok) {
+            collectorReadyReported = true;
+        }
+        return ready;
     }
 
     function stopHarvestTimer() {
@@ -597,14 +683,49 @@
         return true;
     }
 
-    async function reserveCandidate(candidate, driver, timerDelayMs) {
-        const checked = recheckCandidate(candidate.videoId, driver.videoId);
+    function recheckCoveredDriver(videoId) {
+        const records = snapshot();
+        sweepTombstones(records);
+        const matches = records.filter((record) => record.videoId === videoId);
+        if (matches.length !== 1 || !matches[0].element.isConnected) {
+            return null;
+        }
+        const record = matches[0];
+        const rect = record.element.getBoundingClientRect();
+        const visible = Dom.bestVideoForRecord(record, innerWidth, innerHeight);
+        const overlayOpaque = Boolean(overlayHost && overlayHost.isConnected && overlay);
+        const mediaMuted = record.videos.length > 0 &&
+            record.videos.every((media) => media.muted === true);
+        if (!overlayOpaque || !mediaMuted) {
+            return null;
+        }
+        return {
+            record,
+            evidence: {
+                captureMethod: 'covered_feed_item',
+                feedOrder: ensureFeedOrder(record),
+                aheadBy: 0,
+                intersectionRatio: visible ? visible.ratio : 0,
+                belowViewport: Dom.isBelowViewport(rect, innerHeight),
+                everIntersected: Dom.rectOverlapsViewport(rect, innerWidth, innerHeight),
+                connected: true,
+                occurrenceCount: matches.length,
+                overlayOpaque: true,
+                mediaMuted: true,
+            },
+        };
+    }
+
+    async function reserveCoveredDriver(driver, timerDelayMs) {
+        const checked = recheckCoveredDriver(driver.videoId);
         if (!checked) {
-            recordDiagnostic('candidate_failed_final_recheck', { reasonCode: 'unsafe_final_state' });
+            recordDiagnostic('covered_driver_failed_recheck', {
+                reasonCode: 'overlay_media_or_identity_changed',
+            });
             stageStartedAt = Date.now();
             return;
         }
-        const videoId = candidate.videoId;
+        const videoId = driver.videoId;
         batchSequence += 1;
         pendingReservations.add(videoId);
         session.harvestPhase = 'reserving';
@@ -612,7 +733,7 @@
         const prepared = await queueSequencedMessage(Core.MESSAGE_TYPES.RESERVE_VIDEO, {
             sessionId: session.id,
             videoId,
-            batchId: `batch-${batchSequence}`,
+            batchId: `covered-${batchSequence}`,
             batchNumber: batchSequence,
             evidence: checked.evidence,
         }, 3);
@@ -623,10 +744,9 @@
         }
         applyProgress(prepared.progress);
 
-        // The first message durably prepares the ID while its card is still
-        // offscreen. Only after a second safety check do we conceal the node
-        // and confirm it as viewer-eligible.
-        const persistedCheck = recheckCandidate(videoId, driver.videoId);
+        // Persist first, then recheck the opaque overlay, muted media, exact ID,
+        // and unique structural card before hiding the item from TikTok's layout.
+        const persistedCheck = recheckCoveredDriver(videoId);
         if (!persistedCheck) {
             pendingReservations.delete(videoId);
             excludedIds.add(videoId);
@@ -635,14 +755,11 @@
                 {
                     sessionId: session.id,
                     videoId,
-                    reason: 'unsafe_after_persist',
+                    reason: 'covered_state_changed_after_persist',
                 },
                 3
             );
             applyProgress(invalidated && invalidated.progress);
-            recordDiagnostic('candidate_changed_after_persist', {
-                reasonCode: 'unsafe_after_persist',
-            });
             stageStartedAt = Date.now();
             return;
         }
@@ -669,15 +786,23 @@
         }
         (confirmed.tombstones || []).forEach((id) => tombstones.add(id));
         applyProgress(confirmed.progress);
+        if (mode === 'collecting' && !collectorReadyReported) {
+            const ready = await reportCollectorReady(timerDelayMs);
+            if (!ready || !ready.ok) {
+                await failClosed('collector_ready_failed');
+                return;
+            }
+        }
         stageStartedAt = Date.now();
         advanceAttempts = 0;
         if (mode !== 'collecting') {
             return;
         }
-        await phaseChanged('settling', driver.videoId, {
+        await phaseChanged('settling', videoId, {
             timerDelayMs,
             hydrationLatencyMs: 0,
             advanceAttempt: 0,
+            retainDriver: true,
         });
         await wait(SETTLE_DELAY_MS);
         if (mode !== 'collecting') {
@@ -686,23 +811,25 @@
         const settledRecords = snapshot();
         sweepTombstones(settledRecords);
         const replacementDriver = currentDriver(settledRecords);
-        if (replacementDriver && replacementDriver.videoId !== driver.videoId) {
+        if (replacementDriver && replacementDriver.videoId !== videoId) {
             awaitingDriverChange = false;
             return;
         }
         advanceAttempts = 1;
         lastAdvanceAt = Date.now();
         awaitingDriverChange = true;
-        await phaseChanged('advancing', driver.videoId, {
+        await phaseChanged('advancing', videoId, {
             timerDelayMs,
             hydrationLatencyMs: lastAdvanceAt - stageStartedAt,
             advanceAttempt: advanceAttempts,
+            retainDriver: true,
         });
         advanceFeed(settledRecords, driver);
-        await phaseChanged('waiting_hydration', driver.videoId, {
+        await phaseChanged('waiting_hydration', videoId, {
             timerDelayMs,
             hydrationLatencyMs: Date.now() - stageStartedAt,
             advanceAttempt: advanceAttempts,
+            retainDriver: true,
         });
     }
 
@@ -741,6 +868,53 @@
             sweepTombstones(records);
             const driver = currentDriver(records);
             if (!driver) {
+                // Once at least one card is safely confirmed, a hidden-tab
+                // hydration pause is not evidence that the participant is
+                // logged out. Retry advancement from the concealed structural
+                // card, then preserve the confirmed pool until the deadline.
+                if (validUnseenCount > 0) {
+                    const stageElapsed = now - stageStartedAt;
+                    const previousRecord = records.find((record) =>
+                        record.videoId === lastDriverId && record.element.isConnected
+                    );
+                    if (
+                        awaitingDriverChange &&
+                        previousRecord &&
+                        stageElapsed >= REPLACEMENT_WAIT_MS &&
+                        advanceAttempts < MAX_ADVANCE_ATTEMPTS
+                    ) {
+                        advanceAttempts += 1;
+                        lastAdvanceAt = Date.now();
+                        await phaseChanged('advancing', lastDriverId, {
+                            timerDelayMs,
+                            hydrationLatencyMs: stageElapsed,
+                            advanceAttempt: advanceAttempts,
+                            retainDriver: true,
+                        });
+                        advanceFeed(records, previousRecord);
+                        await phaseChanged('waiting_hydration', lastDriverId, {
+                            timerDelayMs,
+                            hydrationLatencyMs: Date.now() - stageStartedAt,
+                            advanceAttempt: advanceAttempts,
+                            retainDriver: true,
+                        });
+                        return;
+                    }
+                    await phaseChanged(
+                        stageElapsed >= STAGE_TIMEOUT_MS ||
+                            advanceAttempts >= MAX_ADVANCE_ATTEMPTS
+                            ? 'waiting_deadline'
+                            : 'waiting_hydration',
+                        lastDriverId,
+                        {
+                            timerDelayMs,
+                            hydrationLatencyMs: stageElapsed,
+                            advanceAttempt: advanceAttempts,
+                            retainDriver: true,
+                        }
+                    );
+                    return;
+                }
                 if (now - stageStartedAt >= STAGE_TIMEOUT_MS) {
                     await failClosed('login_or_fyp_absent', { elapsedMs: now - stageStartedAt });
                     return;
@@ -753,11 +927,11 @@
                 lastDriverId = driver.videoId;
                 awaitingDriverChange = false;
                 lastAdvanceAt = 0;
-                excludedIds.add(driver.videoId);
                 const response = await phaseChanged('waiting_candidate', driver.videoId, {
                     timerDelayMs,
                     hydrationLatencyMs: now - stageStartedAt,
                     advanceAttempt: 0,
+                    retainDriver: true,
                 });
                 if (!response || !response.ok) {
                     await failClosed('driver_persist_failed');
@@ -768,11 +942,8 @@
             }
 
             if (!awaitingDriverChange) {
-                const candidate = safeCandidate(records, driver);
-                if (candidate) {
-                    await reserveCandidate(candidate, driver, timerDelayMs);
-                    return;
-                }
+                await reserveCoveredDriver(driver, timerDelayMs);
+                return;
             }
 
             const stageElapsed = Date.now() - stageStartedAt;
@@ -782,10 +953,20 @@
                     timerDelayMs,
                     hydrationLatencyMs: stageElapsed,
                     advanceAttempt: advanceAttempts,
+                    retainDriver: true,
                 });
                 return;
             }
             if (advanceAttempts >= MAX_ADVANCE_ATTEMPTS || stageElapsed >= STAGE_TIMEOUT_MS) {
+                if (validUnseenCount > 0) {
+                    await phaseChanged('waiting_deadline', driver.videoId, {
+                        timerDelayMs,
+                        hydrationLatencyMs: stageElapsed,
+                        advanceAttempt: advanceAttempts,
+                        retainDriver: true,
+                    });
+                    return;
+                }
                 await failClosed('harvest_stalled', { elapsedMs: stageElapsed });
                 return;
             }
@@ -796,12 +977,14 @@
                 timerDelayMs,
                 hydrationLatencyMs: stageElapsed,
                 advanceAttempt: advanceAttempts,
+                retainDriver: true,
             });
             advanceFeed(records, driver);
             await phaseChanged('waiting_hydration', driver.videoId, {
                 timerDelayMs,
                 hydrationLatencyMs: Date.now() - stageStartedAt,
                 advanceAttempt: advanceAttempts,
+                retainDriver: true,
             });
             await wait(SETTLE_DELAY_MS);
         } finally {
@@ -819,6 +1002,8 @@
         failurePending = true;
         stopHarvestTimer();
         session.harvestPhase = 'failed';
+        session.stopReason = reason;
+        session.failureDetail = detail && typeof detail === 'object' ? detail : {};
         updateOverlay();
         try {
             const response = await queueSequencedMessage(Core.MESSAGE_TYPES.HARVEST_FAIL, {
@@ -908,6 +1093,8 @@
         (context.session.feedOrders || []).forEach((entry) => {
             discoveryOrders.set(entry.videoId, entry.feedOrder);
         });
+        const restoredSteps = context.session.recentHarvestSteps || [];
+        lastHarvestTelemetry = restoredSteps[restoredSteps.length - 1] || null;
 
         observer = new MutationObserver(processMutationBatch);
         observer.observe(document.documentElement, {
@@ -931,14 +1118,12 @@
         if (mode !== 'collecting') {
             return;
         }
-        const ready = await queueSequencedMessage(Core.MESSAGE_TYPES.COLLECTOR_READY, {
-            sessionId: session.id,
-            visibility: document.visibilityState === 'hidden' ? 'hidden' : 'visible',
-            timerDelayMs: 0,
-        }, 3).catch(() => null);
-        if (!ready || !ready.ok) {
-            await failClosed('collector_ready_failed');
-            return;
+        if (validUnseenCount > 0) {
+            const ready = await reportCollectorReady(0);
+            if (!ready || !ready.ok) {
+                await failClosed('collector_ready_failed');
+                return;
+            }
         }
         scheduleHarvest(0);
     }

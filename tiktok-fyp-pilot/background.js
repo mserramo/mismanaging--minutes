@@ -9,6 +9,9 @@ const BROWSER_SESSION_MARKER = 'viewerLeaseEpochInitialized';
 const RETURN_TABS_KEY = 'harvestReturnTabs';
 const HARVEST_ALARM_PREFIX = 'harvest-deadline:';
 const STARTUP_VIEWER_RECOVERY_MS = 1500;
+const QUALTRICS_BRIDGE_NAME = 'tiktok-fyp-qualtrics-v1';
+const QUALTRICS_BRIDGE_VERSION = 4;
+const QUALTRICS_HOST = 'stanforduniversity.qualtrics.com';
 let mutationQueue = Promise.resolve();
 let registrationQueue = Promise.resolve();
 
@@ -88,6 +91,20 @@ function isTikTokFypCollector(sender) {
     }
     try {
         return Core.isFypPath(new URL(sender.url).pathname);
+    } catch (_error) {
+        return false;
+    }
+}
+
+function isAllowedQualtricsSender(sender) {
+    if (!sender || !sender.tab || !Number.isInteger(sender.tab.id) ||
+        !Number.isInteger(sender.frameId) || sender.frameId < 0 ||
+        typeof sender.url !== 'string') {
+        return false;
+    }
+    try {
+        const url = new URL(sender.url);
+        return url.protocol === 'https:' && url.hostname === QUALTRICS_HOST;
     } catch (_error) {
         return false;
     }
@@ -232,6 +249,7 @@ function publicState(state) {
                 id: active.id,
                 status: active.status,
                 startedAt: active.startedAt,
+                deliveryTarget: active.deliveryTarget,
                 progress: Core.sessionProgress(active),
             }
             : null,
@@ -350,7 +368,7 @@ function randomSeed() {
     return values[0] || 1;
 }
 
-async function startSession() {
+async function startSession(options = {}) {
     if (!(await hasTikTokPermission())) {
         return { ok: false, error: 'tiktok_permission_required' };
     }
@@ -369,12 +387,19 @@ async function startSession() {
         ? initialActive
         : null;
     const returnTabs = await readReturnTabs();
-    const currentReturnTabId = activeTabs.length && Number.isInteger(activeTabs[0].id)
-        ? activeTabs[0].id
-        : null;
-    const returnTabId = previousFailed && Number.isInteger(returnTabs[previousFailed.id])
-        ? returnTabs[previousFailed.id]
-        : currentReturnTabId;
+    const currentReturnTabId = Number.isInteger(options.returnTabId)
+        ? options.returnTabId
+        : activeTabs.length && Number.isInteger(activeTabs[0].id)
+            ? activeTabs[0].id
+            : null;
+    // A survey-owned start must bind to the tab that made this request. Reusing
+    // a failed session's old lease can send progress and completion to an older
+    // Preview—or even to a different survey with different end settings.
+    const returnTabId = Number.isInteger(options.returnTabId)
+        ? options.returnTabId
+        : previousFailed && Number.isInteger(returnTabs[previousFailed.id])
+            ? returnTabs[previousFailed.id]
+            : currentReturnTabId;
     const target = await createOrReuseTargetTab(
         previousFailed && previousFailed.targetTabId
     );
@@ -384,6 +409,7 @@ async function startSession() {
         seed: randomSeed(),
         startedAt: Date.now(),
         targetTabId: tabId,
+        deliveryTarget: options.deliveryTarget,
     };
     const mutation = await mutateState((state) => {
         const active = Core.getActiveSession(state);
@@ -579,6 +605,9 @@ async function openOrFocusViewer(sessionId) {
         ].includes(session.status)) {
             return { ok: false, error: 'viewer_not_available' };
         }
+        if (session.deliveryTarget === Core.DELIVERY_TARGET.QUALTRICS) {
+            return { ok: true, action: 'qualtrics' };
+        }
         if (Number.isInteger(session.viewerTabId)) {
             return { ok: true, action: 'focus', tabId: session.viewerTabId };
         }
@@ -591,6 +620,12 @@ async function openOrFocusViewer(sessionId) {
     });
     if (!claim.result.ok) {
         return claim.result;
+    }
+    if (claim.result.action === 'qualtrics') {
+        const returnTabs = await readReturnTabs();
+        const tabId = returnTabs[sessionId];
+        const focused = await focusTab(tabId);
+        return { ok: true, deliveredTo: 'qualtrics', tabId, focused };
     }
     if (claim.result.action === 'focus') {
         try {
@@ -670,6 +705,105 @@ async function recoverViewerAfterBrowserStart() {
     return openOrFocusViewer(active.id);
 }
 
+async function qualtricsSessionStatus(sender, requestedSessionId) {
+    if (!isAllowedQualtricsSender(sender)) {
+        return { ok: false, error: 'untrusted_sender' };
+    }
+    const state = await readState();
+    const returnTabs = await readReturnTabs();
+    const requested = typeof requestedSessionId === 'string'
+        ? Core.getSession(state, requestedSessionId)
+        : Core.getActiveSession(state);
+    const tabBound = requested && returnTabs[requested.id] === sender.tab.id;
+    const session = tabBound && requested.deliveryTarget === Core.DELIVERY_TARGET.QUALTRICS
+        ? requested
+        : null;
+    return {
+        ok: true,
+        bridgeVersion: QUALTRICS_BRIDGE_VERSION,
+        extensionVersion: chrome.runtime.getManifest().version,
+        permissionGranted: await hasTikTokPermission(),
+        conflict: tabBound && !session
+            ? {
+                sessionId: requested.id,
+                status: requested.status,
+                reason: 'standalone_session_active',
+            }
+            : null,
+        session: session
+            ? {
+                id: session.id,
+                status: session.status,
+                stopReason: session.stopReason || null,
+                deliveryTarget: session.deliveryTarget,
+                progress: Core.sessionProgress(session),
+                queue: Core.viewerQueue(session).map((record) => ({
+                    videoId: record.videoId,
+                    order: record.order,
+                })),
+            }
+            : null,
+    };
+}
+
+async function finishQualtricsSession(sender, sessionId) {
+    if (!isAllowedQualtricsSender(sender)) {
+        return { ok: false, error: 'untrusted_sender' };
+    }
+    const returnTabs = await readReturnTabs();
+    if (returnTabs[sessionId] !== sender.tab.id) {
+        return { ok: false, error: 'wrong_qualtrics_tab' };
+    }
+    const mutation = await mutateState((state) => {
+        const session = Core.getSession(state, sessionId);
+        if (!session || session.deliveryTarget !== Core.DELIVERY_TARGET.QUALTRICS) {
+            return { ok: false, error: 'session_not_found' };
+        }
+        if (!Core.finishViewer(session, Date.now())) {
+            return { ok: false, error: 'session_not_ready' };
+        }
+        if (state.activeSessionId === session.id) {
+            state.activeSessionId = null;
+        }
+        return { ok: true, sessionId: session.id };
+    });
+    if (mutation.result.ok) {
+        await sendShutdownToInjectedCollectors();
+        await clearHarvestAlarm(sessionId);
+        await unregisterCollector();
+        await forgetReturnTab(sessionId);
+    }
+    return mutation.result;
+}
+
+async function dispatchQualtricsMessage(message, sender) {
+    await browserLifetimeInitialization;
+    if (!isAllowedQualtricsSender(sender) || !message || typeof message !== 'object') {
+        return { ok: false, error: 'untrusted_sender' };
+    }
+    if (message.type === 'hello' || message.type === 'status') {
+        return qualtricsSessionStatus(sender, message.sessionId);
+    }
+    if (message.type === 'start') {
+        const started = await startSession({
+            returnTabId: sender.tab.id,
+            deliveryTarget: Core.DELIVERY_TARGET.QUALTRICS,
+        });
+        if (!started.ok) {
+            return started;
+        }
+        return {
+            ...started,
+            bridgeVersion: QUALTRICS_BRIDGE_VERSION,
+            extensionVersion: chrome.runtime.getManifest().version,
+        };
+    }
+    if (message.type === 'finish') {
+        return finishQualtricsSession(sender, message.sessionId);
+    }
+    return { ok: false, error: 'unknown_bridge_message' };
+}
+
 async function getContentContext(sender) {
     if (!isTikTokCollector(sender)) {
         return { ok: false, active: false };
@@ -712,6 +846,8 @@ async function getContentContext(sender) {
                 harvestDeadlineAt: session.harvestDeadlineAt,
                 harvestPhase: session.harvestPhase,
                 status: session.status,
+                stopReason: session.stopReason || null,
+                deliveryTarget: session.deliveryTarget,
                 boundTab,
                 lockedSettings: session.lockedSettings,
                 qualifiedMs: session.qualifiedMs,
@@ -728,6 +864,8 @@ async function getContentContext(sender) {
                         videoId: record.videoId,
                         feedOrder: record.feedOrder,
                     })),
+                recentDiagnostics: session.diagnostics.slice(-5),
+                recentHarvestSteps: session.harvestSteps.slice(-5),
             },
         };
     });
@@ -833,6 +971,7 @@ async function dispatchMessage(message, sender) {
                 seed: randomSeed(),
                 startedAt: Date.now(),
                 targetTabId: sender.tab.id,
+                deliveryTarget: previous.deliveryTarget,
             });
             state.sessions.push(session);
             state.activeSessionId = session.id;
@@ -850,6 +989,35 @@ async function dispatchMessage(message, sender) {
             active: true,
         });
         return mutation.result;
+    }
+
+    if (message.type === Core.MESSAGE_TYPES.CONTINUE_TO_QUALTRICS) {
+        if (!isTikTokCollector(sender) || !sender.tab) {
+            return { ok: false, error: 'untrusted_sender' };
+        }
+        const mutation = await mutateState((state) => {
+            const session = Core.getSession(state, message.sessionId);
+            if (
+                !session ||
+                session.targetTabId !== sender.tab.id ||
+                session.status !== Core.SESSION_STATUS.FAILED ||
+                session.deliveryTarget !== Core.DELIVERY_TARGET.QUALTRICS
+            ) {
+                return { ok: false, error: 'qualtrics_return_not_available' };
+            }
+            Core.recordDiagnostic(session, 'testing_continue_to_qualtrics', Date.now(), {
+                tabBound: true,
+            });
+            return { ok: true, sessionId: session.id };
+        });
+        if (!mutation.result.ok) {
+            return mutation.result;
+        }
+        const returnTabs = await readReturnTabs();
+        const returned = await focusTab(returnTabs[mutation.result.sessionId]);
+        return returned
+            ? { ok: true, returned: true }
+            : { ok: false, error: 'qualtrics_tab_unavailable' };
     }
 
     if (message.type === Core.MESSAGE_TYPES.STOP_SESSION) {
@@ -1380,6 +1548,31 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         .then((response) => sendResponse(response))
         .catch(() => sendResponse({ ok: false, error: 'internal_error' }));
     return true;
+});
+
+chrome.runtime.onConnectExternal.addListener((port) => {
+    if (
+        !port ||
+        port.name !== QUALTRICS_BRIDGE_NAME ||
+        !isAllowedQualtricsSender(port.sender)
+    ) {
+        if (port && typeof port.disconnect === 'function') {
+            port.disconnect();
+        }
+        return;
+    }
+    port.onMessage.addListener((message) => {
+        const requestId = message && typeof message.requestId === 'string'
+            ? message.requestId.slice(0, 80)
+            : null;
+        dispatchQualtricsMessage(message, port.sender)
+            .then((response) => {
+                port.postMessage({ requestId, ...response });
+            })
+            .catch(() => {
+                port.postMessage({ requestId, ok: false, error: 'internal_error' });
+            });
+    });
 });
 
 chrome.runtime.onInstalled.addListener(() => {

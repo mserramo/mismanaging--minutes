@@ -12,7 +12,7 @@
         <header class="popup-header">
             <div class="brand-mark" aria-hidden="true"></div>
             <div>
-                <p class="eyebrow">Browser-local pilot</p>
+                <p class="eyebrow">Research pilot</p>
                 <h1>TikTok FYP study</h1>
             </div>
         </header>
@@ -32,8 +32,10 @@
                 <p>
                     Only numeric video IDs, local timing/status metadata, and player events.
                     It reads post links to extract the IDs but does not store usernames, captions,
-                    messages, credentials, or cookies. No collected records go to a researcher or
-                    pilot backend; normal TikTok pages and embeds still communicate with TikTok.
+                    messages, credentials, or cookies. If I deliberately start collection from the
+                    allowlisted Stanford Qualtrics pilot, that survey receives numeric IDs and its
+                    playback log. There is no pilot backend;
+                    normal TikTok pages and embeds still communicate with TikTok.
                     During collection, the extension automatically advances and skips covered
                     FYP cards. TikTok may treat those skips or brief watch time as ranking signals,
                     which can influence future recommendations.
@@ -47,7 +49,12 @@
                 </label>
             </div>
 
-            <button id="start" type="button" disabled>Allow access and start</button>
+            <button id="grant" type="button" disabled>Grant TikTok access</button>
+            <div id="qualtrics-ready" class="notice success" hidden>
+                Access is ready. Return to the Qualtrics survey, select
+                <strong>Connect</strong>, then <strong>Start harvest</strong> there.
+                Granting access does not start collection.
+            </div>
         </section>
 
         <section id="active-session" class="stack" hidden>
@@ -63,7 +70,6 @@
             </div>
             <div class="button-row">
                 <button id="resume" type="button">Return to FYP</button>
-                <button id="retry" type="button" hidden>Try a fresh session</button>
                 <button id="open-viewer" type="button" hidden>Open viewer</button>
                 <button id="stop" class="secondary" type="button">Stop session</button>
             </div>

@@ -252,7 +252,7 @@ controls.runBackground.addEventListener('click', async () => {
     );
     const records = Dom.snapshotFeed(document, location.href);
     const driver = records[0];
-    const candidate = records[1];
+    const nextDriver = records[1];
     const step = Core.recordHarvestStep(testSession, {
         phase: 'waiting_candidate',
         visibility: 'hidden',
@@ -260,47 +260,79 @@ controls.runBackground.addEventListener('click', async () => {
         hydrationLatencyMs: 0,
         advanceAttempt: 0,
         driverVideoId: driver.videoId,
+        retainDriver: true,
         feedOrder: 1,
     }, 1100);
     writeLog(
-        'hidden-tab timer delay and automation driver are recorded',
+        'hidden-tab timing is recorded without excluding the covered driver',
         step.applied &&
             testSession.harvestSteps[0].visibility === 'hidden' &&
-            Core.findExcluded(testSession, driver.videoId).classification === 'automation_driver'
+            Core.findExcluded(testSession, driver.videoId) === null
     );
 
     const prepared = Core.reserveVideo(testSession, {
-        videoId: candidate.videoId,
-        batchId: 'synthetic-batch-1',
+        videoId: driver.videoId,
+        batchId: 'synthetic-covered-1',
         batchNumber: 1,
         at: 1200,
         evidence: {
-            feedOrder: 2,
-            aheadBy: 1,
-            intersectionRatio: 0,
-            belowViewport: true,
-            everIntersected: false,
+            captureMethod: 'covered_feed_item',
+            feedOrder: 1,
+            aheadBy: 0,
+            intersectionRatio: 1,
+            belowViewport: false,
+            everIntersected: true,
             connected: true,
             occurrenceCount: 1,
+            overlayOpaque: true,
+            mediaMuted: true,
         },
     });
     writeLog(
-        'candidate is persisted before any tombstone or concealment',
+        'covered current card is persisted before tombstone or concealment',
         prepared.applied &&
-            Core.findReserved(testSession, candidate.videoId).state === 'prepared' &&
+            Core.findReserved(testSession, driver.videoId).state === 'prepared' &&
             testSession.tombstones.length === 0 &&
-            !candidate.element.classList.contains('ttfp-reserved-card')
+            !driver.element.classList.contains('ttfp-reserved-card')
     );
-    candidate.element.classList.add('ttfp-reserved-card');
-    candidate.element.setAttribute('aria-hidden', 'true');
-    tombstones.add(candidate.videoId);
-    const confirmed = Core.confirmReservation(testSession, candidate.videoId, 1300);
-    reserved.push(candidate.videoId);
+    driver.element.classList.add('ttfp-reserved-card');
+    driver.element.setAttribute('aria-hidden', 'true');
+    tombstones.add(driver.videoId);
+    const confirmed = Core.confirmReservation(testSession, driver.videoId, 1300);
+    reserved.push(driver.videoId);
     writeLog(
-        'concealed candidate confirms once and never becomes a driver',
+        'concealed current card confirms and remains viewer-eligible',
         confirmed.applied &&
             Core.viewerQueue(testSession).length === 1 &&
-            Core.findExcluded(testSession, candidate.videoId) === null
+            Core.findExcluded(testSession, driver.videoId) === null
+    );
+
+    const preparedNext = Core.reserveVideo(testSession, {
+        videoId: nextDriver.videoId,
+        batchId: 'synthetic-covered-2',
+        batchNumber: 2,
+        at: 1400,
+        evidence: {
+            captureMethod: 'covered_feed_item',
+            feedOrder: 2,
+            aheadBy: 0,
+            intersectionRatio: 1,
+            belowViewport: false,
+            everIntersected: true,
+            connected: true,
+            occurrenceCount: 1,
+            overlayOpaque: true,
+            mediaMuted: true,
+        },
+    });
+    nextDriver.element.classList.add('ttfp-reserved-card');
+    nextDriver.element.setAttribute('aria-hidden', 'true');
+    tombstones.add(nextDriver.videoId);
+    const confirmedNext = Core.confirmReservation(testSession, nextDriver.videoId, 1500);
+    reserved.push(nextDriver.videoId);
+    writeLog(
+        'the next covered card is also retained rather than used only as a driver',
+        preparedNext.applied && confirmedNext.applied && Core.viewerQueue(testSession).length === 2
     );
 
     Core.recordHarvestStep(testSession, {
@@ -322,7 +354,7 @@ controls.runBackground.addEventListener('click', async () => {
         )
     );
 
-    const recycled = createCard(candidate.videoId, false);
+    const recycled = createCard(driver.videoId, false);
     feed.appendChild(recycled);
     sweepTombstones(Dom.snapshotFeed(document, location.href));
     writeLog(
@@ -334,7 +366,7 @@ controls.runBackground.addEventListener('click', async () => {
         'the fixed window keeps every safely confirmed video collected before its deadline',
         completedWindow.outcome === 'complete' &&
             testSession.status === Core.SESSION_STATUS.COMPLETE &&
-            Core.viewerQueue(testSession).length === 1
+            Core.viewerQueue(testSession).length === 2
     );
 
     const stalled = Core.createSession(
@@ -367,12 +399,22 @@ controls.runBackground.addEventListener('click', async () => {
         driverVideoId: ids[21],
         feedOrder: 1,
     }, 2000 + attempt));
-    Core.failHarvest(stalled, 9000, 'harvest_stalled');
+    Core.recordHarvestStep(stalled, {
+        phase: 'waiting_deadline',
+        visibility: 'hidden',
+        timerDelayMs: 1000,
+        hydrationLatencyMs: 8000,
+        advanceAttempt: 3,
+        driverVideoId: ids[21],
+        feedOrder: 1,
+    }, 9000);
+    const stalledWindow = Core.finalizeHarvestWindow(stalled, 16000);
     writeLog(
-        'three failed stage attempts reject the partial bank and open no viewer',
-        stalled.status === Core.SESSION_STATUS.FAILED &&
-            Core.viewerQueue(stalled).length === 0 &&
-            Core.findReserved(stalled, partialId).state === 'invalidated'
+        'a hydration stall preserves the confirmed partial pool until the deadline',
+        stalledWindow.outcome === 'complete' &&
+            stalled.status === Core.SESSION_STATUS.COMPLETE &&
+            Core.viewerQueue(stalled).length === 1 &&
+            Core.findReserved(stalled, partialId).state === 'reserved'
     );
     const retried = Core.createSession(
         stalled.lockedSettings,

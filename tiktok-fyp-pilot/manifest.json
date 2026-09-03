@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "TikTok FYP Research Pilot",
-  "version": "0.3.0",
-  "description": "Experimentally harvests a local pool of covered, account-personalized TikTok recommendations for a controlled viewer.",
+  "version": "0.4.4",
+  "description": "Harvests a covered, account-personalized TikTok pool for the allowlisted Qualtrics research viewer.",
   "minimum_chrome_version": "111",
   "incognito": "not_allowed",
   "permissions": [
@@ -23,6 +23,11 @@
   "options_ui": {
     "page": "options/options.html",
     "open_in_tab": true
+  },
+  "externally_connectable": {
+    "matches": [
+      "https://stanforduniversity.qualtrics.com/*"
+    ]
   },
   "content_security_policy": {
     "extension_pages": "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'none'; connect-src 'none'; frame-src https://www.tiktok.com;"

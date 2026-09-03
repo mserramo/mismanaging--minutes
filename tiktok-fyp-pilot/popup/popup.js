@@ -8,13 +8,13 @@ const elements = {
     activeSession: document.getElementById('active-session'),
     durationSummary: document.getElementById('duration-summary'),
     consent: document.getElementById('consent'),
-    start: document.getElementById('start'),
+    grant: document.getElementById('grant'),
+    qualtricsReady: document.getElementById('qualtrics-ready'),
     activeLabel: document.getElementById('active-label'),
     activeStatus: document.getElementById('active-status'),
     activeProgress: document.getElementById('active-progress'),
     timeProgress: document.getElementById('time-progress'),
     resume: document.getElementById('resume'),
-    retry: document.getElementById('retry'),
     openViewer: document.getElementById('open-viewer'),
     stop: document.getElementById('stop'),
     settings: document.getElementById('settings'),
@@ -63,16 +63,23 @@ function render(response) {
     elements.newSession.hidden = Boolean(active);
     elements.activeSession.hidden = !active;
     if (!active) {
+        elements.grant.hidden = response.permissionGranted;
+        elements.qualtricsReady.hidden = !response.permissionGranted;
         elements.consent.checked = false;
-        elements.start.disabled = true;
+        elements.grant.disabled = true;
         return;
     }
 
     const progress = active.progress;
     const automated = progress.collectionMode === Core.COLLECTION_MODE.AUTOMATED_BACKGROUND;
+    const collecting = active.status === Core.SESSION_STATUS.COLLECTING;
+    const failed = active.status === Core.SESSION_STATUS.FAILED;
+    const qualtrics = active.deliveryTarget === Core.DELIVERY_TARGET.QUALTRICS;
     elements.activeProgress.textContent = automated
-        ? `${progress.unseenCount} sourced · ` +
-            `${Math.ceil(progress.harvestRemainingMs / 1000)}s remaining`
+        ? failed
+            ? `Failure: ${progress.stopReason || 'unknown_failure'} · ${progress.unseenCount} sourced`
+            : `${progress.unseenCount} sourced · ` +
+                `${Math.ceil(progress.harvestRemainingMs / 1000)}s remaining`
         : `${Math.min(progress.qualifiedSeconds, progress.durationSeconds)} / ` +
             `${progress.durationSeconds}s · ${progress.unseenCount} / ` +
             `${progress.targetUnseenCount} reserved`;
@@ -81,8 +88,6 @@ function render(response) {
             (progress.harvestDurationSeconds * 1000)) * 100)}%`
         : `${Math.min(100, (progress.qualifiedMs /
             (progress.durationSeconds * 1000)) * 100)}%`;
-    const collecting = active.status === Core.SESSION_STATUS.COLLECTING;
-    const failed = active.status === Core.SESSION_STATUS.FAILED;
     elements.activeLabel.textContent = collecting
         ? 'Collection in progress'
         : active.status === Core.SESSION_STATUS.COMPLETE
@@ -92,9 +97,9 @@ function render(response) {
                 : 'Viewer in progress';
     elements.activeStatus.textContent = collecting ? 'Background' : failed ? 'Retry' : 'Ready';
     elements.resume.hidden = !collecting;
-    elements.retry.hidden = !failed;
-    elements.stop.hidden = !collecting;
+    elements.stop.hidden = !collecting && !failed;
     elements.openViewer.hidden = collecting || failed;
+    elements.openViewer.textContent = qualtrics ? 'Return to Qualtrics' : 'Open viewer';
 }
 
 async function refresh() {
@@ -107,30 +112,29 @@ async function refresh() {
 }
 
 elements.consent.addEventListener('change', () => {
-    elements.start.disabled = !elements.consent.checked;
+    const permissionGranted = Boolean(currentState && currentState.permissionGranted);
+    elements.grant.disabled = permissionGranted || !elements.consent.checked;
 });
 
-elements.start.addEventListener('click', async () => {
+elements.grant.addEventListener('click', async () => {
     clearMessage();
-    setBusy(elements.start, true);
+    setBusy(elements.grant, true);
     try {
         const granted = await chrome.permissions.request({
             origins: ['https://www.tiktok.com/*'],
         });
         if (!granted) {
-            showMessage('TikTok access was not granted. No session was created.', 'error');
+            showMessage('TikTok access was not granted.', 'error');
             return;
         }
-        const response = await send({ type: Core.MESSAGE_TYPES.START_SESSION });
-        if (!response || !response.ok) {
-            showMessage('The session could not be started.', 'error');
-            return;
-        }
-        window.close();
+        showMessage('TikTok access is ready. Return to Qualtrics; collection starts only from the survey.', 'success');
+        await refresh();
     } catch (_error) {
         showMessage('Chrome could not request TikTok access. Please try again.', 'error');
     } finally {
-        setBusy(elements.start, false);
+        setBusy(elements.grant, false);
+        const permissionGranted = Boolean(currentState && currentState.permissionGranted);
+        elements.grant.disabled = permissionGranted || !elements.consent.checked;
     }
 });
 
@@ -141,18 +145,6 @@ elements.resume.addEventListener('click', async () => {
     if (!response || !response.ok) {
         showMessage('The FYP collection tab could not be reopened.', 'error');
         setBusy(elements.resume, false);
-        return;
-    }
-    window.close();
-});
-
-elements.retry.addEventListener('click', async () => {
-    clearMessage();
-    setBusy(elements.retry, true);
-    const response = await send({ type: Core.MESSAGE_TYPES.START_SESSION });
-    if (!response || !response.ok) {
-        showMessage('A fresh background session could not be started.', 'error');
-        setBusy(elements.retry, false);
         return;
     }
     window.close();

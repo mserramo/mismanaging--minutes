@@ -140,6 +140,8 @@ test('starting a session snapshots settings', () => {
     assert.deepEqual(session.lockedSettings, {
         harvestDurationSeconds: 120,
     });
+    assert.equal(session.captureStrategy, Core.CAPTURE_STRATEGY.COVERED_EVERY_ITEM);
+    assert.equal(session.deliveryTarget, Core.DELIVERY_TARGET.LOCAL_VIEWER);
     assert.equal(session.harvestDeadlineAt, 121000);
 });
 
@@ -414,6 +416,53 @@ test('reservation is persisted before concealment confirmation and cannot enter 
     assert.equal(Core.finalizeHarvestWindow(session, 16000).outcome, 'complete');
 });
 
+test('an opaque covered and muted current feed item is eligible despite viewport intersection', () => {
+    const session = makeSession({ harvestDurationSeconds: 15 });
+    const prepared = Core.reserveVideo(session, {
+        videoId: IDS.a,
+        batchId: 'covered-1',
+        batchNumber: 1,
+        at: 1500,
+        evidence: {
+            captureMethod: 'covered_feed_item',
+            feedOrder: 1,
+            aheadBy: 0,
+            intersectionRatio: 0.92,
+            belowViewport: false,
+            everIntersected: true,
+            connected: true,
+            occurrenceCount: 1,
+            overlayOpaque: true,
+            mediaMuted: true,
+        },
+    });
+    assert.equal(prepared.applied, true);
+    assert.equal(Core.findReserved(session, IDS.a).captureMethod, 'covered_feed_item');
+    assert.equal(Core.findReserved(session, IDS.a).state, 'prepared');
+    assert.equal(Core.confirmReservation(session, IDS.a, 1600).applied, true);
+    assert.deepEqual(Core.viewerQueue(session).map((record) => record.videoId), [IDS.a]);
+
+    const unsafe = Core.reserveVideo(session, {
+        videoId: IDS.b,
+        batchId: 'covered-2',
+        batchNumber: 2,
+        at: 1700,
+        evidence: {
+            captureMethod: 'covered_feed_item',
+            feedOrder: 2,
+            aheadBy: 0,
+            intersectionRatio: 0.8,
+            belowViewport: false,
+            everIntersected: true,
+            connected: true,
+            occurrenceCount: 1,
+            overlayOpaque: false,
+            mediaMuted: true,
+        },
+    });
+    assert.equal(unsafe.reason, 'unsafe_evidence');
+});
+
 test('harvest diagnostics capture hidden timer delay and automation drivers', () => {
     const session = makeSession();
     const result = Core.recordHarvestStep(session, {
@@ -430,6 +479,25 @@ test('harvest diagnostics capture hidden timer delay and automation drivers', ()
     assert.equal(session.harvestSteps[0].timerDelayMs, 1700);
     assert.equal(Core.findExcluded(session, IDS.a).classification, 'automation_driver');
     assert.equal(reserve(session, IDS.a, 2).reason, 'already_exposed');
+});
+
+test('waiting for the deadline is a valid partial-pool harvest phase', () => {
+    const session = makeSession();
+    reserve(session, IDS.a, 1);
+    const result = Core.recordHarvestStep(session, {
+        phase: 'waiting_deadline',
+        visibility: 'hidden',
+        timerDelayMs: 700,
+        hydrationLatencyMs: 8200,
+        advanceAttempt: 3,
+        driverVideoId: IDS.a,
+        feedOrder: 1,
+        retainDriver: true,
+    }, 9000);
+    assert.equal(result.applied, true);
+    assert.equal(session.status, Core.SESSION_STATUS.COLLECTING);
+    assert.equal(session.harvestPhase, 'waiting_deadline');
+    assert.equal(Core.viewerQueue(session).length, 1);
 });
 
 test('window progress is wall-clock based and a partial bank becomes the completed pool', () => {
@@ -458,6 +526,7 @@ test('an empty harvest window fails without opening a viewer', () => {
     });
     assert.equal(session.status, Core.SESSION_STATUS.FAILED);
     assert.equal(session.stopReason, 'harvest_empty');
+    assert.equal(Core.sessionProgress(session, 16000).stopReason, 'harvest_empty');
 });
 
 test('schema 1 migration preserves completed sessions and stops collecting sessions', () => {
@@ -476,7 +545,7 @@ test('schema 1 migration preserves completed sessions and stops collecting sessi
         activeSessionId: collecting.id,
         sessions: [completed, collecting],
     });
-    assert.equal(migrated.schemaVersion, 3);
+    assert.equal(migrated.schemaVersion, 4);
     assert.equal(migrated.sessions[0].collectionMode, Core.COLLECTION_MODE.LEGACY_MANUAL);
     assert.equal(migrated.sessions[0].status, Core.SESSION_STATUS.COMPLETE);
     assert.equal(migrated.sessions[1].status, Core.SESSION_STATUS.STOPPED);
@@ -501,13 +570,42 @@ test('schema 2 migration preserves completed pools and stops the old target-base
         activeSessionId: collecting.id,
         sessions: [completed, collecting],
     });
-    assert.equal(migrated.schemaVersion, 3);
+    assert.equal(migrated.schemaVersion, 4);
     assert.deepEqual(migrated.settings, { harvestDurationSeconds: 30 });
     assert.equal(migrated.sessions[0].status, Core.SESSION_STATUS.COMPLETE);
     assert.deepEqual(migrated.sessions[0].lockedSettings, { harvestDurationSeconds: 90 });
     assert.equal(migrated.sessions[1].status, Core.SESSION_STATUS.STOPPED);
     assert.equal(migrated.sessions[1].stopReason, 'collection_rule_replaced');
     assert.equal(migrated.activeSessionId, null);
+});
+
+test('schema 3 completion keeps its one-ahead interpretation while collection is stopped', () => {
+    const completed = makeSession({ harvestDurationSeconds: 15 });
+    reserve(completed, IDS.a, 1);
+    completed.status = Core.SESSION_STATUS.COMPLETE;
+    completed.completedAt = 16000;
+    delete completed.captureStrategy;
+    delete completed.deliveryTarget;
+    completed.reserved.forEach((record) => delete record.captureMethod);
+    const collecting = makeSession({ harvestDurationSeconds: 30 });
+    collecting.id = 'schema-3-collecting';
+    delete collecting.captureStrategy;
+    delete collecting.deliveryTarget;
+    const migrated = Core.normalizeState({
+        schemaVersion: 3,
+        settings: { harvestDurationSeconds: 45 },
+        activeSessionId: collecting.id,
+        sessions: [completed, collecting],
+    });
+    assert.equal(migrated.schemaVersion, 4);
+    assert.deepEqual(migrated.settings, { harvestDurationSeconds: 45 });
+    assert.equal(
+        migrated.sessions[0].captureStrategy,
+        Core.CAPTURE_STRATEGY.OFFSCREEN_SUCCESSOR
+    );
+    assert.equal(migrated.sessions[0].reserved[0].captureMethod, 'offscreen_successor');
+    assert.equal(migrated.sessions[1].status, Core.SESSION_STATUS.STOPPED);
+    assert.equal(migrated.sessions[1].stopReason, 'collection_rule_replaced');
 });
 
 test('participant navigation can terminally skip an unfinished viewer item', () => {
