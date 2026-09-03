@@ -4,7 +4,7 @@ Use a research-development TikTok account/profile. Record date, Chrome version, 
 
 ## 1. Clean installation and consent
 
-- [ ] Load this directory from `chrome://extensions` and confirm version 0.4.4.
+- [ ] Load this directory from `chrome://extensions` and confirm version 0.4.5.
 - [ ] Confirm required permissions are `alarms`, `storage`, and `scripting`; confirm only TikTok access is optional.
 - [ ] Before consent, open TikTok and confirm there is no injected overlay or collector.
 - [ ] Leave consent unchecked and confirm the permission action is disabled.
@@ -35,7 +35,7 @@ Use a research-development TikTok account/profile. Record date, Chrome version, 
 - [ ] Confirm each traversed card has one numeric ID and is retained with `captureMethod=covered_feed_item` while the opaque overlay is mounted and its media is muted.
 - [ ] In the inspector, confirm each card first appears as a persisted reservation and is then confirmed only after the overlay/media/identity recheck and concealment.
 - [ ] Confirm the structural target node remains mounted but removed from layout/accessibility.
-- [ ] Confirm at least 750 ms separates confirmation from the next advancement attempt.
+- [ ] Confirm advancement occurs only after reservation confirmation, with already-hydrated successors limited to a four-item burst and a 250 ms settle before hydration fallback.
 - [ ] Confirm a replacement hydrates automatically or the relevant scroll container advances programmatically.
 - [ ] Confirm visibility, timer delay, hydration latency, phase, attempt number, and driver ID appear in bounded harvest diagnostics.
 - [ ] Confirm duplicate IDs and ambiguous multi-ID cards are never reserved.
@@ -82,7 +82,7 @@ Use a research-development TikTok account/profile. Record date, Chrome version, 
 ## 8. Qualtrics bridge
 
 - [ ] Import `qualtrics/TikTok_FYP_Qualtrics_Pilot.qsf` into the Stanford brand and keep it inactive.
-- [ ] Confirm the imported survey name ends in `v0.4.2 - QSF r2`, uses Qualtrics' default completion message, and has no Prolific redirect.
+- [ ] Confirm the imported survey name ends in `v0.4.5 - QSF r3`, uses Qualtrics' default completion message, and has no Prolific redirect.
 - [ ] Confirm a non-Qualtrics page cannot connect and the Stanford Qualtrics respondent hostname can connect only when given the exact installed extension ID.
 - [ ] Confirm both an anonymous survey top frame and the same-origin iframe used by Qualtrics Preview can connect.
 - [ ] Confirm TikTok access must already have been granted from the extension popup.

@@ -87,7 +87,10 @@ test('collector and service worker retain fail-closed runtime guards', () => {
     assert.match(collector, /stopImmediatePropagation/);
     assert.match(collector, /EXCLUDE_VIDEO/);
     assert.match(collector, /CONFIRM_RESERVATION/);
-    assert.match(collector, /SETTLE_DELAY_MS = 750/);
+    assert.match(collector, /SETTLE_DELAY_MS = 250/);
+    assert.match(collector, /REPLACEMENT_WAIT_MS = 1000/);
+    assert.match(collector, /MAX_BURST_ITEMS = 4/);
+    assert.match(collector, /currentBurstDepth \+ 1 < MAX_BURST_ITEMS/);
     assert.match(collector, /STAGE_TIMEOUT_MS = 8000/);
     assert.match(collector, /MAX_ADVANCE_ATTEMPTS = 3/);
     assert.match(collector, /Continue to Qualtrics \(testing\)/);

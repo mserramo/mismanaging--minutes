@@ -92,6 +92,7 @@
             .ttfpq-viewer[hidden], .ttfpq-setup[hidden] { display: none !important; }
             .ttfpq-viewer { width: min(430px, 100%); margin: 0 auto; }
             .ttfpq-player { position: relative; width: min(100%, 360px); margin: 0 auto; aspect-ratio: 9 / 16; overflow: hidden; border-radius: 18px; background: #0f1115; box-shadow: 0 20px 48px rgba(15,17,21,.2); }
+            .ttfpq-player-mount { position: absolute; inset: 0; width: 100%; height: 100%; }
             .ttfpq-player iframe { display: block; width: 100%; height: 100%; border: 0; pointer-events: none; }
             .ttfpq-placeholder { position: absolute; inset: 0; display: grid; place-content: center; padding: 24px; background: #111522; color: #d0d5dd; text-align: center; }
             .ttfpq-placeholder[hidden] { display: none; }
@@ -142,7 +143,7 @@
         viewer.hidden = true;
         const counter = element('p', 'ttfpq-counter');
         const player = element('div', 'ttfpq-player');
-        const playerMount = element('div');
+        const playerMount = element('div', 'ttfpq-player-mount');
         const placeholder = element('div', 'ttfpq-placeholder', 'Preparing the TikTok player…');
         player.append(playerMount, placeholder);
         const controls = element('div', 'ttfpq-controls');

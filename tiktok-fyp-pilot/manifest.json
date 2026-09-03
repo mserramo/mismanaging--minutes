@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "TikTok FYP Research Pilot",
-  "version": "0.4.4",
+  "version": "0.4.5",
   "description": "Harvests a covered, account-personalized TikTok pool for the allowlisted Qualtrics research viewer.",
   "minimum_chrome_version": "111",
   "incognito": "not_allowed",

@@ -38,6 +38,8 @@ class TikTokQualtricsQsfTests(unittest.TestCase):
         self.assertIn("ttfp_test_bypass", javascript)
         self.assertIn("question.showNextButton()", javascript)
         self.assertIn("event.source !== currentIframe.contentWindow", javascript)
+        self.assertIn(".ttfpq-player-mount { position: absolute; inset: 0;", javascript)
+        self.assertIn("element('div', 'ttfpq-player-mount')", javascript)
         self.assertNotIn("document.write", javascript)
         self.assertEqual(javascript.count("${"), 2)
         self.assertEqual(javascript.count("${e://Field/ttfp_"), 2)

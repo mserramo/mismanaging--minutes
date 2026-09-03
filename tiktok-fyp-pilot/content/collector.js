@@ -9,11 +9,12 @@
 
     const Core = TikTokPilotCore;
     const Dom = TikTokPilotDom;
-    const RECONCILE_DELAY_MS = 350;
-    const REPLACEMENT_WAIT_MS = 2000;
-    const SETTLE_DELAY_MS = 750;
+    const RECONCILE_DELAY_MS = 200;
+    const REPLACEMENT_WAIT_MS = 1000;
+    const SETTLE_DELAY_MS = 250;
     const STAGE_TIMEOUT_MS = 8000;
     const MAX_ADVANCE_ATTEMPTS = 3;
+    const MAX_BURST_ITEMS = 4;
     const RESERVED_CARD_CLASS = 'ttfp-reserved-card';
     const OVERLAY_HOST_ID = 'ttfp-harvest-overlay-host';
 
@@ -716,7 +717,9 @@
         };
     }
 
-    async function reserveCoveredDriver(driver, timerDelayMs) {
+    async function reserveCoveredDriver(driver, timerDelayMs, burstDepth) {
+        const currentBurstDepth = Math.max(0, Number(burstDepth) || 0);
+        muteAllMedia();
         const checked = recheckCoveredDriver(driver.videoId);
         if (!checked) {
             recordDiagnostic('covered_driver_failed_recheck', {
@@ -798,10 +801,58 @@
         if (mode !== 'collecting') {
             return;
         }
-        await phaseChanged('settling', videoId, {
+        await phaseChanged('advancing', videoId, {
             timerDelayMs,
             hydrationLatencyMs: 0,
-            advanceAttempt: 0,
+            advanceAttempt: 1,
+            retainDriver: true,
+        });
+        advanceAttempts = 1;
+        lastAdvanceAt = Date.now();
+        awaitingDriverChange = true;
+        const advanceRecords = snapshot();
+        sweepTombstones(advanceRecords);
+        const retainedDriver = advanceRecords.find((record) =>
+            record.videoId === videoId && record.element.isConnected
+        ) || driver;
+        advanceFeed(advanceRecords, retainedDriver);
+
+        // Geometry changes caused by scrollIntoView are synchronous. When the
+        // next muted card was already hydrated, keep the durable reservation
+        // chain inside this turn and avoid another throttled hidden-tab timer.
+        const immediateRecords = snapshot();
+        excludeAmbiguousRecords(immediateRecords);
+        sweepTombstones(immediateRecords);
+        const immediateDriver = currentDriver(immediateRecords);
+        if (
+            immediateDriver &&
+            immediateDriver.videoId !== videoId &&
+            currentBurstDepth + 1 < MAX_BURST_ITEMS &&
+            Date.now() < session.harvestDeadlineAt
+        ) {
+            lastDriverId = immediateDriver.videoId;
+            awaitingDriverChange = false;
+            lastAdvanceAt = 0;
+            const persisted = await phaseChanged('waiting_candidate', immediateDriver.videoId, {
+                timerDelayMs,
+                hydrationLatencyMs: Date.now() - stageStartedAt,
+                advanceAttempt: 0,
+                retainDriver: true,
+            });
+            if (!persisted || !persisted.ok) {
+                await failClosed('driver_persist_failed');
+                return;
+            }
+            stageStartedAt = Date.now();
+            advanceAttempts = 0;
+            await reserveCoveredDriver(immediateDriver, timerDelayMs, currentBurstDepth + 1);
+            return;
+        }
+
+        await phaseChanged('settling', videoId, {
+            timerDelayMs,
+            hydrationLatencyMs: Date.now() - stageStartedAt,
+            advanceAttempt: advanceAttempts,
             retainDriver: true,
         });
         await wait(SETTLE_DELAY_MS);
@@ -813,18 +864,28 @@
         const replacementDriver = currentDriver(settledRecords);
         if (replacementDriver && replacementDriver.videoId !== videoId) {
             awaitingDriverChange = false;
+            if (
+                currentBurstDepth + 1 < MAX_BURST_ITEMS &&
+                Date.now() < session.harvestDeadlineAt
+            ) {
+                lastDriverId = replacementDriver.videoId;
+                lastAdvanceAt = 0;
+                const persisted = await phaseChanged('waiting_candidate', replacementDriver.videoId, {
+                    timerDelayMs,
+                    hydrationLatencyMs: Date.now() - stageStartedAt,
+                    advanceAttempt: 0,
+                    retainDriver: true,
+                });
+                if (!persisted || !persisted.ok) {
+                    await failClosed('driver_persist_failed');
+                    return;
+                }
+                stageStartedAt = Date.now();
+                advanceAttempts = 0;
+                await reserveCoveredDriver(replacementDriver, timerDelayMs, currentBurstDepth + 1);
+            }
             return;
         }
-        advanceAttempts = 1;
-        lastAdvanceAt = Date.now();
-        awaitingDriverChange = true;
-        await phaseChanged('advancing', videoId, {
-            timerDelayMs,
-            hydrationLatencyMs: lastAdvanceAt - stageStartedAt,
-            advanceAttempt: advanceAttempts,
-            retainDriver: true,
-        });
-        advanceFeed(settledRecords, driver);
         await phaseChanged('waiting_hydration', videoId, {
             timerDelayMs,
             hydrationLatencyMs: Date.now() - stageStartedAt,

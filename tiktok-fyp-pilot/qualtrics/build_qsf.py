@@ -17,7 +17,7 @@ TEMPLATE_PATH = (
 )
 JAVASCRIPT_PATH = Path(__file__).with_name("tiktok_fyp_qualtrics.js")
 DEFAULT_OUTPUT = Path(__file__).with_name("TikTok_FYP_Qualtrics_Pilot.qsf")
-SURVEY_NAME = "TikTok FYP Qualtrics Bridge Pilot v0.4.2 - QSF r2"
+SURVEY_NAME = "TikTok FYP Qualtrics Bridge Pilot v0.4.5 - QSF r3"
 QUESTION_ID = "QID1"
 BLOCK_ID = "BL_ttfp_task"
 

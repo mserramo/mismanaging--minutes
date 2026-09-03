@@ -67,7 +67,7 @@ function createHarness(options = {}) {
                 return `chrome-extension://${extensionId}/${relativePath}`;
             },
             getManifest() {
-                return { version: '0.4.4' };
+                return { version: '0.4.5' };
             },
             onMessage: runtimeMessage,
             onConnectExternal: runtimeConnectExternal,
@@ -539,7 +539,7 @@ test('allowlisted Qualtrics page starts a bound session and reads confirmed IDs 
     const started = await harness.externalRequest({ type: 'start' }, qualtricsSender(7));
     assert.equal(started.ok, true);
     assert.equal(started.bridgeVersion, 4);
-    assert.equal(started.extensionVersion, '0.4.4');
+    assert.equal(started.extensionVersion, '0.4.5');
     const state = harness.getState();
     assert.equal(state.sessions[0].deliveryTarget, Core.DELIVERY_TARGET.QUALTRICS);
 
