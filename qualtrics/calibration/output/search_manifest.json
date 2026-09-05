@@ -1,0 +1,13 @@
+{
+  "candidate_count_evaluated": 96,
+  "config_sha256": "bb302a0ee62200262d6d92d983ccac98588a2650784d3aa48e2590e206e71121",
+  "outputs": {
+    "parameter_profiles.csv": "93526e5078ddbbd50766a73c169d1e1f8689bdbd618ee0c8eb3c374d155d8fca",
+    "parameter_profiles_passing.csv": "4b4693c3c3242b3f6196754916c8ff7e0ac98b6f181247ab3aa73e3661560b32",
+    "parameter_task_metrics.csv": "70f67efcd8e557afbb942a80a3104db37e75f6756fa1dc95a55a34c897e03a88",
+    "selected_profile.json": "a4a9ff7ea1737642b856b3e72b2f5b5f2225ef85177d155fbfce1b8b34b57c98"
+  },
+  "passing_count": 4,
+  "search_version": "parameter-search-v2",
+  "selected_profile_id": "profile_0081"
+}

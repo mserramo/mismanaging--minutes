@@ -1457,6 +1457,7 @@ async function dispatchMessage(message, sender) {
                 return { ok: true, duplicate: true, progress: Core.sessionProgress(session) };
             }
             const now = Date.now();
+            Core.applyBufferedHarvestTelemetry(session, message.telemetry, now);
             if (now >= session.harvestDeadlineAt) {
                 Core.recordDiagnostic(session, 'harvest_window_ended', now, {
                     elapsedMs: now - session.harvestStartedAt,
@@ -1474,7 +1475,8 @@ async function dispatchMessage(message, sender) {
                     viewerSessionId: completed ? session.id : null,
                 };
             }
-            const step = Core.recordHarvestStep(session, message, now);
+            const step = message.telemetryOnly === true
+                ? { applied: true } : Core.recordHarvestStep(session, message, now);
             return {
                 ok: step.applied,
                 error: step.reason || null,
@@ -1506,6 +1508,7 @@ async function dispatchMessage(message, sender) {
                 return { ok: true, duplicate: true, progress: Core.sessionProgress(session) };
             }
             const now = Date.now();
+            Core.applyBufferedHarvestTelemetry(session, message.telemetry, now);
             const reason = typeof message.reason === 'string'
                 ? message.reason
                 : 'harvest_failed';
@@ -1521,6 +1524,51 @@ async function dispatchMessage(message, sender) {
             await clearHarvestAlarm(message.sessionId);
             await focusTab(sender.tab.id);
         }
+        return mutation.result;
+    }
+
+    if ([Core.MESSAGE_TYPES.RESERVE_VIDEO_BATCH, Core.MESSAGE_TYPES.CONFIRM_RESERVATION_BATCH]
+        .includes(message.type)) {
+        if (typeof message.sourceId !== 'string' || !/^[A-Za-z0-9:_-]{1,120}$/.test(message.sourceId) ||
+            !Number.isInteger(message.sequence) || message.sequence < 1) {
+            return { ok: false, error: 'invalid_source_event' };
+        }
+        const confirm = message.type === Core.MESSAGE_TYPES.CONFIRM_RESERVATION_BATCH;
+        const mutation = await mutateState((state) => {
+            const session = collectorSessionForMessage(state, sender, message.sessionId,
+                [Core.SESSION_STATUS.COLLECTING, Core.SESSION_STATUS.COMPLETE]);
+            if (!session) { return { ok: false, error: 'wrong_session_or_tab' }; }
+            // A replay returns per-ID durable outcomes, not a generic success.
+            // This matters if a write succeeded but its acknowledgement was lost.
+            const replay = !Core.acceptSourceEvent(session, message.sourceId, message.sequence);
+            const now = Date.now();
+            if (!replay) {
+                Core.applyBufferedHarvestTelemetry(session, message.telemetry, now);
+            }
+            const hadGuards = session.tombstones.length > 0;
+            let result;
+            let completed = false;
+            if (!confirm && !replay && session.status === Core.SESSION_STATUS.COLLECTING && now >= session.harvestDeadlineAt) {
+                const finalization = Core.finalizeHarvestWindow(session, now);
+                completed = finalization.outcome === 'complete';
+                result = { ok: true, finished: true, failed: finalization.outcome === 'failed', items: [] };
+            } else {
+                result = Core.applyReservationBatch(session, { ...message, at: now }, confirm, replay);
+                completed = result.ok && confirm && !replay && Core.evaluateCompletion(session, now);
+            }
+            if (completed && session.viewerTabOpenedAt === null) { session.viewerTabOpenedAt = 0; }
+            return {
+                ...result,
+                progress: Core.sessionProgress(session, now),
+                tombstones: session.tombstones.slice(),
+                shouldActivateGuards: !hadGuards && session.tombstones.length > 0,
+                viewerSessionId: completed ? session.id : null,
+            };
+        });
+        if (mutation.result.shouldActivateGuards) { await activateTombstoneGuards(); }
+        if (mutation.result.finished || mutation.result.viewerSessionId) { await clearHarvestAlarm(message.sessionId); }
+        if (mutation.result.failed) { await focusTab(sender.tab.id); }
+        await maybeOpenViewer(mutation);
         return mutation.result;
     }
 

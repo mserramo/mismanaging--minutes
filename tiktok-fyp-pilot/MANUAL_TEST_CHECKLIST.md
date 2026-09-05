@@ -103,6 +103,9 @@ Use a research-development TikTok account/profile. Record date, Chrome version, 
 - [ ] For the v0.5.3 throughput update, reload the installed extension and start a fresh covered session from the existing Qualtrics preview. Record counts from three 30-second runs.
 - [ ] Confirm the covered feed retains the size and original display mode of captured slots and scrolls instantly. Check `capture_batch` and `automated_advance` diagnostics if a run stalls.
 - [ ] Serve `harness/collector-benchmark.html` locally and verify its throughput, slow-hydration, stall, identity-change (`invalidateFirst=1`), and early-Stop (`stopAfterMs=500`) scenarios. Check `hiddenCaptureCount` before calling a test an actual hidden-tab trial.
+- [ ] For v0.5.4, reload the extension, refresh Qualtrics, and run three fresh 30-second harvests. The existing QSF and natural mode should continue to work without reimporting.
+- [ ] Check `reservation_prepare` and `reservation_confirm` durations against hydration latency in the local inspector. Routine phase/log updates are buffered and may lag while idle; confirmed counts must remain durable.
+- [ ] In the synthetic harness, use `messageDelay=40`, `dropPrepareAck=1`, `dropConfirmAck=1`, `invalidateFirst=1`, and `stopOnPrepare=1`. Verify duplicate-free order, individual invalidation, no confirmation before durable preparation, and no viewer-eligible IDs after Stop during preparation.
 
 - [ ] `npm run check` result recorded.
 - [ ] `npm test` result and test count recorded.

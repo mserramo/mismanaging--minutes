@@ -58,10 +58,10 @@ The collector uses `MutationObserver` and chained `setTimeout` callbacks rather 
 For each step it:
 
 1. Identifies every uniquely identified, hydrated feed card while the full-page opaque overlay is mounted, including offscreen neighbours.
-2. Mutes its media and durably writes its numeric ID as `prepared`, including the covered-capture evidence.
+2. Mutes its media and durably writes up to twelve numeric IDs together as `prepared`, including each card's covered-capture evidence, in one storage write.
 3. Rechecks that the same unique card is connected, the overlay remains active, and its media remains muted.
 4. Conceals the structural card with a tombstone while preserving its display mode, size, and position for TikTok's virtual scroller. The covered tab uses transparent slots; guards in other tabs still remove tombstones from layout.
-5. Confirms the concealment, which changes the record to `reserved` and makes it viewer-eligible.
+5. Confirms the safe cards together in a second storage write, which changes their records to `reserved` and makes them viewer-eligible. Cards whose identity or cover/mute evidence changed are individually invalidated in that same write. An acknowledgement is sent only after storage succeeds; retries return per-ID persisted outcomes without duplicating records.
 6. Captures up to twelve hydrated IDs per pass, then scrolls instantly to the next structural slot, including a not-yet-hydrated placeholder. Explicit instant scrolling avoids inheriting TikTok's CSS smooth animation. A scroll event notifies the page even when native rendering is delayed.
 7. Repeats for every safely identified card traversed during the locked window.
 
@@ -71,7 +71,9 @@ Numeric IDs in ambiguous multi-ID card boundaries are excluded without concealin
 
 Version 0.5.3 adds `capture_batch` diagnostics (batch size, persistence time, visibility) and `automated_advance` diagnostics (elapsed time, confirmed count, and whether scrolling moved). These appear in the existing local inspector's code-only diagnostics.
 
-The production collector can also be run against a synthetic virtual feed using `harness/collector-benchmark.html` served locally. Parameters `duration` (milliseconds), `timerFloor` (collector timer clamp), `hydration` (feed delay), `stallAfter` (slot index), and `invalidateFirst=1` exercise throughput and failure handling. The page reports confirmed IDs, duplicates/handshake violations, actual hidden-tab captures, preserved slot heights, and diagnostics. It makes no TikTok requests. Synthetic results are not live TikTok throughput guarantees.
+Version 0.5.4 batches the two-phase storage handshake and buffers routine phase/diagnostic events. Up to 32 recent telemetry entries ride along with the next prepare, settlement, deadline, or failure command; they no longer require a separate write for every event. An idle-only fallback attempts a telemetry flush once per second while collection is waiting, never while a capture or another command is in flight. Storage still serializes all mutations, so a write already underway cannot be preempted. Safety records are never buffered this way. Unflushed telemetry is best-effort and may be lost on tab closure, Stop, or crash, while acknowledged reservations remain durable. `reservation_prepare` and `reservation_confirm` record batch round-trip durations; these and hydration diagnostics distinguish extension overhead from feed-loading delays. Natural-session collection and the Qualtrics interface are unchanged; reload the extension, but no new QSF import is needed.
+
+The production collector can also be run against a synthetic virtual feed using `harness/collector-benchmark.html` served locally. Parameters `duration` (milliseconds), `timerFloor` (collector timer clamp), `hydration` (feed delay), `messageDelay` (simulated serialized bridge delay), `stallAfter` (slot index), `invalidateFirst=1`, `dropPrepareAck=1`, `dropConfirmAck=1`, and `stopOnPrepare=1` exercise throughput and failure handling. The page reports confirmed IDs, message counts, duplicates/handshake violations, actual hidden-tab captures, preserved slot heights, and diagnostics. It makes no TikTok requests and does not benchmark real Chrome storage. Synthetic results are not live TikTok throughput guarantees.
 
 ## Overlay behavior
 

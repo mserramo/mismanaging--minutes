@@ -43,6 +43,40 @@ function reserve(session, videoId, order, aheadBy) {
     return prepared;
 }
 
+test('buffered harvest telemetry is bounded, sanitized and cannot alter safety state', () => {
+    const session = makeSession();
+    const entries = Array.from({ length: 60 }, (_unused, index) => ({
+        kind: 'diagnostic', at: 2000 + index, code: 'synthetic_step',
+        detail: { count: index, username: 'not-stored', url: 'not-stored' },
+    }));
+    Core.applyBufferedHarvestTelemetry(session, entries, 2100);
+    assert.equal(session.diagnostics.length, 32);
+    assert.deepEqual(session.diagnostics[0].detail, { count: 28 });
+    Core.applyBufferedHarvestTelemetry(session, [
+        { kind: 'step', at: 999999, step: { phase: 'advancing', driverVideoId: IDS.a,
+            retainDriver: false, visibility: 'hidden', timerDelayMs: 1000 } },
+        { kind: 'step', step: { phase: 'complete' } },
+        { kind: 'step', step: { phase: 'failed' } },
+    ], 2200);
+    assert.equal(session.status, Core.SESSION_STATUS.COLLECTING);
+    assert.equal(session.harvestPhase, 'advancing');
+    assert.equal(session.excluded.length, 0);
+    assert.equal(session.harvestSteps.length, 1);
+    assert.equal(session.harvestSteps[0].at, 2200);
+    Core.stopSession(session, 2300);
+    const stopped = JSON.stringify(session);
+    Core.applyBufferedHarvestTelemetry(session, entries, 2400);
+    assert.equal(JSON.stringify(session), stopped);
+});
+
+test('natural sessions ignore buffered harvest telemetry', () => {
+    const session = makeSession();
+    session.collectionMode = Core.COLLECTION_MODE.NATURAL_FYP_SESSION;
+    const before = JSON.stringify(session);
+    Core.applyBufferedHarvestTelemetry(session, [{ kind: 'diagnostic', code: 'capture_batch' }], 2100);
+    assert.equal(JSON.stringify(session), before);
+});
+
 test('defaults and settings bounds are stable', () => {
     assert.deepEqual(Core.DEFAULT_SETTINGS, {
         harvestDurationSeconds: 30,

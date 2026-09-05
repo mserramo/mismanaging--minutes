@@ -90,6 +90,7 @@ CONFIG_FIELDS = {
 OUTPUT_FIELDS: dict[str, str | None] = {
     "cs_task_status": None,
     "cs_decision_count": None,
+    "cs_choices_at_end": None,
     "cs_answered_at_end": None,
     "cs_task_elapsed_ms": None,
     "cs_all_at_once_final_zoom": None,
@@ -436,7 +437,7 @@ def build_header(bank: dict[str, Any]) -> str:
   border: 0;
   border-radius: 6px;
   background: #0f4c81;
-  color: #fff;
+  color: #fff !important;
   cursor: pointer;
   font: inherit;
   font-weight: 700;
@@ -668,7 +669,7 @@ def build_header(bank: dict[str, Any]) -> str:
   border: 0;
   border-radius: 6px;
   background: #0f4c81;
-  color: #fff;
+  color: #fff !important;
   cursor: pointer;
   font-family: inherit;
   font-size: 13px;
@@ -774,6 +775,10 @@ def build_header(bank: dict[str, Any]) -> str:
   font-size: 14px;
   font-weight: 750;
 }
+.csq-all-round-choice-color {
+  color: var(--choice-color, #334155);
+  font-weight: 850;
+}
 .csq-all-card-row {
   display: grid !important;
   grid-template-columns: repeat(10, minmax(0, 1fr)) !important;
@@ -821,7 +826,7 @@ def build_header(bank: dict[str, Any]) -> str:
   border: 0;
   border-radius: 6px;
   background: #0f4c81;
-  color: #fff;
+  color: #fff !important;
   cursor: pointer;
   font-family: inherit;
   font-size: 13px;
@@ -857,6 +862,13 @@ def build_header(bank: dict[str, Any]) -> str:
   box-shadow: none;
 }
 .csq-all-at-once > .csq-rules-panel[hidden] { display: none !important; }
+.Skin .csq-continue-button,
+.Skin .csq-game-nav-button,
+.Skin .csq-all-nav-button,
+.Skin #NextButton {
+  color: #fff !important;
+  -webkit-text-fill-color: #fff !important;
+}
 @media (max-width: 680px) {
   .csq-field { grid-template-columns: 1fr; gap: 5px; }
 }
@@ -1161,6 +1173,7 @@ def validate_generated_qsf(qsf: dict[str, Any]) -> None:
             )
     required_treatment_outputs = {
         "cs_all_at_once_final_zoom",
+        "cs_choices_at_end",
         "cs_answered_at_end",
         "cs_slot_order",
         "cs_layout_version",

@@ -400,9 +400,6 @@
         readonlyField(economic, "Required B minimum", bank.certificate.required_B_min);
         readonlyField(economic, "Required M minimum", bank.certificate.required_M_min);
         readonlyField(economic, "Required B+M minimum", bank.certificate.required_B_plus_M_min);
-        readonlyField(economic, "Bank hash", bank.certificate.bank_hash);
-        readonlyField(economic, "Detailed CSV SHA-256", bank.certificate.validated_sequences_sha256);
-        readonlyField(economic, "Summary CSV SHA-256", bank.certificate.validated_sequence_summary_sha256);
         display = setupSection(root, "Participant counters and feedback");
         inputs.showRound = checkboxField(display, "Show round counter?", config.showRound);
         inputs.showMain = checkboxField(display, "Show main-card counter?", config.showMain);
@@ -470,7 +467,7 @@
         appendText(root, "h2", "Card-choice task");
         if (config.treatmentMode === "all_at_once") {
             appendText(root, "p", "All " + profile.rounds + " choice sets will appear together in one scrollable list. Choose one card in every round. You may revisit any round and change its choice until you select Done.");
-            appendText(root, "p", "The fixed status bar remains visible while you scroll and shows which rounds are in view, how many are answered, and your current payoff. Done appears below round " + profile.rounds + " and becomes available after all rounds are answered.");
+            appendText(root, "p", "The fixed status bar remains visible while you scroll and shows which rounds are in view, how many choices you have made, and your current payoff. Done appears below round " + profile.rounds + " and becomes available after every round has a choice.");
         } else {
             appendText(root, "p", "You will make exactly " + profile.rounds + " choices, one round at a time. Each choice is final before the next round appears.");
             appendText(root, "p", "The fixed status bar remains visible and shows the current round, your current payoff, and the inactivity countdown.");
@@ -976,7 +973,7 @@
         var state = initialTaskState();
         var trace = [];
         var decisions = [];
-        var answered = 0;
+        var choiceCount = 0;
         timing = timing || {};
         environment.rounds.forEach(function (round, index) {
             var before = cloneState(state);
@@ -989,7 +986,7 @@
             var after;
             if (card) {
                 reward = applyChoice(bankProfile, state, round, card);
-                answered += 1;
+                choiceCount += 1;
             } else {
                 breakInfiniteStreak(bankProfile, state, round, null);
             }
@@ -1010,7 +1007,7 @@
                 ));
             }
         });
-        return { task: state, trace: trace, decisions: decisions, answeredCount: answered };
+        return { task: state, trace: trace, decisions: decisions, choiceCount: choiceCount };
     }
 
     function createCardButton(bankProfile, environment, round, card, state, config, selected, onChoose, onActivity) {
@@ -1137,6 +1134,7 @@
         });
         var fields = {
             cs_task_status: status, cs_decision_count: state.decisions.length,
+            cs_choices_at_end: state.decisions.length,
             cs_answered_at_end: state.decisions.length,
             cs_treatment_mode: state.treatmentMode || "sequential",
             cs_all_at_once_final_zoom: state.treatmentMode === "all_at_once" ? state.zoom : "",
@@ -1527,7 +1525,7 @@
         var primary;
         var controls;
         var viewingCounter;
-        var answeredCounter;
+        var choiceCounter;
         var mainCounter;
         var movieCounter;
         var pointsCounter;
@@ -1558,8 +1556,8 @@
         primary = toolbarParts.primary; controls = toolbarParts.controls;
         viewingCounter = appendText(primary, "span", "Rounds 1–1 of " + config.profile.rounds);
         viewingCounter.setAttribute("data-csq", "all-viewing");
-        answeredCounter = appendText(primary, "span", "Answered 0 of " + config.profile.rounds);
-        answeredCounter.setAttribute("data-csq", "all-answered");
+        choiceCounter = appendText(primary, "span", "Choices made: 0 of " + config.profile.rounds);
+        choiceCounter.setAttribute("data-csq", "all-choice-count");
         if (config.showMain) { mainCounter = appendText(primary, "span", ""); }
         if (config.showMovie) { movieCounter = appendText(primary, "span", ""); }
         if (config.showPoints) {
@@ -1656,16 +1654,16 @@
         }
 
         function refreshCounters() {
-            var answered = state.evaluation.answeredCount;
-            answeredCounter.textContent = "Answered " + answered + " of " + config.profile.rounds;
+            var choicesMade = state.evaluation.choiceCount;
+            choiceCounter.textContent = "Choices made: " + choicesMade + " of " + config.profile.rounds;
             if (mainCounter) { mainCounter.textContent = "Main: " + state.task.main + " / " + config.profile.mainTarget; }
             if (movieCounter) { movieCounter.textContent = "Movie: " + state.task.movie + " / " + config.profile.movieRounds; }
             if (pointsCounter) { pointsCounter.textContent = "Points: " + awardedTotalPoints(config.profile, state.task); }
-            doneButton.disabled = state.narrow || answered !== config.profile.rounds;
-            if (answered === config.profile.rounds) {
-                helper.textContent = "All rounds are answered. You may review and change any choice before selecting Done.";
+            doneButton.disabled = state.narrow || choicesMade !== config.profile.rounds;
+            if (choicesMade === config.profile.rounds) {
+                helper.textContent = "Every round has a choice. You may review and change any choice before selecting Done.";
             } else {
-                helper.textContent = "Answer every round to enable Done. " + (config.profile.rounds - answered) + " remaining.";
+                helper.textContent = "Choose one card in every round to enable Done. " + (config.profile.rounds - choicesMade) + " remaining.";
             }
             refreshInactivityClock();
         }
@@ -1674,9 +1672,18 @@
             var ref = rowRefs[index];
             var trace = state.evaluation.trace[index];
             var selectedTaskId = state.selections[index];
-            ref.status.textContent = selectedTaskId ? "Answered" : "Not answered";
+            var selectedColor;
+            clearElement(ref.status);
+            if (selectedTaskId) {
+                selectedColor = bank.profile.colors[environment.colorMap[selectedTaskId]];
+                appendText(ref.status, "span", "Chose ", "csq-all-round-choice-prefix");
+                var colorLabel = appendText(ref.status, "span", selectedColor.label, "csq-all-round-choice-color");
+                colorLabel.style.setProperty("--choice-color", selectedColor.hex);
+            } else {
+                ref.status.textContent = "No choice yet";
+            }
             ref.outer.setAttribute("data-selected-task", selectedTaskId || "");
-            ref.outer.setAttribute("data-answered", selectedTaskId ? "1" : "0");
+            ref.outer.setAttribute("data-has-choice", selectedTaskId ? "1" : "0");
             fixedSlotsForRound(environment, trace.round).forEach(function (card) {
                 updateCardButton(ref.buttons[card.taskId], bank.profile, environment, trace.round, card, trace.before, config, selectedTaskId === card.taskId);
             });
@@ -1717,10 +1724,10 @@
             var outer = element("section", "csq-all-round");
             var scale = element("div", "csq-all-round-scale");
             var heading = element("div", "csq-all-round-heading");
-            var status = element("span", "csq-all-round-status", "Not answered");
+            var status = element("span", "csq-all-round-status", "No choice yet");
             var cardRow = element("div", "csq-all-card-row");
             var buttons = {};
-            outer.setAttribute("data-round", round.number); outer.setAttribute("data-answered", "0");
+            outer.setAttribute("data-round", round.number); outer.setAttribute("data-has-choice", "0");
             heading.appendChild(element("span", "", "Round " + round.number + " of " + config.profile.rounds));
             heading.appendChild(status); scale.appendChild(heading);
             cardRow.setAttribute("role", "radiogroup"); cardRow.setAttribute("aria-label", "Round " + round.number);
@@ -1733,7 +1740,7 @@
         });
         completion = element("div", "csq-all-completion");
         completion.setAttribute("data-csq", "all-completion");
-        helper = appendText(completion, "p", "Answer every round to enable Done. " + config.profile.rounds + " remaining.", "csq-all-helper");
+        helper = appendText(completion, "p", "Choose one card in every round to enable Done. " + config.profile.rounds + " remaining.", "csq-all-helper");
         doneButton = element("button", "csq-all-nav-button csq-all-done", "Done");
         doneButton.type = "button"; doneButton.disabled = true;
         doneButton.setAttribute("data-csq", "all-done"); completion.appendChild(doneButton);
@@ -1793,7 +1800,7 @@
         }
 
         function finish(statusName) {
-            if (state.finished || statusName === "completed" && state.evaluation.answeredCount !== config.profile.rounds) { return; }
+            if (state.finished || statusName === "completed" && state.evaluation.choiceCount !== config.profile.rounds) { return; }
             if (!authority && !claimOwner(token, "finish")) { return; }
             authority = true; state.finished = true;
             state.task = state.evaluation.task; state.decisions = state.evaluation.decisions;
@@ -1903,7 +1910,7 @@
             ["Layout version", getEmbeddedData("cs_layout_version")], ["Permanent slot order", getEmbeddedData("cs_slot_order")],
             ["Profile version", getEmbeddedData("cs_profile_version")], ["Bank hash", getEmbeddedData("cs_bank_hash")],
             ["Task-to-color map", getEmbeddedData("cs_task_color_map")],
-            ["Answered rounds", getEmbeddedData("cs_answered_at_end") || getEmbeddedData("cs_decision_count")],
+            ["Rounds with choices", getEmbeddedData("cs_choices_at_end") || getEmbeddedData("cs_answered_at_end") || getEmbeddedData("cs_decision_count")],
             ["All-at-once display scale", getEmbeddedData("cs_all_at_once_final_zoom")],
             ["Main choices", getEmbeddedData("cs_main_cards_collected")],
             ["Movie choices", getEmbeddedData("cs_movie_cards_collected")], ["Main completed", yesNo(getEmbeddedData("cs_main_complete"))],

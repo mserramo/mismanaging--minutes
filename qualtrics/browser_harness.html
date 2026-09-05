@@ -14,7 +14,7 @@
         .harness-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 8px; }
         .harness-toolbar button, #NextButton, .csq-continue-button {
             min-height: 42px; padding: 9px 17px; border: 0; border-radius: 6px;
-            background: #0f4c81; color: #fff; cursor: pointer; font: inherit; font-weight: 700;
+            background: #0f4c81; color: #fff !important; cursor: pointer; font: inherit; font-weight: 700;
         }
         .harness-toolbar label { display: inline-flex; align-items: center; gap: 7px; min-height: 42px; padding: 0 10px; border: 1px solid #cbd5e1; border-radius: 6px; background: #fff; font-weight: 700; }
         .harness-toolbar select, .harness-toolbar input { min-height: 32px; border: 1px solid #94a3b8; border-radius: 4px; background: #fff; font: inherit; }
@@ -92,7 +92,7 @@
         .csq-game-toolbar-controls { margin-left: auto; }
         .csq-toolbar-feedback { display: inline-block; min-width: 88px; color: #475569; font-weight: 750; text-align: center; white-space: nowrap; }
         .csq-toolbar-feedback-visible { color: #0f172a; }
-        .csq-game-nav-button { min-height: 34px; padding: 6px 12px; border: 0; border-radius: 6px; background: #0f4c81; color: #fff; cursor: pointer; font-family: inherit; font-size: 13px; line-height: 1.2; font-weight: 750; white-space: nowrap; }
+        .csq-game-nav-button { min-height: 34px; padding: 6px 12px; border: 0; border-radius: 6px; background: #0f4c81; color: #fff !important; cursor: pointer; font-family: inherit; font-size: 13px; line-height: 1.2; font-weight: 750; white-space: nowrap; }
         .csq-game-nav-button:hover, .csq-game-nav-button:focus { background: #0b365b; }
         .csq-game-nav-button:disabled { background: #94a3b8; cursor: not-allowed; }
         .csq-payoff-key-open { overflow: hidden !important; }
@@ -108,12 +108,13 @@
         .csq-all-round { box-sizing: border-box; width: 100%; min-width: 0; padding: 10px 8px 12px; border: 1px solid #d8e0ea; border-radius: 7px; background: #fff; scroll-margin: 12px; }
         .csq-all-round-scale { box-sizing: border-box; width: 100%; }
         .csq-all-round-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 24px; margin: 0 0 8px; color: #334155; font-size: 14px; font-weight: 750; }
+        .csq-all-round-choice-color { color: var(--choice-color, #334155); font-weight: 850; }
         .csq-all-card-row { display: grid !important; grid-template-columns: repeat(10, minmax(0, 1fr)) !important; align-items: stretch; gap: 6px; width: 100%; min-width: 0; }
         .csq-all-at-once .cs-card { flex-basis: auto; width: 100%; min-width: 0; min-height: 184px; }
         .csq-all-helper { margin: 0; color: #475569; font-size: 13px; line-height: 1.35; }
         .csq-all-completion { box-sizing: border-box; display: flex; align-items: center; justify-content: space-between; gap: 16px; width: 100%; padding: 14px 16px; border: 1px solid #cbd5e1; border-radius: 7px; background: #fff; }
         .csq-all-done { padding: 7px 10px; border: 1px solid #86efac; border-radius: 6px; background: #f0fdf4; color: #166534; font-size: 13px; font-weight: 750; }
-        .csq-all-nav-button { min-height: 34px; padding: 6px 12px; border: 0; border-radius: 6px; background: #0f4c81; color: #fff; cursor: pointer; font-family: inherit; font-size: 13px; line-height: 1.2; font-weight: 750; }
+        .csq-all-nav-button { min-height: 34px; padding: 6px 12px; border: 0; border-radius: 6px; background: #0f4c81; color: #fff !important; cursor: pointer; font-family: inherit; font-size: 13px; line-height: 1.2; font-weight: 750; }
         .csq-all-nav-button:hover, .csq-all-nav-button:focus { background: #0b365b; }
         .csq-all-nav-button:disabled { background: #94a3b8; cursor: not-allowed; }
         .csq-all-wide-blocker { box-sizing: border-box; max-width: 760px; margin: 16px auto; padding: 18px 20px; border: 2px solid #b45309; border-radius: 8px; background: #fffbeb; color: #78350f; font-weight: 700; line-height: 1.45; }
@@ -158,7 +159,7 @@
             <button type="button" id="run-treatment-checks">Run treatment checks</button>
             <button type="button" id="advance-sequential-movie">Sequential: verify through round 81</button>
             <button type="button" id="run-radio-check">Test round 1 replacement</button>
-            <button type="button" id="answer-all-rounds">Answer every unfinished round</button>
+            <button type="button" id="choose-all-rounds">Choose a card in every unfinished round</button>
             <button type="button" id="open-narrow-viewport">Open 1279px blocker test</button>
             <button type="button" id="run-inactivity-test">Run 2-second partial-inactivity test</button>
         </div>
@@ -450,10 +451,20 @@
             firstInactive.focus(); inactiveFocusPass = document.activeElement !== firstInactive;
             firstInactive.click(); inactiveSelectionPass = selectedCards(rows[0]).length === selectedBeforeInactiveClick && firstInactive.getAttribute("aria-checked") !== "true";
         }
-        var answered = rows.reduce(function (sum, row) { return sum + (selectedCards(row).length === 1 ? 1 : 0); }, 0);
+        var choicesMade = rows.reduce(function (sum, row) { return sum + (selectedCards(row).length === 1 ? 1 : 0); }, 0);
+        var roundChoiceStatusPass = !allAtOnce || rows.every(function (row) {
+            var selected = selectedCards(row);
+            var roundStatus = row.querySelector(".csq-all-round-status");
+            if (!roundStatus) { return false; }
+            if (!selected.length) { return roundStatus.textContent.trim() === "No choice yet"; }
+            var chosenColor = selected[0].querySelector(".cs-card-color-label").textContent.trim();
+            var statusColor = roundStatus.querySelector(".csq-all-round-choice-color");
+            return !!statusColor && roundStatus.textContent.trim() === "Chose " + chosenColor
+                && statusColor.style.getPropertyValue("--choice-color") === selected[0].style.getPropertyValue("--card-color");
+        });
         sampleCard = rows.length && activeCards(rows[0]).length ? activeCards(rows[0])[0] : null;
         var viewing = roots.game.querySelector("[data-csq='all-viewing']");
-        var answeredCounter = roots.game.querySelector("[data-csq='all-answered']");
+        var choiceCounter = roots.game.querySelector("[data-csq='all-choice-count']");
         var roundCounter = roots.game.querySelector("[data-csq='sequential-round']");
         var pointsCounter = roots.game.querySelector(allAtOnce ? "[data-csq='all-points']" : "[data-csq='game-points']");
         var inactivityCounter = roots.game.querySelector(allAtOnce ? "[data-csq='all-inactivity']" : "[data-csq='game-inactivity']");
@@ -510,8 +521,8 @@
         var legacyJumpInput = roots.game.querySelector("input[data-csq='all-round-jump-input'], input[data-csq-round-jump], input.csq-round-jump, #csq-round-jump");
         var legacyJumpButton = roots.game.querySelector("button[data-csq='all-round-jump-button'], button[data-csq-round-jump-button], button.csq-round-jump-button, #csq-round-jump-button");
         var legacyNext = roots.game.querySelector("button[data-csq='all-next-unanswered'], button[data-csq-next-unanswered], button.csq-next-unanswered, #csq-next-unanswered");
-        var allAtOnceControls = !!viewing && !!answeredCounter && !legacyNext && !legacyJumpInput && !legacyJumpButton;
-        var sequentialControls = !!roundCounter && !viewing && !answeredCounter && !legacyNext && !done && !legacyJumpInput && !legacyJumpButton;
+        var allAtOnceControls = !!viewing && !!choiceCounter && !legacyNext && !legacyJumpInput && !legacyJumpButton;
+        var sequentialControls = !!roundCounter && !viewing && !choiceCounter && !legacyNext && !done && !legacyJumpInput && !legacyJumpButton;
         var toolbarHeight = toolbar ? toolbar.getBoundingClientRect().height : 0;
         var graySurface = allAtOnce ? scroll : roots.game.querySelector(".csq-sequential-stage");
         var whiteSurface = allAtOnce ? roots.game.querySelector(".csq-all-round") : roots.game.querySelector(".csq-sequential-stage > .cs-task");
@@ -535,7 +546,8 @@
             assertion("Points counter", !!pointsCounter && /Points\s*:\s*\d+/i.test(pointsCounter.textContent), pointsCounter ? pointsCounter.textContent.trim() : "counter not found"),
             assertion("Inactivity counter", !!inactivityCounter && (window.innerWidth < 1280 ? /Inactivity paused/i.test(inactivityCounter.textContent) : /Inactive in\s+\d+:\d\d/i.test(inactivityCounter.textContent)), inactivityCounter ? inactivityCounter.textContent.trim() : "counter not found"),
             assertion("Fixed 100% all-at-once scale", !zoomControl && fixedScale, zoomControl ? "zoom control still present" : fixedScale ? "no zoom control and no transformed round rows" : "a round row is scaled"),
-            assertion("Exactly one or zero choices per round", rows.length === expectedRows && rows.every(function (row) { return selectedCards(row).length <= 1; }), answered + " answered"),
+            assertion("Exactly one or zero choices per round", rows.length === expectedRows && rows.every(function (row) { return selectedCards(row).length <= 1; }), choicesMade + " choices made"),
+            assertion("Round statuses use choice vocabulary and card colors", roundChoiceStatusPass, roundChoiceStatusPass ? "No choice yet / Chose [color] states match selections" : "at least one round status does not match its choice"),
             assertion("Narrow-width blocker state", !!blocker && (window.innerWidth < 1280 ? visible(blocker) : !visible(blocker)), blocker ? (visible(blocker) ? "visible at " : "hidden at ") + window.innerWidth + "px" : "blocker element not found"),
             assertion("Narrow-width interaction lock", window.innerWidth >= 1280 || !!sampleCard && (sampleCard.disabled || sampleCard.getAttribute("aria-disabled") === "true") || !!roots.game.querySelector(".csq-game-layout") && roots.game.querySelector(".csq-game-layout").hidden, window.innerWidth >= 1280 ? "not applicable at this width" : roots.game.querySelector(".csq-game-layout") && roots.game.querySelector(".csq-game-layout").hidden ? "game surface hidden" : sampleCard ? "disabled=" + sampleCard.disabled + ", aria-disabled=" + sampleCard.getAttribute("aria-disabled") : "no card found", window.innerWidth >= 1280),
             assertion("No horizontal choice scrolling", window.innerWidth < 1280 || !!surface && surface.scrollWidth <= surface.clientWidth + 2, surface ? surface.scrollWidth + "px content / " + surface.clientWidth + "px viewport" : "game surface not found", window.innerWidth < 1280),
@@ -543,17 +555,17 @@
         ];
         if (allAtOnce) {
             result.push(
-                assertion("All-at-once toolbar counters", allAtOnceControls && countPattern.test(viewing.textContent) && /Answered\s+\d+\s+of\s+100/i.test(answeredCounter.textContent), allAtOnceControls ? viewing.textContent.trim() + "; " + answeredCounter.textContent.trim() : "one or more all-at-once controls are missing"),
-                assertion("All-at-once toolbar omits navigation controls", !legacyNext && !legacyJumpInput && !legacyJumpButton, "Next unanswered present=" + !!legacyNext + "; round input present=" + !!legacyJumpInput + "; Go present=" + !!legacyJumpButton),
+                assertion("All-at-once toolbar counters", allAtOnceControls && countPattern.test(viewing.textContent) && /Choices made:\s*\d+\s+of\s+100/i.test(choiceCounter.textContent), allAtOnceControls ? viewing.textContent.trim() + "; " + choiceCounter.textContent.trim() : "one or more all-at-once controls are missing"),
+                assertion("All-at-once toolbar omits navigation controls", !legacyNext && !legacyJumpInput && !legacyJumpButton, "legacy next-choice control present=" + !!legacyNext + "; round input present=" + !!legacyJumpInput + "; Go present=" + !!legacyJumpButton),
                 assertion("Scrollable 100-round list", !!scroll && scroll.scrollHeight > scroll.clientHeight, scroll ? scroll.clientHeight + "px visible / " + scroll.scrollHeight + "px total" : "scroll container not found"),
                 assertion("Toolbar stays fixed after decision-pane scroll", toolbarFixedAfterScroll, toolbarScrollDetail),
                 assertion("Done follows round 100 outside toolbar", doneBelowRounds, done ? "completion after round 100=" + completionAfterLastRound + "; inside toolbar=" + (!!toolbar && toolbar.contains(done)) : "Done button not found"),
-                assertion("Done gating", !!done && (answered === 100 ? !done.disabled : done.disabled), done ? "answered " + answered + "; disabled=" + done.disabled : "Done button not found")
+                assertion("Done gating", !!done && (choicesMade === 100 ? !done.disabled : done.disabled), done ? choicesMade + " choices made; disabled=" + done.disabled : "Done button not found")
             );
         } else {
             result.push(
                 assertion("Sequential round counter", !!roundCounter && roundPattern.test(roundCounter.textContent), roundCounter ? roundCounter.textContent.trim() : "counter not found"),
-                assertion("Sequential toolbar omits all-at-once controls", sequentialControls, "viewing=" + !!viewing + ", answered=" + !!answeredCounter + ", next=" + !!legacyNext + ", done=" + !!done)
+                assertion("Sequential toolbar omits all-at-once controls", sequentialControls, "viewing=" + !!viewing + ", choice counter=" + !!choiceCounter + ", next=" + !!legacyNext + ", done=" + !!done)
             );
         }
         status.textContent = (mode === "all_at_once" ? "All-at-once" : "Sequential") + " checks: " + result.filter(function (item) { return item.pass || item.skipped; }).length + " of " + result.length + " passed or skipped.";
@@ -586,9 +598,15 @@
                 cards[1].click();
                 afterPaint(function () {
                     var twice = selectedCards(row);
+                    var roundStatus = row.querySelector(".csq-all-round-status");
+                    var statusColor = roundStatus ? roundStatus.querySelector(".csq-all-round-choice-color") : null;
+                    var chosenColor = cards[1].querySelector(".cs-card-color-label").textContent.trim();
+                    var choiceStatusPass = !!statusColor && roundStatus.textContent.trim() === "Chose " + chosenColor
+                        && statusColor.style.getPropertyValue("--choice-color") === cards[1].style.getPropertyValue("--card-color");
                     renderAssertions([
                         assertion("Radio-like replacement", replacementPass, replacementPass ? "second card replaced the first" : once.length + " selected after replacement"),
                         assertion("Selected card cannot deselect itself", twice.length === 1 && twice[0] === cards[1], twice.length + " selected after clicking it again"),
+                        assertion("Round status names the chosen color", choiceStatusPass, roundStatus ? roundStatus.textContent.trim() : "round status not found"),
                         assertion("Replacement preserves scroll", Math.abs(afterScroll - beforeScroll) <= 2, beforeScroll + "px before / " + afterScroll + "px after")
                     ], false);
                 });
@@ -596,10 +614,10 @@
         });
     }
 
-    function answerAllRounds() {
+    function chooseAllRounds() {
         var rows = roundRows();
         var index = 0;
-        function answerBatch() {
+        function choiceBatch() {
             var stop = Math.min(index + 10, rows.length);
             for (; index < stop; index += 1) {
                 if (!selectedCards(rows[index]).length) {
@@ -613,20 +631,20 @@
                     }
                 }
             }
-            if (index < rows.length) { window.setTimeout(answerBatch, 0); }
+            if (index < rows.length) { window.setTimeout(choiceBatch, 0); }
             else {
                 afterPaint(function () {
                     var done = gameControl("done");
-                    var answered = roundRows().filter(function (row) { return selectedCards(row).length === 1; }).length;
+                    var choicesMade = roundRows().filter(function (row) { return selectedCards(row).length === 1; }).length;
                     renderAssertions([
-                        assertion("Answer-all helper completed 100 rounds", answered === 100, answered + " answered"),
-                        assertion("Done enables after all answers", !!done && !done.disabled, done ? "disabled=" + done.disabled : "Done button not found")
+                        assertion("Choose-all helper completed 100 rounds", choicesMade === 100, choicesMade + " choices made"),
+                        assertion("Done enables after every round has a choice", !!done && !done.disabled, done ? "disabled=" + done.disabled : "Done button not found")
                     ], false);
-                    status.textContent = "Answer-all helper finished. Review choices or select Done below round 100.";
+                    status.textContent = "Choose-all helper finished. Review choices or select Done below round 100.";
                 });
             }
         }
-        answerBatch();
+        choiceBatch();
     }
 
     function freshHarnessUrl(width, treatment, inactivitySeconds) {
@@ -807,7 +825,7 @@
     document.getElementById("run-treatment-checks").addEventListener("click", runTreatmentChecks);
     document.getElementById("advance-sequential-movie").addEventListener("click", verifySequentialThroughMovie);
     document.getElementById("run-radio-check").addEventListener("click", runRadioCheck);
-    document.getElementById("answer-all-rounds").addEventListener("click", answerAllRounds);
+    document.getElementById("choose-all-rounds").addEventListener("click", chooseAllRounds);
     document.getElementById("run-inactivity-test").addEventListener("click", runInactivityTest);
 
     window.harness = {
@@ -834,7 +852,7 @@
         runTreatmentChecks: runTreatmentChecks,
         runAllAtOnceChecks: runAllAtOnceChecks,
         runRadioCheck: runRadioCheck,
-        answerAllRounds: answerAllRounds,
+        chooseAllRounds: chooseAllRounds,
         runInactivityTest: runInactivityTest,
         verifySequentialThroughMovie: verifySequentialThroughMovie,
         openViewport: openViewport

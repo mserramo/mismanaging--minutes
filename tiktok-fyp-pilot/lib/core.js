@@ -57,6 +57,8 @@
         EXCLUDE_VIDEO: 'EXCLUDE_VIDEO',
         RESERVE_VIDEO: 'RESERVE_VIDEO',
         CONFIRM_RESERVATION: 'CONFIRM_RESERVATION',
+        RESERVE_VIDEO_BATCH: 'RESERVE_VIDEO_BATCH',
+        CONFIRM_RESERVATION_BATCH: 'CONFIRM_RESERVATION_BATCH',
         COLLECTOR_READY: 'COLLECTOR_READY',
         NATURAL_COLLECTOR_READY: 'NATURAL_COLLECTOR_READY',
         NATURAL_ACTIVITY: 'NATURAL_ACTIVITY',
@@ -1397,6 +1399,80 @@
         return { applied: true };
     }
 
+    // One durable prepare and one durable settlement per batch. A settlement
+    // can invalidate individual recycled cards without discarding safe peers.
+    // Replay only reports persisted results; it never creates a reservation.
+    function applyReservationBatch(session, payload, confirm, replay) {
+        const items = payload && payload.items;
+        const batchId = payload && payload.batchId;
+        if (!Array.isArray(items) || !items.length || items.length > 12 ||
+            !batchId || sanitizeToken(batchId, null) !== batchId ||
+            items.some((item) => !item || !isVideoId(item.videoId) ||
+                (confirm && !['confirm', 'invalidate'].includes(item.action))) ||
+            new Set(items.map((item) => item.videoId)).size !== items.length) {
+            return { ok: false, error: 'invalid_batch' };
+        }
+        if (!session || session.collectionMode !== COLLECTION_MODE.AUTOMATED_BACKGROUND ||
+            (session.status !== SESSION_STATUS.COLLECTING && !replay)) {
+            return { ok: false, error: 'not_collecting' };
+        }
+        const now = sanitizeTimestamp(payload.at, Date.now());
+        if (!confirm && !replay && now >= session.harvestDeadlineAt) {
+            return { ok: false, error: 'harvest_window_ended' };
+        }
+        const results = items.map((item) => {
+            let result;
+            const prior = findReserved(session, item.videoId);
+            if (confirm || replay) {
+                if (!prior || prior.batchId !== batchId) {
+                    result = { applied: false, reason: 'batch_reservation_missing' };
+                } else if (replay) {
+                    const expected = confirm && item.action === 'invalidate'
+                        ? ['invalidated'] : confirm ? ['reserved'] : ['prepared', 'reserved'];
+                    result = { applied: expected.includes(prior.state), reason: 'reservation_changed' };
+                } else if (item.action === 'invalidate') {
+                    result = { applied: prior.state === 'invalidated' ||
+                        invalidateReservation(session, item.videoId, item.reason, now) };
+                } else {
+                    result = confirmReservation(session, item.videoId, now);
+                }
+            } else {
+                result = reserveVideo(session, {
+                    videoId: item.videoId, evidence: item.evidence,
+                    batchId, batchNumber: payload.batchNumber, at: now,
+                });
+            }
+            const record = findReserved(session, item.videoId);
+            return {
+                videoId: item.videoId,
+                ok: result.applied,
+                state: record ? record.state : null,
+                error: result.applied ? null : result.reason || 'reservation_failed',
+            };
+        });
+        return { ok: true, duplicate: Boolean(replay), items: results };
+    }
+
+    // Routine telemetry is observational only: it must not exclude drivers,
+    // finish a session, or overwrite terminal state. Critical commands do that.
+    function applyBufferedHarvestTelemetry(session, entries, at) {
+        if (!session || session.collectionMode !== COLLECTION_MODE.AUTOMATED_BACKGROUND ||
+            session.status !== SESSION_STATUS.COLLECTING || !Array.isArray(entries)) {
+            return;
+        }
+        const now = sanitizeTimestamp(at, Date.now());
+        const phases = new Set(['reserving', 'advancing', 'waiting_hydration', 'waiting_driver', 'waiting_deadline']);
+        entries.slice(-32).forEach((entry) => {
+            if (!entry || typeof entry !== 'object') { return; }
+            const eventAt = Math.max(session.startedAt, Math.min(now, sanitizeTimestamp(entry.at, now)));
+            if (entry.kind === 'step' && entry.step && phases.has(entry.step.phase)) {
+                recordHarvestStep(session, { ...entry.step, retainDriver: true }, eventAt);
+            } else if (entry.kind === 'diagnostic') {
+                recordDiagnostic(session, entry.code, eventAt, entry.detail);
+            }
+        });
+    }
+
     function evaluateCompletion(session, at) {
         if (!session || session.status !== SESSION_STATUS.COLLECTING) {
             return false;
@@ -1822,6 +1898,8 @@
         selectImmediateSafeCandidate,
         reserveVideo,
         confirmReservation,
+        applyReservationBatch,
+        applyBufferedHarvestTelemetry,
         invalidateReservation,
         evaluateCompletion,
         finalizeHarvestWindow,

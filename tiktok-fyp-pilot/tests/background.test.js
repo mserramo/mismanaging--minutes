@@ -68,7 +68,7 @@ function createHarness(options = {}) {
                 return `chrome-extension://${extensionId}/${relativePath}`;
             },
             getManifest() {
-                return { version: '0.5.3' };
+                return { version: '0.5.4' };
             },
             onMessage: runtimeMessage,
             onConnectExternal: runtimeConnectExternal,
@@ -81,6 +81,9 @@ function createHarness(options = {}) {
                     return key === 'pilotState' ? { pilotState: clone(stored) } : {};
                 },
                 async set(value) {
+                    if (options.rejectWrite && options.rejectWrite(value.pilotState)) {
+                        throw new Error('synthetic_storage_failure');
+                    }
                     stored = clone(value.pilotState);
                     log.push('storage.set');
                 },
@@ -364,6 +367,195 @@ function collectingState() {
     return state;
 }
 
+function batchRequest(state, count = 12) {
+    return {
+        type: Core.MESSAGE_TYPES.RESERVE_VIDEO_BATCH,
+        sessionId: state.activeSessionId, sourceId: 'batch-source', sequence: 1,
+        batchId: 'covered-1', batchNumber: 1,
+        items: Array.from({ length: count }, (_unused, index) => ({
+            videoId: String(7311111111111111000n + BigInt(index)),
+            evidence: {
+                captureMethod: 'covered_feed_item', feedOrder: index + 1,
+                aheadBy: 0, intersectionRatio: 0, belowViewport: true,
+                everIntersected: false, connected: true, occurrenceCount: 1,
+                overlayOpaque: true, mediaMuted: true,
+            },
+        })),
+    };
+}
+
+function batchConfirmation(preparation) {
+    return { ...preparation, type: Core.MESSAGE_TYPES.CONFIRM_RESERVATION_BATCH, sequence: 2,
+        items: preparation.items.map((item) => ({ videoId: item.videoId, action: 'confirm' })) };
+}
+
+test('twelve reservations plus buffered telemetry use exactly two durable writes', async () => {
+    const state = collectingState();
+    const harness = createHarness({ state });
+    const request = batchRequest(state);
+    request.telemetry = [
+        { kind: 'diagnostic', code: 'capture_batch', at: Date.now(), detail: { count: 12, url: 'not-stored' } },
+        { kind: 'step', step: { phase: 'advancing', driverVideoId: request.items[0].videoId,
+            visibility: 'hidden', retainDriver: false } },
+    ];
+    const prepared = await harness.dispatch(request, collectorSender());
+    assert.equal(prepared.ok, true);
+    assert.equal(prepared.items.every((item) => item.state === 'prepared'), true);
+    assert.equal(harness.getState().sessions[0].tombstones.length, 0);
+    assert.equal(Core.viewerQueue(harness.getState().sessions[0]).length, 0);
+    const confirmation = batchConfirmation(request);
+    delete confirmation.telemetry;
+    const confirmed = await harness.dispatch(confirmation, collectorSender());
+    assert.equal(confirmed.items.every((item) => item.ok && item.state === 'reserved'), true);
+    const session = harness.getState().sessions[0];
+    assert.deepEqual(Core.viewerQueue(session).map((item) => item.videoId), request.items.map((item) => item.videoId));
+    assert.equal(session.excluded.length, 0, 'observational steps must never exclude drivers');
+    assert.deepEqual(session.diagnostics[0].detail, { count: 12 });
+    assert.equal(session.harvestSteps[0].visibility, 'hidden');
+    assert.equal(harness.log.filter((entry) => entry === 'storage.set').length, 2);
+});
+
+test('lost batch acknowledgements replay durable per-ID results after worker restart', async () => {
+    const state = collectingState();
+    const first = createHarness({ state });
+    const request = batchRequest(state, 3);
+    await first.dispatch(request, collectorSender());
+    const restarted = createHarness({ state: first.getState() });
+    const replay = await restarted.dispatch(request, collectorSender());
+    assert.equal(replay.duplicate, true);
+    assert.equal(replay.items.every((item) => item.ok && item.state === 'prepared'), true);
+    const confirmation = batchConfirmation(request);
+    await restarted.dispatch(confirmation, collectorSender());
+    const afterConfirm = createHarness({ state: restarted.getState() });
+    const confirmedReplay = await afterConfirm.dispatch(confirmation, collectorSender());
+    assert.equal(confirmedReplay.items.every((item) => item.ok && item.state === 'reserved'), true);
+    assert.equal(afterConfirm.getState().sessions[0].reserved.length, 3);
+    const inventedReplay = await afterConfirm.dispatch({ ...confirmation, batchId: 'other-batch' }, collectorSender());
+    assert.equal(inventedReplay.items.every((item) => !item.ok), true);
+});
+
+test('batch settlement invalidates a recycled item without losing safe peers or their order', async () => {
+    const state = collectingState();
+    const harness = createHarness({ state });
+    const request = batchRequest(state, 3);
+    await harness.dispatch(request, collectorSender());
+    const confirmation = batchConfirmation(request);
+    confirmation.items[1] = { ...confirmation.items[1], action: 'invalidate', reason: 'covered_state_changed_after_persist' };
+    const response = await harness.dispatch(confirmation, collectorSender());
+    assert.deepEqual(response.items.map((item) => item.state), ['reserved', 'invalidated', 'reserved']);
+    const session = harness.getState().sessions[0];
+    assert.deepEqual(Core.viewerQueue(session).map((item) => item.videoId), [request.items[0].videoId, request.items[2].videoId]);
+    assert.deepEqual(session.tombstones, [request.items[0].videoId, request.items[2].videoId]);
+});
+
+test('batches reject unsafe evidence, repeated IDs, oversized requests and wrong senders', async () => {
+    const state = collectingState();
+    const request = batchRequest(state, 3);
+    request.items[1].evidence.overlayOpaque = false;
+    const harness = createHarness({ state });
+    const result = await harness.dispatch(request, collectorSender());
+    assert.deepEqual(result.items.map((item) => item.ok), [true, false, true]);
+    for (const message of [
+        { ...batchRequest(state, 13) },
+        { ...request, items: [request.items[0], request.items[0]] },
+        { ...request, items: [] },
+        { ...request, sequence: 0 },
+    ]) {
+        assert.equal((await createHarness({ state }).dispatch(message, collectorSender())).ok, false);
+    }
+    for (const sender of [collectorSender(99), tiktokSender('https://www.tiktok.com/login'), popupSender()]) {
+        const isolated = createHarness({ state });
+        assert.equal((await isolated.dispatch(batchRequest(state), sender)).ok, false);
+        assert.equal(isolated.getState().sessions[0].reserved.length, 0);
+    }
+});
+
+test('a batch arriving after the deadline preserves the already-confirmed pool', async () => {
+    const state = collectingState();
+    reserveOne(state.sessions[0]);
+    state.sessions[0].startedAt = Date.now() - 31000;
+    state.sessions[0].harvestStartedAt = state.sessions[0].startedAt;
+    state.sessions[0].harvestDeadlineAt = Date.now() - 1;
+    const harness = createHarness({ state });
+    const result = await harness.dispatch(batchRequest(state, 2), collectorSender());
+    assert.equal(result.finished, true);
+    assert.equal(result.progress.status, Core.SESSION_STATUS.COMPLETE);
+    assert.equal(Core.viewerQueue(harness.getState().sessions[0]).length, 1);
+    assert.equal(harness.getState().sessions[0].reserved.length, 1);
+});
+
+test('confirmation rejects IDs excluded after batch preparation', async () => {
+    const state = collectingState();
+    const first = createHarness({ state });
+    const request = batchRequest(state, 2);
+    await first.dispatch(request, collectorSender());
+    const saved = first.getState();
+    Core.excludeVideo(saved.sessions[0], { videoId: request.items[0].videoId,
+        classification: 'automation_driver', feedOrder: 1, at: Date.now() });
+    const second = createHarness({ state: saved });
+    const result = await second.dispatch(batchConfirmation(request), collectorSender());
+    assert.equal(result.items[0].ok, false);
+    assert.equal(result.items[1].ok, true);
+    assert.deepEqual(Core.viewerQueue(second.getState().sessions[0]).map((item) => item.videoId), [request.items[1].videoId]);
+});
+
+test('an idle telemetry flush persists sanitized progress without reservations', async () => {
+    const state = collectingState();
+    const harness = createHarness({ state });
+    const message = { type: Core.MESSAGE_TYPES.HARVEST_STEP, sessionId: state.activeSessionId,
+        sourceId: 'idle-telemetry', sequence: 1, telemetryOnly: true, telemetry: [
+            { kind: 'step', step: { phase: 'waiting_hydration', visibility: 'hidden', hydrationLatencyMs: 1200 } },
+            { kind: 'diagnostic', code: 'automated_advance', detail: { count: 1, reasonCode: 'instant_scroll' } },
+        ] };
+    const response = await harness.dispatch(message, collectorSender());
+    assert.equal(response.ok, true);
+    assert.equal(response.progress.harvestPhase, 'waiting_hydration');
+    assert.equal(harness.getState().sessions[0].diagnostics.length, 1);
+    assert.equal(harness.getState().sessions[0].reserved.length, 0);
+    assert.equal(harness.log.filter((entry) => entry === 'storage.set').length, 1);
+    await harness.dispatch(message, collectorSender());
+    assert.equal(harness.getState().sessions[0].diagnostics.length, 1, 'replay must not duplicate logs');
+});
+
+test('storage failure never acknowledges an unpersisted batch', async () => {
+    for (const failedState of ['prepared', 'reserved']) {
+        const state = collectingState();
+        const harness = createHarness({ state,
+            rejectWrite: (value) => value.sessions[0].reserved.some((item) => item.state === failedState) });
+        const request = batchRequest(state, 2);
+        const prepared = await harness.dispatch(request, collectorSender());
+        if (failedState === 'prepared') {
+            assert.equal(prepared.ok, false);
+            assert.equal(harness.getState().sessions[0].reserved.length, 0);
+        } else {
+            assert.equal((await harness.dispatch(batchConfirmation(request), collectorSender())).ok, false);
+            assert.equal(harness.getState().sessions[0].reserved.every((item) => item.state === 'prepared'), true);
+            assert.equal(Core.viewerQueue(harness.getState().sessions[0]).length, 0);
+        }
+    }
+});
+
+test('stop, clear and deadline cannot turn prepared batch items into viewer records', async () => {
+    for (const action of ['stop', 'clear', 'deadline']) {
+        const state = collectingState();
+        const harness = createHarness({ state });
+        const request = batchRequest(state, 2);
+        await harness.dispatch(request, collectorSender());
+        if (action === 'clear') {
+            await harness.dispatch({ type: Core.MESSAGE_TYPES.CLEAR_DATA }, inspectorSender());
+            assert.equal((await harness.dispatch(batchConfirmation(request), collectorSender())).ok, false);
+            assert.equal(harness.getState().sessions.length, 0);
+        } else {
+            const saved = harness.getState();
+            if (action === 'stop') { Core.stopSession(saved.sessions[0], Date.now()); }
+            else { Core.finalizeHarvestWindow(saved.sessions[0], saved.sessions[0].harvestDeadlineAt); }
+            const restored = createHarness({ state: saved });
+            assert.equal((await restored.dispatch(batchConfirmation(request), collectorSender())).ok, false);
+            assert.equal(Core.viewerQueue(restored.getState().sessions[0]).length, 0);
+        }
+    }
+});
+
 function reserveOne(session, videoId = '7311111111111111111') {
     const prepared = Core.reserveVideo(session, {
         videoId,
@@ -547,7 +739,7 @@ test('allowlisted Qualtrics page starts a bound session and reads confirmed IDs 
     const started = await harness.externalRequest({ type: 'start' }, qualtricsSender(7));
     assert.equal(started.ok, true);
     assert.equal(started.bridgeVersion, 5);
-    assert.equal(started.extensionVersion, '0.5.3');
+    assert.equal(started.extensionVersion, '0.5.4');
     const state = harness.getState();
     assert.equal(state.sessions[0].deliveryTarget, Core.DELIVERY_TARGET.QUALTRICS);
 

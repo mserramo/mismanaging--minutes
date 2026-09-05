@@ -1,0 +1,128 @@
+{
+  "metrics": {
+    "cumulative_max_inclusion_probability_gap": 0.15057271160212343,
+    "cumulative_max_marginal_payoff_gap": 0,
+    "cumulative_variants_distinct": true,
+    "derived_main_bonus": 3250,
+    "derived_movie_bonus": 1805,
+    "guaranteed_gap_both_over_main": 1205,
+    "guaranteed_gap_main_over_movie": 245,
+    "guaranteed_gap_movie_over_neither": 305,
+    "guaranteed_pct_both_over_main": 0.312987012987013,
+    "guaranteed_pct_main_over_movie": 0.08153078202995008,
+    "guaranteed_pct_movie_over_neither": 0.20333333333333334,
+    "inclusion_probabilities_during_is": "{\"cumulative_a\": 0.3219205630970337, \"cumulative_b\": 0.450255871579401, \"fives\": 0.450255871579401, \"simple_a\": 0.450255871579401, \"simple_b\": 0.450255871579401, \"trio_a\": 0.3219205630970337, \"trio_b\": 0.5551353874883287}",
+    "inclusion_probabilities_without_is": "{\"cumulative_a\": 0.44858768682298095, \"cumulative_b\": 0.5991603984251044, \"fives\": 0.5991603984251044, \"simple_a\": 0.5991603984251044, \"simple_b\": 0.5991603984251044, \"trio_a\": 0.44858768682298095, \"trio_b\": 0.7061830326536209}",
+    "mean_change_in_task_mix": 0.1478047222222222,
+    "meets_all_targets": true,
+    "passes_planning_value": true,
+    "passes_sequence_variation": true,
+    "passes_start_now_value_balance": true,
+    "planning_gain_over_random": 0.7621129169706519,
+    "planning_minus_random": 103.59083333333334,
+    "planning_minus_random_lower_95": 102.08728010804397,
+    "planning_minus_random_se": 0.7671189924945746,
+    "planning_policy_mean_side_pay": 239.51666666666668,
+    "profile_id": "profile_0081",
+    "random_policy_mean_side_pay": 135.92583333333334,
+    "review_rank": 1,
+    "robust_ordering_certified": true,
+    "search_version": "parameter-search-v2",
+    "sequence_draws": 600,
+    "sequential_evidence_status": "planning-policy diagnostic; not an optimality proof",
+    "side_budget_both": 20,
+    "side_budget_main_only": 40,
+    "side_budget_movie_only": 80,
+    "side_budget_neither": 100,
+    "side_budget_when_both_completed": 20,
+    "side_upper_both": 300,
+    "side_upper_main_only": 600,
+    "side_upper_movie_only": 1200,
+    "side_upper_neither": 1500,
+    "simple_max_inclusion_probability_gap": 0.0,
+    "simple_payoff_distribution_total_variation": 0.15000000000000002,
+    "simple_variants_distinct": true,
+    "start_now_value_max": 9.620139313886964,
+    "start_now_value_min": 8.148851791211701,
+    "start_now_value_ratio": 1.1805515133140603,
+    "trio_max_inclusion_probability_gap": 0.25759534583064,
+    "trio_payoff_gap": 0,
+    "trio_variants_distinct": true,
+    "variant_separation_pass": true
+  },
+  "profile": {
+    "cumulative": {
+      "cumulative_a": {
+        "cap": 10,
+        "increase": 10,
+        "start": 5
+      },
+      "cumulative_b": {
+        "cap": 10,
+        "increase": 5,
+        "start": 5
+      }
+    },
+    "group_bonuses": {
+      "fives": 45,
+      "trio_a": 30,
+      "trio_b": 30
+    },
+    "infinite_scroll": {
+      "increase": 3,
+      "start": 5
+    },
+    "is_duration_name": "short",
+    "is_duration_probabilities": {
+      "4": 0.4,
+      "5": 0.3,
+      "6": 0.2,
+      "7": 0.1
+    },
+    "is_start_probability": 0.1,
+    "non_is_weights": {
+      "cumulative_a": 0.1,
+      "cumulative_b": 0.15,
+      "fives": 0.15,
+      "simple_a": 0.15,
+      "simple_b": 0.15,
+      "trio_a": 0.1,
+      "trio_b": 0.2
+    },
+    "profile_id": "profile_0081",
+    "simple_tasks": {
+      "simple_a": [
+        {
+          "points": 5,
+          "probability": 0.3
+        },
+        {
+          "points": 10,
+          "probability": 0.5
+        },
+        {
+          "points": 15,
+          "probability": 0.2
+        }
+      ],
+      "simple_b": [
+        {
+          "points": 5,
+          "probability": 0.45
+        },
+        {
+          "points": 10,
+          "probability": 0.4
+        },
+        {
+          "points": 15,
+          "probability": 0.15
+        }
+      ]
+    }
+  },
+  "recommended_main_bonus": 3250,
+  "recommended_movie_bonus": 1805,
+  "status": "all targets met",
+  "warning": "This file is a design recommendation, not a Qualtrics runtime profile. Review it before adapting environment_profile.json."
+}

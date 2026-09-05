@@ -72,21 +72,22 @@ ten-column card grid, so each all-at-once row matches the sequential row without
 leaving an unused horizontal column after the final card.
 
 All-at-once mode presents all 100 pre-drawn choice sets in a scrolling decision
-pane. Its bar retains the `Rounds X–Y of 100` visible-range display, answered
+pane. Its bar retains the `Rounds X–Y of 100` visible-range display, choices-made
 count, points, inactivity clock, and the same payoff-key control used in
-sequential mode. It contains no round-jump or Next unanswered navigation. The
+sequential mode. It contains no round-jump or next-incomplete navigation. The
 choice sets use one fixed 100% scale with no participant zoom control. A participant can review and revise one
 selection per round before finishing. The Done control appears beneath round
-100 and becomes available only after all rounds are answered. The choice sets
+100 and becomes available only after every round has a choice. The choice sets
 never wrap. A
 minimum-width blocker prevents either treatment from running in a viewport
 that cannot safely show all ten permanent slots.
 
 All-at-once decision logs are final-only: a completed response writes the 100
-final selections, while inactivity writes only the rounds answered at the end.
+final selections, while inactivity writes only the rounds with choices at the end.
 Those rows retain a per-row `task_elapsed_ms` and leave `response_time_ms`
 blank because the treatment has no sequential per-round response interval.
-Response-level fields record `cs_treatment_mode`, `cs_answered_at_end`, and
+Response-level fields record `cs_treatment_mode`, `cs_choices_at_end`, the
+legacy-compatible `cs_answered_at_end` alias, and
 `cs_all_at_once_final_zoom` (fixed at 100 for all-at-once responses). They also
 record the seeded `cs_slot_order` and
 `cs_layout_version=fixed-slots-v1`. `reconstruct_decisions.py` repeats these

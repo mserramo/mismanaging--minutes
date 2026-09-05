@@ -1,0 +1,58 @@
+{
+  "search_version": "parameter-search-v2",
+  "seed": 2026082501,
+  "candidate_count": 96,
+  "sequence_draws_per_candidate": 600,
+  "random_policy_repetitions": 4,
+  "rounds": 100,
+  "movie_rounds": 20,
+  "main_target": 60,
+  "side_cards_per_round": 4,
+  "nice_number_step": 5,
+  "required_incentive_cushion": 0.20,
+  "required_absolute_gap": 5,
+  "best_profiles_pdf_count": 10,
+  "variant_separation": {
+    "minimum_payoff_parameter_gap": 5,
+    "minimum_probability_gap_exclusive": 0.10
+  },
+  "targets": {
+    "maximum_start_now_value_ratio": 1.25,
+    "minimum_planning_gain_over_random": 0.10,
+    "minimum_mean_change_in_task_mix": 0.10
+  },
+  "non_is_weight_bounds_in_five_point_units": {
+    "trio_a": [2, 4],
+    "trio_b": [2, 4],
+    "fives": [1, 3],
+    "cumulative_a": [2, 4],
+    "cumulative_b": [2, 4],
+    "simple_a": [3, 6],
+    "simple_b": [3, 6]
+  },
+  "group_bonus_options": {
+    "trio_a": [25, 30],
+    "trio_b": [25, 30],
+    "fives": [40, 45]
+  },
+  "cumulative_options": [
+    {"start": 0, "increase": 5, "cap": 10},
+    {"start": 5, "increase": 5, "cap": 10},
+    {"start": 5, "increase": 10, "cap": 10},
+    {"start": 10, "increase": 5, "cap": 10}
+  ],
+  "infinite_scroll_options": [
+    {"start": 5, "increase": 3},
+    {"start": 2, "increase": 4}
+  ],
+  "infinite_scroll_start_probabilities": [0.05, 0.10],
+  "infinite_scroll_duration_distributions": [
+    {"name": "short", "probabilities": {"4": 0.40, "5": 0.30, "6": 0.20, "7": 0.10}},
+    {"name": "uniform", "probabilities": {"4": 0.25, "5": 0.25, "6": 0.25, "7": 0.25}},
+    {"name": "long", "probabilities": {"4": 0.10, "5": 0.20, "6": 0.30, "7": 0.40}}
+  ],
+  "simple_tasks": {
+    "simple_a": [{"points": 5, "probability": 0.30}, {"points": 10, "probability": 0.50}, {"points": 15, "probability": 0.20}],
+    "simple_b": [{"points": 5, "probability": 0.45}, {"points": 10, "probability": 0.40}, {"points": 15, "probability": 0.15}]
+  }
+}

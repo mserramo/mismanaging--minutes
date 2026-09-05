@@ -15,12 +15,17 @@
     const STAGE_TIMEOUT_MS = 8000;
     const MAX_ADVANCE_ATTEMPTS = 3;
     const MAX_BURST_ITEMS = 12;
+    const TELEMETRY_FLUSH_MS = 1000;
+    const MAX_BUFFERED_TELEMETRY = 32;
     const RESERVED_CARD_CLASS = 'ttfp-reserved-card';
     const OVERLAY_HOST_ID = 'ttfp-harvest-overlay-host';
 
     const sourceId = crypto.randomUUID();
     let sourceSequence = 0;
     let outboundQueue = Promise.resolve();
+    let outboundPending = 0;
+    let telemetryTimer = null;
+    const bufferedTelemetry = [];
     let destroyed = false;
     let mode = 'inactive';
     let session = null;
@@ -80,7 +85,14 @@
             sequence: ++sourceSequence,
         };
         const maxAttempts = Math.max(1, attempts || 1);
+        outboundPending += 1;
         const operation = outboundQueue.then(async () => {
+            if ([Core.MESSAGE_TYPES.RESERVE_VIDEO_BATCH, Core.MESSAGE_TYPES.CONFIRM_RESERVATION_BATCH,
+                Core.MESSAGE_TYPES.HARVEST_STEP, Core.MESSAGE_TYPES.HARVEST_FAIL].includes(type)) {
+                // Drain at dispatch, not enqueue, and reuse the identical payload
+                // on retries. Telemetry costs no additional durable write here.
+                message.telemetry = bufferedTelemetry.splice(0);
+            }
             let lastError = null;
             for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
                 try {
@@ -90,9 +102,35 @@
                 }
             }
             throw lastError || new Error('extension_message_failed');
-        });
+        }).finally(() => { outboundPending -= 1; });
         outboundQueue = operation.catch(() => undefined);
         return operation;
+    }
+
+    function scheduleTelemetryFlush() {
+        if (telemetryTimer || destroyed || mode !== 'collecting') { return; }
+        telemetryTimer = setTimeout(() => {
+            telemetryTimer = null;
+            if (destroyed || mode !== 'collecting' || !bufferedTelemetry.length) { return; }
+            // Idle-only fallback for stalls. Never enqueue a routine log write
+            // while a capture, confirmation, or critical command is in flight.
+            if (harvestBusy || outboundPending || pendingReservations.size) {
+                scheduleTelemetryFlush();
+                return;
+            }
+            queueSequencedMessage(Core.MESSAGE_TYPES.HARVEST_STEP, {
+                sessionId: session.id, telemetryOnly: true,
+            }).then((response) => applyProgress(response && response.progress))
+                .catch(() => undefined);
+        }, TELEMETRY_FLUSH_MS);
+    }
+
+    function bufferTelemetry(entry) {
+        bufferedTelemetry.push({ ...entry, at: Date.now() });
+        if (bufferedTelemetry.length > MAX_BUFFERED_TELEMETRY) {
+            bufferedTelemetry.splice(0, bufferedTelemetry.length - MAX_BUFFERED_TELEMETRY);
+        }
+        scheduleTelemetryFlush();
     }
 
     function ensureVideoFeedOrder(videoId) {
@@ -550,6 +588,10 @@
         lastReportedPhase = signature;
         session.harvestPhase = phase;
         updateOverlay();
+        if (phase !== 'complete') {
+            bufferTelemetry({ kind: 'step', step: telemetry });
+            return Promise.resolve({ ok: true, buffered: true });
+        }
         return queueSequencedMessage(Core.MESSAGE_TYPES.HARVEST_STEP, {
             sessionId: session.id,
             ...telemetry,
@@ -560,11 +602,7 @@
         if (!session || destroyed) {
             return;
         }
-        queueSequencedMessage(Core.MESSAGE_TYPES.RECORD_DIAGNOSTIC, {
-            sessionId: session.id,
-            code,
-            detail: detail || {},
-        }, 1).catch(() => undefined);
+        bufferTelemetry({ kind: 'diagnostic', code, detail: detail || {} });
     }
 
     function applyProgress(progress) {
@@ -703,96 +741,102 @@
         };
     }
 
-    async function reserveCoveredDriver(driver, timerDelayMs) {
+    async function reserveCoveredBatch(candidates, timerDelayMs) {
         if (destroyed || mode !== 'collecting' || Date.now() >= session.harvestDeadlineAt) {
-            return;
+            return 0;
         }
         muteAllMedia();
-        const checked = recheckCoveredDriver(driver.videoId);
-        if (!checked) {
-            recordDiagnostic('covered_driver_failed_recheck', {
-                reasonCode: 'overlay_media_or_identity_changed',
-            });
-            // Never repeatedly retry an unchanged unsafe candidate from a
-            // microtask wakeup: that would starve Stop and deadline handling.
-            excludedIds.add(driver.videoId);
-            return;
+        const items = [];
+        for (const candidate of candidates) {
+            const checked = recheckCoveredDriver(candidate.videoId);
+            if (!checked) {
+                recordDiagnostic('covered_driver_failed_recheck', {
+                    reasonCode: 'overlay_media_or_identity_changed',
+                });
+                excludedIds.add(candidate.videoId);
+                continue;
+            }
+            items.push({ videoId: candidate.videoId, evidence: checked.evidence });
         }
-        const videoId = driver.videoId;
+        if (!items.length) { return 0; }
         batchSequence += 1;
-        pendingReservations.add(videoId);
+        const batchId = `covered-${batchSequence}`;
+        items.forEach((item) => pendingReservations.add(item.videoId));
         session.harvestPhase = 'reserving';
         updateOverlay();
-        const prepared = await queueSequencedMessage(Core.MESSAGE_TYPES.RESERVE_VIDEO, {
-            sessionId: session.id,
-            videoId,
-            batchId: `covered-${batchSequence}`,
-            batchNumber: batchSequence,
-            evidence: checked.evidence,
-        }, 3);
-        if (!prepared || !prepared.ok) {
-            pendingReservations.delete(videoId);
-            await failClosed('reservation_persist_failed');
-            return;
-        }
-        applyProgress(prepared.progress);
-
-        // Persist first, then recheck the opaque overlay, muted media, exact ID,
-        // and unique structural card before concealing it without resizing it.
-        if (destroyed || mode !== 'collecting') {
-            pendingReservations.delete(videoId);
-            return;
-        }
-        muteAllMedia();
-        const persistedCheck = recheckCoveredDriver(videoId);
-        if (!persistedCheck) {
-            pendingReservations.delete(videoId);
-            excludedIds.add(videoId);
-            const invalidated = await queueSequencedMessage(
-                Core.MESSAGE_TYPES.INVALIDATE_VIDEO,
-                {
-                    sessionId: session.id,
-                    videoId,
-                    reason: 'covered_state_changed_after_persist',
-                },
-                3
-            );
-            applyProgress(invalidated && invalidated.progress);
-            stageStartedAt = Date.now();
-            return;
-        }
-        if (!concealReservedRecord(persistedCheck.record)) {
-            pendingReservations.delete(videoId);
-            await queueSequencedMessage(Core.MESSAGE_TYPES.INVALIDATE_VIDEO, {
-                sessionId: session.id,
-                videoId,
-                reason: 'concealment_failed',
-            }, 3).catch(() => undefined);
-            await failClosed('concealment_failed');
-            return;
-        }
-        tombstones.add(videoId);
-        const confirmed = await queueSequencedMessage(
-            Core.MESSAGE_TYPES.CONFIRM_RESERVATION,
-            { sessionId: session.id, videoId },
-            3
-        );
-        pendingReservations.delete(videoId);
-        if (!confirmed || !confirmed.ok) {
-            await failClosed('reservation_confirm_failed');
-            return;
-        }
-        (confirmed.tombstones || []).forEach((id) => tombstones.add(id));
-        applyProgress(confirmed.progress);
-        if (mode === 'collecting' && !collectorReadyReported) {
-            const ready = await reportCollectorReady(timerDelayMs);
-            if (!ready || !ready.ok) {
-                await failClosed('collector_ready_failed');
-                return;
+        try {
+            const prepareStartedAt = Date.now();
+            const prepared = await queueSequencedMessage(Core.MESSAGE_TYPES.RESERVE_VIDEO_BATCH, {
+                sessionId: session.id, batchId, batchNumber: batchSequence, items,
+            }, 3);
+            if (prepared && prepared.progress && prepared.progress.status !== Core.SESSION_STATUS.COLLECTING) {
+                applyProgress(prepared.progress);
+                return 0;
             }
+            if (!prepared || !prepared.ok || !Array.isArray(prepared.items) ||
+                prepared.items.length !== items.length ||
+                prepared.items.some((item, index) => item.videoId !== items[index].videoId)) {
+                await failClosed('reservation_persist_failed');
+                return 0;
+            }
+            recordDiagnostic('reservation_prepare', { count: items.length, elapsedMs: Date.now() - prepareStartedAt });
+            applyProgress(prepared.progress);
+            if (destroyed || mode !== 'collecting') { return 0; }
+
+            const settlements = [];
+            let concealmentFailed = false;
+            muteAllMedia();
+            // No async gap between these rechecks and concealment. A single
+            // changed card is invalidated in the same settlement as safe peers.
+            for (const item of prepared.items) {
+                const videoId = item.videoId;
+                if (!item.ok) { excludedIds.add(videoId); continue; }
+                const checked = recheckCoveredDriver(videoId);
+                if (!checked) {
+                    excludedIds.add(videoId);
+                    settlements.push({ videoId, action: 'invalidate', reason: 'covered_state_changed_after_persist' });
+                } else if (!concealReservedRecord(checked.record)) {
+                    concealmentFailed = true;
+                    settlements.push({ videoId, action: 'invalidate', reason: 'concealment_failed' });
+                } else {
+                    tombstones.add(videoId);
+                    settlements.push({ videoId, action: 'confirm' });
+                }
+            }
+            if (!settlements.length) { return 0; }
+            const confirmStartedAt = Date.now();
+            const confirmed = await queueSequencedMessage(Core.MESSAGE_TYPES.CONFIRM_RESERVATION_BATCH, {
+                sessionId: session.id, batchId, items: settlements,
+            }, 3);
+            if (confirmed && !confirmed.ok && confirmed.progress &&
+                confirmed.progress.status !== Core.SESSION_STATUS.COLLECTING) {
+                applyProgress(confirmed.progress);
+                return 0;
+            }
+            if (!confirmed || !confirmed.ok || !Array.isArray(confirmed.items) ||
+                confirmed.items.length !== settlements.length ||
+                confirmed.items.some((item, index) => !item.ok || item.videoId !== settlements[index].videoId ||
+                    item.state !== (settlements[index].action === 'confirm' ? 'reserved' : 'invalidated'))) {
+                await failClosed('reservation_confirm_failed');
+                return 0;
+            }
+            recordDiagnostic('reservation_confirm', { count: settlements.length, elapsedMs: Date.now() - confirmStartedAt });
+            (confirmed.tombstones || []).forEach((id) => tombstones.add(id));
+            applyProgress(confirmed.progress);
+            if (concealmentFailed) { await failClosed('concealment_failed'); return 0; }
+            const count = confirmed.items.filter((item) => item.state === 'reserved').length;
+            if (count && mode === 'collecting' && !collectorReadyReported) {
+                const ready = await reportCollectorReady(timerDelayMs);
+                if (!ready || !ready.ok) { await failClosed('collector_ready_failed'); return 0; }
+            }
+            if (count) {
+                stageStartedAt = Date.now();
+                advanceAttempts = 0;
+            }
+            return count;
+        } finally {
+            items.forEach((item) => pendingReservations.delete(item.videoId));
         }
-        stageStartedAt = Date.now();
-        advanceAttempts = 0;
     }
 
     function eligibleCoveredRecords(records) {
@@ -840,18 +884,11 @@
             sweepTombstones(records);
             const candidates = eligibleCoveredRecords(records).slice(0, MAX_BURST_ITEMS);
             const captureStartedAt = Date.now();
-            for (const candidate of candidates) {
-                if (destroyed || mode !== 'collecting' || Date.now() >= session.harvestDeadlineAt) {
-                    return;
-                }
-                // All hydrated IDs are usable under the opaque, muted cover.
-                // They do not need to play or occupy the viewport first.
-                await reserveCoveredDriver(candidate, timerDelayMs);
-                lastDriverId = candidate.videoId;
-            }
+            const captured = await reserveCoveredBatch(candidates, timerDelayMs);
             if (candidates.length) {
+                lastDriverId = candidates[candidates.length - 1].videoId;
                 recordDiagnostic('capture_batch', {
-                    count: candidates.length,
+                    count: captured,
                     elapsedMs: Date.now() - captureStartedAt,
                     reasonCode: document.hidden ? 'hidden' : 'visible',
                 });
@@ -1003,6 +1040,9 @@
         }
         destroyed = true;
         stopHarvestTimer();
+        clearTimeout(telemetryTimer);
+        telemetryTimer = null;
+        bufferedTelemetry.length = 0;
         if (observer) {
             observer.disconnect();
         }

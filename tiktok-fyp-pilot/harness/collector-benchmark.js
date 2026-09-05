@@ -12,6 +12,10 @@
     const stallAfter = parameters.has('stallAfter') ? Number(parameters.get('stallAfter')) : Infinity;
     const invalidateFirst = parameters.get('invalidateFirst') === '1';
     const stopAfterMs = Math.max(0, Number(parameters.get('stopAfterMs') || 0));
+    const messageDelayMs = Math.max(0, Number(parameters.get('messageDelay') || 0));
+    const dropPrepareAck = parameters.get('dropPrepareAck') === '1';
+    const dropConfirmAck = parameters.get('dropConfirmAck') === '1';
+    const stopOnPrepare = parameters.get('stopOnPrepare') === '1';
     const nativeTimeout = window.setTimeout.bind(window);
     const feed = document.getElementById('benchmark-feed');
     const output = document.getElementById('benchmark-result');
@@ -27,6 +31,9 @@
     let lastPosition = 0;
     let invalidatedFirst = false;
     let hiddenCaptureCount = 0;
+    const messageCounts = {};
+    const droppedAcks = new Set();
+    let messageQueue = Promise.resolve();
     const slots = Array.from({ length: 120 }, (_unused, index) => {
         const card = document.createElement('article');
         card.dataset.e2e = 'recommend-list-item-container';
@@ -74,7 +81,38 @@
         }
         if (type === Core.MESSAGE_TYPES.COLLECTOR_READY) { ready = true; }
         let result = { applied: true };
-        if (type === Core.MESSAGE_TYPES.RESERVE_VIDEO) {
+        if ([Core.MESSAGE_TYPES.RESERVE_VIDEO_BATCH, Core.MESSAGE_TYPES.CONFIRM_RESERVATION_BATCH].includes(type)) {
+            const confirm = type === Core.MESSAGE_TYPES.CONFIRM_RESERVATION_BATCH;
+            const replay = !Core.acceptSourceEvent(session, message.sourceId, message.sequence);
+            if (!replay) { Core.applyBufferedHarvestTelemetry(session, message.telemetry, Date.now()); }
+            if (!confirm && !replay && session.status === Core.SESSION_STATUS.COLLECTING && Date.now() >= session.harvestDeadlineAt) {
+                Core.finalizeHarvestWindow(session, Date.now());
+                return { ok: true, finished: true, items: [], progress: Core.sessionProgress(session) };
+            }
+            if (confirm && !replay) {
+                message.items.filter((item) => item.action === 'confirm').forEach((item) => {
+                    const prepared = Core.findReserved(session, item.videoId);
+                    const wrapper = document.getElementById('xgwrapper-0-' + item.videoId);
+                    if (!prepared || prepared.state !== 'prepared') { violations.push('confirm_before_prepare'); }
+                    if (!wrapper || !wrapper.closest('.ttfp-reserved-card')) { violations.push('confirm_without_concealment'); }
+                });
+            }
+            const batch = Core.applyReservationBatch(session, { ...message, at: Date.now() }, confirm, replay);
+            if (!confirm && batch.ok && stopOnPrepare && !stopped) {
+                stopped = true;
+                Core.stopSession(session, Date.now(), 'synthetic_stop_during_prepare');
+                listeners.forEach((listener) => listener({ type: Core.MESSAGE_TYPES.SHUTDOWN_COLLECTOR }));
+            }
+            if (!confirm && batch.ok && invalidateFirst && !invalidatedFirst) {
+                invalidatedFirst = true;
+                const wrapper = document.getElementById('xgwrapper-0-' + message.items[0].videoId);
+                if (wrapper) { wrapper.id = 'unidentified-after-persist'; }
+            }
+            if (confirm && batch.ok && !replay && document.hidden) {
+                hiddenCaptureCount += batch.items.filter((item) => item.ok && item.state === 'reserved').length;
+            }
+            return { ...batch, progress: Core.sessionProgress(session), tombstones: session.tombstones.slice() };
+        } else if (type === Core.MESSAGE_TYPES.RESERVE_VIDEO) {
             result = Core.reserveVideo(session, { ...message, at: Date.now() });
             if (!message.evidence.overlayOpaque || !message.evidence.mediaMuted) {
                 violations.push('missing_cover_or_mute');
@@ -92,10 +130,12 @@
             result = Core.confirmReservation(session, message.videoId, Date.now());
             if (result.applied && document.hidden) { hiddenCaptureCount += 1; }
         } else if (type === Core.MESSAGE_TYPES.HARVEST_STEP) {
-            result = Core.recordHarvestStep(session, message, Date.now());
+            Core.applyBufferedHarvestTelemetry(session, message.telemetry, Date.now());
+            result = message.telemetryOnly ? { applied: true } : Core.recordHarvestStep(session, message, Date.now());
         } else if (type === Core.MESSAGE_TYPES.INVALIDATE_VIDEO) {
             Core.invalidateReservation(session, message.videoId, message.reason, Date.now());
         } else if (type === Core.MESSAGE_TYPES.HARVEST_FAIL) {
+            Core.applyBufferedHarvestTelemetry(session, message.telemetry, Date.now());
             Core.failHarvest(session, Date.now(), message.reason);
         } else if (type === Core.MESSAGE_TYPES.RECORD_DIAGNOSTIC) {
             Core.recordDiagnostic(session, message.code, Date.now(), message.detail);
@@ -105,13 +145,31 @@
     // The bridge is simulated only on this local test page. Message callbacks
     // are independent of the collector's clamped timers, like worker replies.
     window.chrome = { runtime: {
-        sendMessage(message, callback) { queueMicrotask(() => callback(respond(message))); },
+        sendMessage(message, callback) {
+            messageCounts[message.type] = (messageCounts[message.type] || 0) + 1;
+            messageQueue = messageQueue.then(() => new Promise((resolve) => {
+                const deliver = () => {
+                    const response = respond(message);
+                    const drop = (dropPrepareAck && message.type === Core.MESSAGE_TYPES.RESERVE_VIDEO_BATCH) ||
+                        (dropConfirmAck && message.type === Core.MESSAGE_TYPES.CONFIRM_RESERVATION_BATCH);
+                    if (drop && !droppedAcks.has(message.type)) {
+                        droppedAcks.add(message.type);
+                        window.chrome.runtime.lastError = { message: 'synthetic_lost_ack' };
+                        callback(undefined);
+                        window.chrome.runtime.lastError = null;
+                    } else { callback(response); }
+                    resolve();
+                };
+                if (messageDelayMs) { nativeTimeout(deliver, messageDelayMs); }
+                else { queueMicrotask(deliver); }
+            }));
+        },
         onMessage: { addListener(fn) { listeners.add(fn); }, removeListener(fn) { listeners.delete(fn); } },
     } };
     window.TikTokPilotCore = { ...Core, isFypPath: () => true };
     window.setTimeout = (fn, delay, ...args) => nativeTimeout(fn, Math.max(timerFloorMs, delay || 0), ...args);
     const script = document.createElement('script');
-    script.src = '../content/collector.js';
+    script.src = '../content/collector.js?v=0.5.4-2';
     document.body.appendChild(script);
 
     if (stopAfterMs) {
@@ -133,6 +191,7 @@
         if (invalidateFirst && ids.includes('7311111111111111000')) { violations.push('invalid_id_banked'); }
         output.textContent = JSON.stringify({
             status: session.status, count: ids.length, durationMs, timerFloorMs, hydrationMs,
+            messageDelayMs, messageCounts, droppedAcks: Array.from(droppedAcks),
             ready, advancements, violations,
             hiddenCaptureCount,
             reservedSlotsRetainHeight: heights.every((height) => height > 0),
@@ -140,6 +199,7 @@
             invalidated: session.reserved.filter((record) => record.state === 'invalidated').length,
             stopReason: session.stopReason,
             diagnostics: session.diagnostics,
+            lastSteps: session.harvestSteps.slice(-5),
         }, null, 2);
         feed.hidden = true;
         window.setTimeout = nativeTimeout;

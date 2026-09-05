@@ -1,6 +1,6 @@
 {
   "name": "tiktok-fyp-pilot",
-  "version": "0.5.3",
+  "version": "0.5.4",
   "private": true,
   "description": "Dependency-free tests for the unpacked TikTok FYP research pilot extension.",
   "scripts": {

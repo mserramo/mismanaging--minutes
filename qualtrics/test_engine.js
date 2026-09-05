@@ -373,7 +373,7 @@ assert.equal(engine.awardedTotalPoints(engine.profileValues(profile), totalState
 const sampleEnvironment = engine.decodeEnvironment(bank, bank.sequences[0]);
 const blankAllocation = Array(100).fill(null);
 const blankEvaluation = engine.evaluateAllocation(profile, sampleEnvironment, blankAllocation, defaultCardTextConfig);
-assert.equal(blankEvaluation.answeredCount, 0);
+assert.equal(blankEvaluation.choiceCount, 0);
 assert.equal(blankEvaluation.decisions.length, 0);
 assert.equal(blankEvaluation.task.sidePay, 0);
 
@@ -382,7 +382,7 @@ const selectionTimes = Array.from({ length: 100 }, (_, index) => (index + 1) * 2
 const completeEvaluation = engine.evaluateAllocation(profile, sampleEnvironment, completeAllocation, defaultCardTextConfig, {
     responseTimes: Array(100).fill(""), selectionElapsedMs: selectionTimes
 });
-assert.equal(completeEvaluation.answeredCount, 100);
+assert.equal(completeEvaluation.choiceCount, 100);
 assert.equal(completeEvaluation.decisions.length, 100);
 assert.ok(completeEvaluation.decisions.every((decision) => decision.response_time_ms === ""));
 assert.equal(completeEvaluation.decisions[99].task_elapsed_ms, 25000);
@@ -414,7 +414,7 @@ partialAllocation[17] = null;
 const partialEvaluation = engine.evaluateAllocation(profile, sampleEnvironment, partialAllocation, defaultCardTextConfig, {
     responseTimes: Array(100).fill(""), selectionElapsedMs: selectionTimes
 });
-assert.equal(partialEvaluation.answeredCount, 99);
+assert.equal(partialEvaluation.choiceCount, 99);
 assert.equal(partialEvaluation.decisions.length, 99);
 assert.equal(partialEvaluation.decisions.some((decision) => decision.round === 18), false);
 assert.equal(engine.viewportIsTooNarrow(1279), true);
