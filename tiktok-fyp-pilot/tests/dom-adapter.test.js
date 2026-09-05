@@ -7,6 +7,31 @@ const Dom = require('../content/dom-adapter.js');
 const A = '7311111111111111111';
 const B = '7311111111111111112';
 
+test('covered navigation includes an empty next slot and preserves a captured current slot', () => {
+    const slot = (top) => ({
+        isConnected: true,
+        contains: () => false,
+        getBoundingClientRect: () => ({ top, bottom: top + 800, left: 0, right: 400, width: 400, height: 800 }),
+    });
+    const previous = slot(-800);
+    const captured = slot(0);
+    const emptyNext = slot(800);
+    const documentObject = { querySelectorAll: () => [previous, captured, emptyNext] };
+    const position = Dom.coveredFeedPosition(documentObject, [{ element: captured, videoId: A }], 1000, 800);
+    assert.equal(position.current, captured);
+    assert.equal(position.next, emptyNext);
+});
+
+test('covered navigation ignores collapsed cards and handles a recycled next position', () => {
+    const collapsed = { isConnected: true, contains: () => false,
+        getBoundingClientRect: () => ({ top: 0, bottom: 0, left: 0, right: 0, width: 0, height: 0 }) };
+    const recycled = { isConnected: true, contains: () => false,
+        getBoundingClientRect: () => ({ top: 0, bottom: 800, left: 0, right: 400, width: 400, height: 800 }) };
+    const position = Dom.coveredFeedPosition({ querySelectorAll: () => [collapsed, recycled] }, [], 1000, 800);
+    assert.equal(position.current, recycled);
+    assert.equal(position.next, null);
+});
+
 function anchor(href) {
     return {
         getAttribute(name) {

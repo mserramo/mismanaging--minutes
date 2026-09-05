@@ -2,6 +2,7 @@
 'use strict';
 
 (function () {
+    const EXTENSION_ID = 'pjcgejllbdjbhegipdkagnafileoecpo';
     const BRIDGE_NAME = 'tiktok-fyp-qualtrics-v1';
     const MIN_BRIDGE_VERSION = 2;
     const TIKTOK_ORIGIN = 'https://www.tiktok.com';
@@ -40,13 +41,6 @@
                 : null;
         }
 
-        function configuredExtensionId() {
-            const piped = '${e://Field/ttfp_extension_id}';
-            const fromQuery = new URLSearchParams(location.search).get('ttfp_extension_id');
-            const remembered = sessionStorage.getItem('ttfp_extension_id');
-            return [fromQuery, piped, remembered].find((value) => /^[a-p]{32}$/.test(value || '')) || '';
-        }
-
         function element(tag, className, text) {
             const node = document.createElement(tag);
             if (className) {
@@ -80,10 +74,6 @@
             .ttfpq-steps li + li { margin-top: 8px; }
             .ttfpq-steps strong { color: #172033; }
             .ttfpq-connect { padding-top: 16px; border-top: 1px solid #e2e6ee; }
-            .ttfpq-row { display: flex; gap: 9px; align-items: end; }
-            .ttfpq-field { flex: 1; min-width: 0; }
-            .ttfpq-field label { display: block; margin-bottom: 5px; font-size: 12px; font-weight: 750; }
-            .ttfpq-field input { width: 100%; min-height: 42px; padding: 9px 11px; border: 1px solid #b9c2d3; border-radius: 9px; font: 13px ui-monospace, SFMono-Regular, Menlo, monospace; }
             .ttfpq-button { min-height: 42px; padding: 9px 15px; border: 1px solid #c6cede; border-radius: 9px; background: #fff; color: #172033; cursor: pointer; font: inherit; font-weight: 750; }
             .ttfpq-button.primary { border-color: #595ee8; background: #595ee8; color: #fff; }
             .ttfpq-button:disabled { cursor: not-allowed; opacity: .48; }
@@ -92,7 +82,7 @@
             .ttfpq-status.success { color: #067647; }
             .ttfpq-progress { height: 8px; margin-top: 12px; overflow: hidden; border-radius: 999px; background: #e8ebf4; }
             .ttfpq-progress-fill { height: 100%; width: 0; background: #595ee8; transition: width .2s ease; }
-            .ttfpq-actions { display: flex; justify-content: center; margin-top: 15px; }
+            .ttfpq-actions { display: flex; gap: 9px; justify-content: center; margin-top: 15px; }
             .ttfpq-note { margin: 14px 0 0; padding-top: 13px; border-top: 1px solid #e2e6ee; color: #667085; font-size: 12px; }
             .ttfpq-viewer[hidden], .ttfpq-setup[hidden] { display: none !important; }
             .ttfpq-viewer { width: min(430px, 100%); margin: 0 auto; }
@@ -108,7 +98,7 @@
             .ttfpq-control-copy strong, .ttfpq-control-copy span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
             .ttfpq-control-copy span { color: #667085; font-size: 11px; }
             .ttfpq-finished { padding: 28px; text-align: center; }
-            @media (max-width: 520px) { .ttfpq-row { align-items: stretch; flex-direction: column; } .ttfpq-player { width: min(100%, 330px); } }
+            @media (max-width: 520px) { .ttfpq-player { width: min(100%, 330px); } }
         `;
         document.head.appendChild(style);
 
@@ -123,16 +113,16 @@
         const steps = element('ol', 'ttfpq-steps');
         [
             [
-                'Load the extension. ',
-                'Open chrome://extensions, turn on Developer mode, select Load unpacked, and choose the supplied tiktok-fyp-pilot folder containing manifest.json. Open the extension, accept the disclosure, and grant TikTok access.'
+                'Install the extension. ',
+                'For this pilot, open chrome://extensions, turn on Developer mode, select Load unpacked, and choose the supplied tiktok-fyp-pilot folder containing manifest.json.'
             ],
             [
-                'Copy the extension code. ',
-                'On chrome://extensions, copy the 32-letter ID shown on the TikTok FYP Research Pilot card.'
+                'Grant TikTok access. ',
+                'Open TikTok FYP Research Pilot, accept the disclosure, and select Grant TikTok access. Then return here.'
             ],
             [
                 'Start collection. ',
-                'Paste the ID below, select Connect, and then select Start harvest.'
+                'This survey checks the extension automatically. When the confirmation appears below, select Start harvest.'
             ],
             [
                 'Wait for collection. ',
@@ -149,30 +139,18 @@
         });
         guide.append(guideTitle, steps);
         const connectArea = element('div', 'ttfpq-connect');
-        const row = element('div', 'ttfpq-row');
-        const field = element('div', 'ttfpq-field');
-        const label = element('label', null, 'Chrome extension ID');
-        const extensionInput = element('input');
-        extensionInput.type = 'text';
-        extensionInput.autocomplete = 'off';
-        extensionInput.spellcheck = false;
-        extensionInput.maxLength = 32;
-        extensionInput.value = configuredExtensionId();
-        label.htmlFor = 'ttfpq-extension-id';
-        extensionInput.id = 'ttfpq-extension-id';
-        field.append(label, extensionInput);
-        const connectButton = button('Connect', 'ttfpq-button');
-        const status = element('p', 'ttfpq-status', 'Complete steps 1–2, paste the extension ID, and then connect.');
+        const status = element('p', 'ttfpq-status', 'Checking the research extension automatically…');
         const progress = element('div', 'ttfpq-progress');
         const progressFill = element('div', 'ttfpq-progress-fill');
         progress.appendChild(progressFill);
         const actions = element('div', 'ttfpq-actions');
+        const retryButton = button('Check extension again', 'ttfpq-button');
+        retryButton.hidden = true;
         const startButton = button('Start harvest', 'ttfpq-button primary');
         startButton.disabled = true;
-        actions.appendChild(startButton);
+        actions.append(retryButton, startButton);
         const note = element('p', 'ttfpq-note', 'This pilot sends numeric TikTok post IDs and the playback log into this Qualtrics response. TikTok separately receives normal embed-player requests and playback signals.');
-        row.append(field, connectButton);
-        connectArea.append(row, status, progress, actions, note);
+        connectArea.append(status, progress, actions, note);
         card.append(guide, connectArea);
         setup.append(eyebrow, title, copy, card);
 
@@ -247,26 +225,23 @@
         }
 
         function connect() {
-            const extensionId = extensionInput.value.trim();
-            if (!/^[a-p]{32}$/.test(extensionId)) {
-                setStatus('The extension ID must be the 32-letter ID shown on chrome://extensions.', 'error');
-                return;
-            }
+            retryButton.hidden = true;
+            startButton.disabled = true;
             if (!window.chrome || !chrome.runtime || typeof chrome.runtime.connect !== 'function') {
                 setStatus('Chrome did not expose the extension bridge on this survey domain.', 'error');
+                retryButton.hidden = false;
                 return;
             }
             if (port) {
                 port.disconnect();
             }
-            sessionStorage.setItem('ttfp_extension_id', extensionId);
-            setEmbeddedData('ttfp_extension_id', extensionId);
             setStatus('Connecting to the research extension…');
             try {
-                port = chrome.runtime.connect(extensionId, { name: BRIDGE_NAME });
+                port = chrome.runtime.connect(EXTENSION_ID, { name: BRIDGE_NAME });
             } catch (_error) {
                 port = null;
-                setStatus('The extension could not be reached. Confirm its ID and reload it.', 'error');
+                retryButton.hidden = false;
+                setStatus('The research extension was not found. Install or reload version 0.5.2, then check again.', 'error');
                 return;
             }
             port.onMessage.addListener((message) => {
@@ -283,11 +258,13 @@
                 rejectPending('bridge_disconnected');
                 if (!destroyed && viewer.hidden) {
                     startButton.disabled = true;
-                    setStatus('Extension connection closed. Press Connect to retry.', 'error');
+                    retryButton.hidden = false;
+                    setStatus('Extension connection closed. Check the extension again.', 'error');
                 }
             });
             request('hello', { sessionId }).then(handleStatus).catch(() => {
-                setStatus('The extension did not answer. Confirm its ID and reload it.', 'error');
+                retryButton.hidden = false;
+                setStatus('The research extension did not answer. Install or reload version 0.5.2, then check again.', 'error');
             });
         }
 
@@ -308,6 +285,8 @@
 
         function handleStatus(response) {
             if (!response || !response.ok) {
+                startButton.disabled = true;
+                retryButton.hidden = false;
                 setStatus(
                     'Extension error: ' + ((response && response.error) || 'unknown_error') + '.',
                     'error'
@@ -319,28 +298,32 @@
             setEmbeddedData('ttfp_bridge_version', bridgeVersion);
             if (bridgeVersion < MIN_BRIDGE_VERSION) {
                 startButton.disabled = true;
+                retryButton.hidden = false;
                 setStatus(
                     'Extension v' + extensionVersion + ' is outdated for this survey. ' +
-                    'Open chrome://extensions, reload TikTok FYP Research Pilot, then press Connect again.',
+                    'Open chrome://extensions, reload TikTok FYP Research Pilot, then check again.',
                     'error'
                 );
                 return;
             }
             if (!response.permissionGranted) {
                 startButton.disabled = true;
-                setStatus('Open the extension, accept the disclosure, and grant TikTok access. Then press Connect again.', 'error');
+                retryButton.hidden = false;
+                setStatus('Open the extension, accept the disclosure, and grant TikTok access. Then check again.', 'error');
                 return;
             }
             if (response.conflict) {
                 startButton.disabled = true;
+                retryButton.hidden = false;
                 setStatus(
                     'A standalone extension session is active and cannot be transferred into this survey. ' +
-                    'Open the extension, stop and clear that session, then press Connect again.',
+                    'Open the extension, stop and clear that session, then check again.',
                     'error'
                 );
                 return;
             }
             if (!response.session) {
+                retryButton.hidden = true;
                 startButton.disabled = false;
                 setStatus(
                     'Extension v' + extensionVersion + ' connected. TikTok access is ready.',
@@ -579,7 +562,7 @@
             });
         }
 
-        connectButton.addEventListener('click', connect);
+        retryButton.addEventListener('click', connect);
         startButton.addEventListener('click', () => {
             startButton.disabled = true;
             setStatus('Starting the covered TikTok collector…');
@@ -645,9 +628,7 @@
         }
 
         window.addEventListener('keydown', keyHandler);
-        if (extensionInput.value) {
-            connect();
-        }
+        connect();
 
         teardown = function () {
             destroyed = true;

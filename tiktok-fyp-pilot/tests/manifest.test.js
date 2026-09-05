@@ -4,6 +4,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
+const crypto = require('node:crypto');
 
 const root = path.resolve(__dirname, '..');
 const manifest = JSON.parse(fs.readFileSync(path.join(root, 'manifest.json'), 'utf8'));
@@ -27,6 +28,27 @@ test('manifest has narrow MV3 permissions and no static TikTok injection', () =>
     const serialized = JSON.stringify(manifest);
     ['cookies', 'history', 'webRequest', '<all_urls>', 'storage.sync'].forEach((forbidden) => {
         assert.equal(serialized.includes(forbidden), false);
+    });
+});
+
+test('manifest public key fixes the unpacked ID used by both Qualtrics surveys', () => {
+    const digest = crypto.createHash('sha256')
+        .update(Buffer.from(manifest.key, 'base64'))
+        .digest('hex')
+        .slice(0, 32);
+    const extensionId = Array.from(
+        digest,
+        (character) => String.fromCharCode(97 + '0123456789abcdef'.indexOf(character))
+    ).join('');
+    assert.equal(extensionId, 'pjcgejllbdjbhegipdkagnafileoecpo');
+    [
+        'qualtrics/tiktok_fyp_qualtrics.js',
+        'qualtrics/tiktok_fyp_natural_qualtrics.js',
+    ].forEach((relativePath) => {
+        const source = fs.readFileSync(path.join(root, relativePath), 'utf8');
+        assert.match(source, new RegExp(`const EXTENSION_ID = '${extensionId}'`));
+        assert.doesNotMatch(source, /extensionInput|Chrome extension ID/);
+        assert.match(source, /connect\(\);/);
     });
 });
 
@@ -55,6 +77,7 @@ test('dynamic collector is document_start and JavaScript avoids unsafe rendering
     assert.match(background, /runAt:\s*'document_start'/);
     assert.match(background, /world:\s*'ISOLATED'/);
     assert.match(background, /setAccessLevel/);
+    assert.match(background, /content\/natural-session\.js/);
 
     const javascript = allFiles(root)
         .filter((file) => file.endsWith('.js'))
@@ -63,6 +86,23 @@ test('dynamic collector is document_start and JavaScript avoids unsafe rendering
     assert.doesNotMatch(javascript, /\.innerHTML\s*=/);
     assert.doesNotMatch(javascript, /\beval\s*\(/);
     assert.doesNotMatch(javascript, /parseInt\s*\(/);
+});
+
+test('natural collector is nonblocking and never inspects key values or cursor coordinates', () => {
+    const natural = fs.readFileSync(path.join(root, 'content/natural-session.js'), 'utf8');
+    assert.match(natural, /NATURAL_ACTIVITY/);
+    assert.match(natural, /attachShadow\(\{ mode: 'closed' \}\)/);
+    assert.match(natural, /document\.visibilityState/);
+    assert.doesNotMatch(natural, /document\.hasFocus\(\)/);
+    assert.match(natural, /authoritativeTabFocused/);
+    assert.doesNotMatch(natural, /updateBanner\('counting'\)/);
+    const background = fs.readFileSync(path.join(root, 'background.js'), 'utf8');
+    assert.match(background, /chrome\.windows\.get\(tab\.windowId\)/);
+    assert.match(background, /tab\.active !== true/);
+    assert.match(natural, /SEEN_THRESHOLD_MS = 500/);
+    assert.doesNotMatch(natural, /event\.(key|code|clientX|clientY|pageX|pageY)/);
+    assert.doesNotMatch(natural, /preventDefault|stopImmediatePropagation/);
+    assert.doesNotMatch(natural, /media\.muted\s*=/);
 });
 
 test('viewer targets TikTok exactly and never uses wildcard postMessage', () => {
@@ -87,10 +127,7 @@ test('collector and service worker retain fail-closed runtime guards', () => {
     assert.match(collector, /stopImmediatePropagation/);
     assert.match(collector, /EXCLUDE_VIDEO/);
     assert.match(collector, /CONFIRM_RESERVATION/);
-    assert.match(collector, /SETTLE_DELAY_MS = 250/);
     assert.match(collector, /REPLACEMENT_WAIT_MS = 1000/);
-    assert.match(collector, /MAX_BURST_ITEMS = 4/);
-    assert.match(collector, /currentBurstDepth \+ 1 < MAX_BURST_ITEMS/);
     assert.match(collector, /STAGE_TIMEOUT_MS = 8000/);
     assert.match(collector, /MAX_ADVANCE_ATTEMPTS = 3/);
     assert.match(collector, /Continue to Qualtrics \(testing\)/);

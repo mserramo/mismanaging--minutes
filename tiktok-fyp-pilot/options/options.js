@@ -4,6 +4,7 @@
 const Core = TikTokPilotCore;
 const form = document.getElementById('settings-form');
 const duration = document.getElementById('duration');
+const naturalDuration = document.getElementById('natural-duration');
 const save = document.getElementById('save');
 const reset = document.getElementById('reset');
 const message = document.getElementById('message');
@@ -34,11 +35,15 @@ async function loadSettings() {
         return;
     }
     duration.value = response.state.settings.harvestDurationSeconds;
+    naturalDuration.value = response.state.settings.naturalSessionSeconds;
     if (response.state.activeSession) {
         const locked = response.state.activeSession.progress;
         activeNote.textContent = locked.collectionMode === Core.COLLECTION_MODE.AUTOMATED_BACKGROUND
             ? `The active session remains locked to a ${locked.harvestDurationSeconds}-second sourcing window. ` +
                 'Changes below apply next time.'
+            : locked.collectionMode === Core.COLLECTION_MODE.NATURAL_FYP_SESSION
+                ? `The active natural session remains locked to ${locked.naturalSessionSeconds} qualified seconds. ` +
+                    'Changes below apply next time.'
             : `A preserved legacy session remains locked at ${locked.durationSeconds} qualified ` +
                 `seconds and ${locked.targetUnseenCount} unseen videos.`;
         activeNote.hidden = false;
@@ -53,6 +58,7 @@ form.addEventListener('submit', async (event) => {
     save.disabled = true;
     const settings = Core.sanitizeSettings({
         harvestDurationSeconds: duration.value,
+        naturalSessionSeconds: naturalDuration.value,
     });
     const response = await send({
         type: Core.MESSAGE_TYPES.SAVE_SETTINGS,
@@ -64,11 +70,13 @@ form.addEventListener('submit', async (event) => {
         return;
     }
     duration.value = response.settings.harvestDurationSeconds;
+    naturalDuration.value = response.settings.naturalSessionSeconds;
     setMessage('Pilot settings saved locally.', 'success');
 });
 
 reset.addEventListener('click', () => {
     duration.value = Core.DEFAULT_SETTINGS.harvestDurationSeconds;
+    naturalDuration.value = Core.DEFAULT_SETTINGS.naturalSessionSeconds;
     message.hidden = true;
 });
 

@@ -7,6 +7,7 @@ const elements = {
     newSession: document.getElementById('new-session'),
     activeSession: document.getElementById('active-session'),
     durationSummary: document.getElementById('duration-summary'),
+    naturalDurationSummary: document.getElementById('natural-duration-summary'),
     consent: document.getElementById('consent'),
     grant: document.getElementById('grant'),
     qualtricsReady: document.getElementById('qualtrics-ready'),
@@ -59,6 +60,8 @@ function render(response) {
     const active = state.activeSession;
     elements.revoke.hidden = !response.permissionGranted;
     elements.durationSummary.textContent = `${state.settings.harvestDurationSeconds} seconds`;
+    elements.naturalDurationSummary.textContent =
+        `${state.settings.naturalSessionSeconds} qualified seconds`;
 
     elements.newSession.hidden = Boolean(active);
     elements.activeSession.hidden = !active;
@@ -72,6 +75,7 @@ function render(response) {
 
     const progress = active.progress;
     const automated = progress.collectionMode === Core.COLLECTION_MODE.AUTOMATED_BACKGROUND;
+    const natural = progress.collectionMode === Core.COLLECTION_MODE.NATURAL_FYP_SESSION;
     const collecting = active.status === Core.SESSION_STATUS.COLLECTING;
     const failed = active.status === Core.SESSION_STATUS.FAILED;
     const qualtrics = active.deliveryTarget === Core.DELIVERY_TARGET.QUALTRICS;
@@ -80,6 +84,9 @@ function render(response) {
             ? `Failure: ${progress.stopReason || 'unknown_failure'} · ${progress.unseenCount} sourced`
             : `${progress.unseenCount} sourced · ` +
                 `${Math.ceil(progress.harvestRemainingMs / 1000)}s remaining`
+        : natural
+            ? `${Math.min(progress.qualifiedSeconds, progress.naturalSessionSeconds)} / ` +
+                `${progress.naturalSessionSeconds}s qualified · ${progress.seenCount} videos`
         : `${Math.min(progress.qualifiedSeconds, progress.durationSeconds)} / ` +
             `${progress.durationSeconds}s · ${progress.unseenCount} / ` +
             `${progress.targetUnseenCount} reserved`;
@@ -95,7 +102,9 @@ function render(response) {
             : failed
                 ? 'Collection failed'
                 : 'Viewer in progress';
-    elements.activeStatus.textContent = collecting ? 'Background' : failed ? 'Retry' : 'Ready';
+    elements.activeStatus.textContent = collecting
+        ? natural ? 'Foreground' : 'Background'
+        : failed ? 'Retry' : 'Ready';
     elements.resume.hidden = !collecting;
     elements.stop.hidden = !collecting && !failed;
     elements.openViewer.hidden = collecting || failed;

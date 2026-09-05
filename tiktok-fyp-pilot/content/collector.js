@@ -11,10 +11,10 @@
     const Dom = TikTokPilotDom;
     const RECONCILE_DELAY_MS = 200;
     const REPLACEMENT_WAIT_MS = 1000;
-    const SETTLE_DELAY_MS = 250;
+    const MIN_ADVANCE_GAP_MS = 300;
     const STAGE_TIMEOUT_MS = 8000;
     const MAX_ADVANCE_ATTEMPTS = 3;
-    const MAX_BURST_ITEMS = 4;
+    const MAX_BURST_ITEMS = 12;
     const RESERVED_CARD_CLASS = 'ttfp-reserved-card';
     const OVERLAY_HOST_ID = 'ttfp-harvest-overlay-host';
 
@@ -34,7 +34,8 @@
     let stageStartedAt = Date.now();
     let advanceAttempts = 0;
     let lastAdvanceAt = 0;
-    let awaitingDriverChange = false;
+    let wakeRequested = false;
+    let mutationWakeQueued = false;
     let lastDriverId = null;
     let lastReportedPhase = null;
     let overlayHost = null;
@@ -52,7 +53,12 @@
     const mutedMedia = new Map();
     const concealedElements = new Map();
 
-    document.documentElement.classList.add('ttfp-booting');
+    // The static fragment is not sent to TikTok. It lets the document-start
+    // bootstrap avoid even a brief opaque cover for the separate natural mode.
+    const naturalModeHint = location.hash === '#ttfp-natural-session';
+    if (!naturalModeHint) {
+        document.documentElement.classList.add('ttfp-booting');
+    }
 
     function runtimeMessage(message) {
         return new Promise((resolve, reject) => {
@@ -87,10 +93,6 @@
         });
         outboundQueue = operation.catch(() => undefined);
         return operation;
-    }
-
-    function wait(milliseconds) {
-        return new Promise((resolve) => setTimeout(resolve, milliseconds));
     }
 
     function ensureVideoFeedOrder(videoId) {
@@ -481,13 +483,16 @@
             });
         }
         record.element.classList.add(RESERVED_CARD_CLASS);
+        if (session && session.boundTab && overlayHost && overlayHost.isConnected) {
+            record.element.classList.add('ttfp-reserved-slot');
+        }
         record.element.setAttribute('aria-hidden', 'true');
         return true;
     }
 
     function restoreConcealedCards() {
         concealedElements.forEach((priorState, element) => {
-            element.classList.remove(RESERVED_CARD_CLASS);
+            element.classList.remove(RESERVED_CARD_CLASS, 'ttfp-reserved-slot');
             if (priorState.hadAriaHidden) {
                 element.setAttribute('aria-hidden', priorState.ariaHidden);
             } else {
@@ -524,29 +529,6 @@
                 feedOrder: ensureVideoFeedOrder(videoId),
             }, 3).catch(() => failClosed('local_storage_error'));
         });
-    }
-
-    function visibleRecords(records) {
-        return records
-            .filter((record) =>
-                record.videoId &&
-                record.occurrenceCount === 1 &&
-                !tombstones.has(record.videoId)
-            )
-            .map((record) => {
-                const visible = Dom.bestVideoForRecord(record, innerWidth, innerHeight);
-                return visible ? { record, ...visible } : null;
-            })
-            .filter((entry) => entry && entry.ratio >= 0.6);
-    }
-
-    function currentDriver(records) {
-        const visible = visibleRecords(records);
-        const playing = visible.filter((entry) => Dom.videoIsPlaying(entry.video));
-        if (playing.length === 1) {
-            return playing[0].record;
-        }
-        return visible.length === 1 ? visible[0].record : null;
     }
 
     function phaseChanged(phase, driverVideoId, detail) {
@@ -658,30 +640,31 @@
         return document.scrollingElement || document.documentElement;
     }
 
-    function advanceFeed(records, driver) {
-        const next = records.find((record) =>
-            record.videoId &&
-            !tombstones.has(record.videoId) &&
-            !excludedIds.has(record.videoId) &&
-            record.liveIndex > driver.liveIndex &&
-            record.element.isConnected
-        );
-        if (next) {
-            next.element.scrollIntoView({ behavior: 'auto', block: 'center' });
-            return true;
+    function advanceFeed(position) {
+        const scroller = findScrollableAncestor(position.current);
+        const before = scroller.scrollTop;
+        const currentRect = position.current.getBoundingClientRect();
+        const scrollerTop = scroller === document.scrollingElement
+            ? 0
+            : scroller.getBoundingClientRect().top;
+        const top = position.next
+            ? before + position.next.getBoundingClientRect().top - scrollerTop
+            : before + Math.max(currentRect.height, scroller.clientHeight, 320);
+        // "auto" inherits TikTok's CSS scroll-behavior:smooth. In a hidden tab
+        // that animation may not finish; explicit instant scroll is synchronous.
+        scroller.scrollTo({ top, behavior: 'instant' });
+        const moved = Math.abs(scroller.scrollTop - before) > 2;
+        if (moved) {
+            // Native scroll-event delivery can wait for a hidden rendering
+            // opportunity. Notify the feed's existing scroll listeners now.
+            scroller.dispatchEvent(new Event('scroll', { bubbles: true }));
         }
-        const scroller = findScrollableAncestor(driver.element);
-        const distance = Math.max(
-            320,
-            Math.round((scroller.clientHeight || innerHeight || 600) * 0.9)
-        );
-        if (typeof scroller.scrollBy === 'function') {
-            scroller.scrollBy({ top: distance, behavior: 'auto' });
-        } else {
-            scroller.scrollTop += distance;
-        }
-        scroller.dispatchEvent(new Event('scroll', { bubbles: true }));
-        return true;
+        recordDiagnostic('automated_advance', {
+            elapsedMs: Date.now() - session.startedAt,
+            reasonCode: moved ? 'instant_scroll' : 'scroll_no_movement',
+            count: validUnseenCount,
+        });
+        return moved;
     }
 
     function recheckCoveredDriver(videoId) {
@@ -694,7 +677,10 @@
         const record = matches[0];
         const rect = record.element.getBoundingClientRect();
         const visible = Dom.bestVideoForRecord(record, innerWidth, innerHeight);
-        const overlayOpaque = Boolean(overlayHost && overlayHost.isConnected && overlay);
+        const overlayRect = overlayHost && overlayHost.getBoundingClientRect();
+        const overlayOpaque = Boolean(overlayHost && overlayHost.isConnected && overlay &&
+            overlayRect.left <= 0 && overlayRect.top <= 0 &&
+            overlayRect.right >= innerWidth && overlayRect.bottom >= innerHeight);
         const mediaMuted = record.videos.length > 0 &&
             record.videos.every((media) => media.muted === true);
         if (!overlayOpaque || !mediaMuted) {
@@ -717,15 +703,19 @@
         };
     }
 
-    async function reserveCoveredDriver(driver, timerDelayMs, burstDepth) {
-        const currentBurstDepth = Math.max(0, Number(burstDepth) || 0);
+    async function reserveCoveredDriver(driver, timerDelayMs) {
+        if (destroyed || mode !== 'collecting' || Date.now() >= session.harvestDeadlineAt) {
+            return;
+        }
         muteAllMedia();
         const checked = recheckCoveredDriver(driver.videoId);
         if (!checked) {
             recordDiagnostic('covered_driver_failed_recheck', {
                 reasonCode: 'overlay_media_or_identity_changed',
             });
-            stageStartedAt = Date.now();
+            // Never repeatedly retry an unchanged unsafe candidate from a
+            // microtask wakeup: that would starve Stop and deadline handling.
+            excludedIds.add(driver.videoId);
             return;
         }
         const videoId = driver.videoId;
@@ -748,7 +738,12 @@
         applyProgress(prepared.progress);
 
         // Persist first, then recheck the opaque overlay, muted media, exact ID,
-        // and unique structural card before hiding the item from TikTok's layout.
+        // and unique structural card before concealing it without resizing it.
+        if (destroyed || mode !== 'collecting') {
+            pendingReservations.delete(videoId);
+            return;
+        }
+        muteAllMedia();
         const persistedCheck = recheckCoveredDriver(videoId);
         if (!persistedCheck) {
             pendingReservations.delete(videoId);
@@ -798,104 +793,23 @@
         }
         stageStartedAt = Date.now();
         advanceAttempts = 0;
-        if (mode !== 'collecting') {
-            return;
-        }
-        await phaseChanged('advancing', videoId, {
-            timerDelayMs,
-            hydrationLatencyMs: 0,
-            advanceAttempt: 1,
-            retainDriver: true,
-        });
-        advanceAttempts = 1;
-        lastAdvanceAt = Date.now();
-        awaitingDriverChange = true;
-        const advanceRecords = snapshot();
-        sweepTombstones(advanceRecords);
-        const retainedDriver = advanceRecords.find((record) =>
-            record.videoId === videoId && record.element.isConnected
-        ) || driver;
-        advanceFeed(advanceRecords, retainedDriver);
+    }
 
-        // Geometry changes caused by scrollIntoView are synchronous. When the
-        // next muted card was already hydrated, keep the durable reservation
-        // chain inside this turn and avoid another throttled hidden-tab timer.
-        const immediateRecords = snapshot();
-        excludeAmbiguousRecords(immediateRecords);
-        sweepTombstones(immediateRecords);
-        const immediateDriver = currentDriver(immediateRecords);
-        if (
-            immediateDriver &&
-            immediateDriver.videoId !== videoId &&
-            currentBurstDepth + 1 < MAX_BURST_ITEMS &&
-            Date.now() < session.harvestDeadlineAt
-        ) {
-            lastDriverId = immediateDriver.videoId;
-            awaitingDriverChange = false;
-            lastAdvanceAt = 0;
-            const persisted = await phaseChanged('waiting_candidate', immediateDriver.videoId, {
-                timerDelayMs,
-                hydrationLatencyMs: Date.now() - stageStartedAt,
-                advanceAttempt: 0,
-                retainDriver: true,
-            });
-            if (!persisted || !persisted.ok) {
-                await failClosed('driver_persist_failed');
-                return;
-            }
-            stageStartedAt = Date.now();
-            advanceAttempts = 0;
-            await reserveCoveredDriver(immediateDriver, timerDelayMs, currentBurstDepth + 1);
-            return;
-        }
-
-        await phaseChanged('settling', videoId, {
-            timerDelayMs,
-            hydrationLatencyMs: Date.now() - stageStartedAt,
-            advanceAttempt: advanceAttempts,
-            retainDriver: true,
-        });
-        await wait(SETTLE_DELAY_MS);
-        if (mode !== 'collecting') {
-            return;
-        }
-        const settledRecords = snapshot();
-        sweepTombstones(settledRecords);
-        const replacementDriver = currentDriver(settledRecords);
-        if (replacementDriver && replacementDriver.videoId !== videoId) {
-            awaitingDriverChange = false;
-            if (
-                currentBurstDepth + 1 < MAX_BURST_ITEMS &&
-                Date.now() < session.harvestDeadlineAt
-            ) {
-                lastDriverId = replacementDriver.videoId;
-                lastAdvanceAt = 0;
-                const persisted = await phaseChanged('waiting_candidate', replacementDriver.videoId, {
-                    timerDelayMs,
-                    hydrationLatencyMs: Date.now() - stageStartedAt,
-                    advanceAttempt: 0,
-                    retainDriver: true,
-                });
-                if (!persisted || !persisted.ok) {
-                    await failClosed('driver_persist_failed');
-                    return;
-                }
-                stageStartedAt = Date.now();
-                advanceAttempts = 0;
-                await reserveCoveredDriver(replacementDriver, timerDelayMs, currentBurstDepth + 1);
-            }
-            return;
-        }
-        await phaseChanged('waiting_hydration', videoId, {
-            timerDelayMs,
-            hydrationLatencyMs: Date.now() - stageStartedAt,
-            advanceAttempt: advanceAttempts,
-            retainDriver: true,
-        });
+    function eligibleCoveredRecords(records) {
+        return records.filter((record) =>
+            record.videoId && record.occurrenceCount === 1 && !record.ambiguous &&
+            record.element.isConnected && !tombstones.has(record.videoId) &&
+            !excludedIds.has(record.videoId) && !seenIds.has(record.videoId) &&
+            !pendingReservations.has(record.videoId)
+        );
     }
 
     async function harvestTick(timerDelayMs) {
-        if (destroyed || mode !== 'collecting' || harvestBusy || !session) {
+        if (harvestBusy) {
+            wakeRequested = true;
+            return;
+        }
+        if (destroyed || mode !== 'collecting' || !session) {
             return;
         }
         harvestBusy = true;
@@ -903,157 +817,139 @@
             keepOverlayMounted();
             muteAllMedia();
             updateOverlay();
-            const now = Date.now();
+            let now = Date.now();
             if (now >= session.harvestDeadlineAt) {
                 const response = await phaseChanged('complete', lastDriverId, {
                     timerDelayMs,
                     hydrationLatencyMs: now - stageStartedAt,
                     advanceAttempt: advanceAttempts,
-                }).catch(() => null);
-                if (response && response.progress) {
-                    applyProgress(response.progress);
-                }
+                    retainDriver: true,
+                });
+                applyProgress(response && response.progress);
                 return;
             }
             if (!Core.isFypPath(location.pathname)) {
                 if (now - stageStartedAt >= STAGE_TIMEOUT_MS) {
                     await failClosed('unsupported_page_state', { pathCode: 'not_foryou' });
-                    return;
                 }
-                await phaseChanged('waiting_driver', null, { timerDelayMs });
                 return;
             }
 
-            const records = snapshot();
+            let records = snapshot();
             excludeAmbiguousRecords(records);
             sweepTombstones(records);
-            const driver = currentDriver(records);
-            if (!driver) {
-                // Once at least one card is safely confirmed, a hidden-tab
-                // hydration pause is not evidence that the participant is
-                // logged out. Retry advancement from the concealed structural
-                // card, then preserve the confirmed pool until the deadline.
-                if (validUnseenCount > 0) {
-                    const stageElapsed = now - stageStartedAt;
-                    const previousRecord = records.find((record) =>
-                        record.videoId === lastDriverId && record.element.isConnected
-                    );
-                    if (
-                        awaitingDriverChange &&
-                        previousRecord &&
-                        stageElapsed >= REPLACEMENT_WAIT_MS &&
-                        advanceAttempts < MAX_ADVANCE_ATTEMPTS
-                    ) {
-                        advanceAttempts += 1;
-                        lastAdvanceAt = Date.now();
-                        await phaseChanged('advancing', lastDriverId, {
-                            timerDelayMs,
-                            hydrationLatencyMs: stageElapsed,
-                            advanceAttempt: advanceAttempts,
-                            retainDriver: true,
-                        });
-                        advanceFeed(records, previousRecord);
-                        await phaseChanged('waiting_hydration', lastDriverId, {
-                            timerDelayMs,
-                            hydrationLatencyMs: Date.now() - stageStartedAt,
-                            advanceAttempt: advanceAttempts,
-                            retainDriver: true,
-                        });
-                        return;
-                    }
-                    await phaseChanged(
-                        stageElapsed >= STAGE_TIMEOUT_MS ||
-                            advanceAttempts >= MAX_ADVANCE_ATTEMPTS
-                            ? 'waiting_deadline'
-                            : 'waiting_hydration',
-                        lastDriverId,
-                        {
-                            timerDelayMs,
-                            hydrationLatencyMs: stageElapsed,
-                            advanceAttempt: advanceAttempts,
-                            retainDriver: true,
-                        }
-                    );
+            const candidates = eligibleCoveredRecords(records).slice(0, MAX_BURST_ITEMS);
+            const captureStartedAt = Date.now();
+            for (const candidate of candidates) {
+                if (destroyed || mode !== 'collecting' || Date.now() >= session.harvestDeadlineAt) {
                     return;
                 }
-                if (now - stageStartedAt >= STAGE_TIMEOUT_MS) {
-                    await failClosed('login_or_fyp_absent', { elapsedMs: now - stageStartedAt });
-                    return;
-                }
-                await phaseChanged('waiting_driver', null, { timerDelayMs });
+                // All hydrated IDs are usable under the opaque, muted cover.
+                // They do not need to play or occupy the viewport first.
+                await reserveCoveredDriver(candidate, timerDelayMs);
+                lastDriverId = candidate.videoId;
+            }
+            if (candidates.length) {
+                recordDiagnostic('capture_batch', {
+                    count: candidates.length,
+                    elapsedMs: Date.now() - captureStartedAt,
+                    reasonCode: document.hidden ? 'hidden' : 'visible',
+                });
+            }
+            if (destroyed || mode !== 'collecting') {
                 return;
             }
-
-            if (driver.videoId !== lastDriverId) {
-                lastDriverId = driver.videoId;
-                awaitingDriverChange = false;
-                lastAdvanceAt = 0;
-                const response = await phaseChanged('waiting_candidate', driver.videoId, {
-                    timerDelayMs,
-                    hydrationLatencyMs: now - stageStartedAt,
-                    advanceAttempt: 0,
+            now = Date.now();
+            if (now >= session.harvestDeadlineAt) {
+                wakeRequested = true;
+                return;
+            }
+            records = snapshot();
+            sweepTombstones(records);
+            if (eligibleCoveredRecords(records).length) {
+                wakeRequested = true;
+                return;
+            }
+            const position = Dom.coveredFeedPosition(document, records, innerWidth, innerHeight);
+            const currentIdentified = position.current && records.some((record) =>
+                record.videoId && (record.element === position.current ||
+                    position.current.contains(record.element))
+            );
+            const elapsed = now - stageStartedAt;
+            const sinceAdvance = lastAdvanceAt ? now - lastAdvanceAt : Infinity;
+            // Wait for the slot just entered to hydrate. Do not rush through
+            // unidentified placeholders, which would lose recommendations.
+            if (!currentIdentified) {
+                await phaseChanged(validUnseenCount ? 'waiting_hydration' : 'waiting_driver', lastDriverId, {
+                    timerDelayMs, hydrationLatencyMs: elapsed, advanceAttempt: advanceAttempts,
                     retainDriver: true,
                 });
-                if (!response || !response.ok) {
-                    await failClosed('driver_persist_failed');
-                    return;
+                if (!validUnseenCount && elapsed >= STAGE_TIMEOUT_MS) {
+                    await failClosed('login_or_fyp_absent', { elapsedMs: elapsed });
                 }
-                stageStartedAt = Date.now();
-                advanceAttempts = 0;
-            }
-
-            if (!awaitingDriverChange) {
-                await reserveCoveredDriver(driver, timerDelayMs);
                 return;
             }
-
-            const stageElapsed = Date.now() - stageStartedAt;
-            const sinceAdvance = lastAdvanceAt ? Date.now() - lastAdvanceAt : stageElapsed;
-            if (stageElapsed < REPLACEMENT_WAIT_MS || sinceAdvance < REPLACEMENT_WAIT_MS) {
-                await phaseChanged(awaitingDriverChange ? 'waiting_hydration' : 'waiting_candidate', driver.videoId, {
-                    timerDelayMs,
-                    hydrationLatencyMs: stageElapsed,
-                    advanceAttempt: advanceAttempts,
+            // A newly captured replacement proves hydration completed. It can
+            // advance immediately; the gap applies only to timer-based retries.
+            if (sinceAdvance < MIN_ADVANCE_GAP_MS && !candidates.length) {
+                return;
+            }
+            if (advanceAttempts >= MAX_ADVANCE_ATTEMPTS || elapsed >= STAGE_TIMEOUT_MS) {
+                await phaseChanged('waiting_deadline', lastDriverId, {
+                    timerDelayMs, hydrationLatencyMs: elapsed, advanceAttempt: advanceAttempts,
                     retainDriver: true,
                 });
                 return;
             }
-            if (advanceAttempts >= MAX_ADVANCE_ATTEMPTS || stageElapsed >= STAGE_TIMEOUT_MS) {
-                if (validUnseenCount > 0) {
-                    await phaseChanged('waiting_deadline', driver.videoId, {
-                        timerDelayMs,
-                        hydrationLatencyMs: stageElapsed,
-                        advanceAttempt: advanceAttempts,
-                        retainDriver: true,
-                    });
-                    return;
-                }
-                await failClosed('harvest_stalled', { elapsedMs: stageElapsed });
+            if (advanceAttempts > 0 && sinceAdvance < REPLACEMENT_WAIT_MS && !candidates.length) {
                 return;
             }
             advanceAttempts += 1;
-            lastAdvanceAt = Date.now();
-            awaitingDriverChange = true;
-            await phaseChanged('advancing', driver.videoId, {
-                timerDelayMs,
-                hydrationLatencyMs: stageElapsed,
-                advanceAttempt: advanceAttempts,
+            lastAdvanceAt = now;
+            await phaseChanged('advancing', lastDriverId, {
+                timerDelayMs, hydrationLatencyMs: elapsed, advanceAttempt: advanceAttempts,
                 retainDriver: true,
             });
-            advanceFeed(records, driver);
-            await phaseChanged('waiting_hydration', driver.videoId, {
-                timerDelayMs,
-                hydrationLatencyMs: Date.now() - stageStartedAt,
-                advanceAttempt: advanceAttempts,
-                retainDriver: true,
+            if (destroyed || mode !== 'collecting' || Date.now() >= session.harvestDeadlineAt) {
+                return;
+            }
+            advanceFeed(position);
+            await phaseChanged('waiting_hydration', lastDriverId, {
+                timerDelayMs, hydrationLatencyMs: Date.now() - stageStartedAt,
+                advanceAttempt: advanceAttempts, retainDriver: true,
             });
-            await wait(SETTLE_DELAY_MS);
         } finally {
             harvestBusy = false;
-            if (mode === 'collecting') {
-                scheduleHarvest(RECONCILE_DELAY_MS);
+            if (mode === 'collecting' && !destroyed) {
+                if (wakeRequested) {
+                    wakeRequested = false;
+                    wakeHarvest();
+                } else {
+                    scheduleHarvest(RECONCILE_DELAY_MS);
+                }
             }
         }
+    }
+
+    function wakeHarvest() {
+        if (destroyed || mode !== 'collecting') {
+            return;
+        }
+        if (harvestBusy) {
+            wakeRequested = true;
+            return;
+        }
+        if (mutationWakeQueued) {
+            return;
+        }
+        mutationWakeQueued = true;
+        stopHarvestTimer();
+        // A DOM hydration event is already a browser task. Do not insert a new
+        // hidden-tab timer between that event and reserving the hydrated IDs.
+        Promise.resolve().then(() => {
+            mutationWakeQueued = false;
+            return harvestTick(0);
+        }).catch(() => failClosed('collector_exception'));
     }
 
     async function failClosed(reason, detail) {
@@ -1091,7 +987,7 @@
         const records = snapshot();
         sweepTombstones(records);
         if (mode === 'collecting') {
-            scheduleHarvest(0);
+            wakeHarvest();
         }
     }
 
@@ -1118,7 +1014,7 @@
         }
         restoreConcealedCards();
         restoreMedia();
-        document.documentElement.classList.remove('ttfp-booting');
+        document.documentElement.classList.remove('ttfp-booting', 'ttfp-covered-harvesting');
         chrome.runtime.onMessage.removeListener(onRuntimeMessage);
     }
 
@@ -1142,6 +1038,10 @@
             document.documentElement.classList.remove('ttfp-booting');
             return;
         }
+        if (context.session.collectionMode === Core.COLLECTION_MODE.NATURAL_FYP_SESSION) {
+            document.documentElement.classList.remove('ttfp-booting');
+            return;
+        }
         session = { ...context.session };
         mode = context.mode;
         validUnseenCount = context.session.validUnseenCount || 0;
@@ -1157,6 +1057,9 @@
         const restoredSteps = context.session.recentHarvestSteps || [];
         lastHarvestTelemetry = restoredSteps[restoredSteps.length - 1] || null;
 
+        if (context.session.boundTab) {
+            document.documentElement.classList.add('ttfp-covered-harvesting');
+        }
         observer = new MutationObserver(processMutationBatch);
         observer.observe(document.documentElement, {
             childList: true,

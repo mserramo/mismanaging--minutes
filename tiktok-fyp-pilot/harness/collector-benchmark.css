@@ -1,0 +1,5 @@
+html, body { margin: 0; }
+#benchmark-feed { height: 100vh; overflow-y: scroll; scroll-behavior: smooth; scroll-snap-type: y mandatory; }
+#benchmark-feed article { height: 100vh; scroll-snap-align: start; }
+#benchmark-feed video { height: 95vh; width: 50vw; }
+#benchmark-result { white-space: pre-wrap; margin: 20px; }

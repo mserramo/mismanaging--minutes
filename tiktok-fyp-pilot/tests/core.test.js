@@ -46,16 +46,19 @@ function reserve(session, videoId, order, aheadBy) {
 test('defaults and settings bounds are stable', () => {
     assert.deepEqual(Core.DEFAULT_SETTINGS, {
         harvestDurationSeconds: 30,
+        naturalSessionSeconds: 60,
     });
     assert.deepEqual(Core.sanitizeSettings({
         harvestDurationSeconds: 0,
     }), {
         harvestDurationSeconds: 15,
+        naturalSessionSeconds: 60,
     });
     assert.deepEqual(Core.sanitizeSettings({
         harvestDurationSeconds: '120',
     }), {
         harvestDurationSeconds: 120,
+        naturalSessionSeconds: 60,
     });
 });
 
@@ -545,7 +548,7 @@ test('schema 1 migration preserves completed sessions and stops collecting sessi
         activeSessionId: collecting.id,
         sessions: [completed, collecting],
     });
-    assert.equal(migrated.schemaVersion, 4);
+    assert.equal(migrated.schemaVersion, 5);
     assert.equal(migrated.sessions[0].collectionMode, Core.COLLECTION_MODE.LEGACY_MANUAL);
     assert.equal(migrated.sessions[0].status, Core.SESSION_STATUS.COMPLETE);
     assert.equal(migrated.sessions[1].status, Core.SESSION_STATUS.STOPPED);
@@ -570,8 +573,11 @@ test('schema 2 migration preserves completed pools and stops the old target-base
         activeSessionId: collecting.id,
         sessions: [completed, collecting],
     });
-    assert.equal(migrated.schemaVersion, 4);
-    assert.deepEqual(migrated.settings, { harvestDurationSeconds: 30 });
+    assert.equal(migrated.schemaVersion, 5);
+    assert.deepEqual(migrated.settings, {
+        harvestDurationSeconds: 30,
+        naturalSessionSeconds: 60,
+    });
     assert.equal(migrated.sessions[0].status, Core.SESSION_STATUS.COMPLETE);
     assert.deepEqual(migrated.sessions[0].lockedSettings, { harvestDurationSeconds: 90 });
     assert.equal(migrated.sessions[1].status, Core.SESSION_STATUS.STOPPED);
@@ -597,8 +603,11 @@ test('schema 3 completion keeps its one-ahead interpretation while collection is
         activeSessionId: collecting.id,
         sessions: [completed, collecting],
     });
-    assert.equal(migrated.schemaVersion, 4);
-    assert.deepEqual(migrated.settings, { harvestDurationSeconds: 45 });
+    assert.equal(migrated.schemaVersion, 5);
+    assert.deepEqual(migrated.settings, {
+        harvestDurationSeconds: 45,
+        naturalSessionSeconds: 60,
+    });
     assert.equal(
         migrated.sessions[0].captureStrategy,
         Core.CAPTURE_STRATEGY.OFFSCREEN_SUCCESSOR
@@ -800,9 +809,110 @@ test('clear keeps settings but removes every session', () => {
     state.activeSessionId = state.sessions[0].id;
     assert.deepEqual(Core.clearCollectedData(state), {
         schemaVersion: Core.SCHEMA_VERSION,
-        settings: { harvestDurationSeconds: 120 },
+        settings: { harvestDurationSeconds: 120, naturalSessionSeconds: 60 },
         activeSessionId: null,
         sessions: [],
+    });
+});
+
+test('natural sessions lock their own duration and complete without a reserved queue', () => {
+    const session = Core.createSession({
+        harvestDurationSeconds: 45,
+        naturalSessionSeconds: 15,
+    }, {
+        id: 'natural-session-test',
+        seed: 17,
+        startedAt: 1000,
+        targetTabId: 77,
+        targetTabOwned: true,
+        collectionMode: Core.COLLECTION_MODE.NATURAL_FYP_SESSION,
+        deliveryTarget: Core.DELIVERY_TARGET.QUALTRICS,
+    });
+    assert.equal(session.collectionMode, Core.COLLECTION_MODE.NATURAL_FYP_SESSION);
+    assert.equal(session.captureStrategy, Core.CAPTURE_STRATEGY.NATURAL_EXPOSURE);
+    assert.deepEqual(session.lockedSettings, { naturalSessionSeconds: 15 });
+    assert.equal(session.targetTabOwned, true);
+    assert.equal(session.harvestDeadlineAt, null);
+    assert.equal(Core.sessionProgress(session, 5000).unseenComplete, true);
+
+    for (let index = 0; index < 60; index += 1) {
+        const applied = Core.applyNaturalActivity(session, {
+            at: 1250 + index * 250,
+            samples: [{
+                videoId: index < 30 ? IDS.a : IDS.b,
+                qualifiedDeltaMs: 250,
+                watchDeltaMs: index === 1 || index === 31 ? 500 : index > 1 ? 250 : 0,
+                firstSeenAt: 1000,
+                feedOrder: index < 30 ? 1 : 2,
+            }],
+        });
+        assert.equal(applied.applied, true);
+    }
+    assert.equal(session.qualifiedMs, 15000);
+    assert.equal(session.seen.length, 2);
+    assert.equal(Core.evaluateCompletion(session, 17000), true);
+    assert.equal(session.status, Core.SESSION_STATUS.COMPLETE);
+    assert.deepEqual(Core.viewerQueue(session), []);
+});
+
+test('natural activity stores bounded counts and state markers but no raw inputs', () => {
+    const session = Core.createSession({ naturalSessionSeconds: 60 }, {
+        id: 'natural-activity-test',
+        seed: 18,
+        startedAt: 1000,
+        collectionMode: Core.COLLECTION_MODE.NATURAL_FYP_SESSION,
+    });
+    const result = Core.applyNaturalActivity(session, {
+        at: 2000,
+        activity: {
+            pointerMoveBursts: 3,
+            clicks: 2,
+            wheelEvents: 4,
+            keyEvents: 5,
+            clientX: 900,
+            key: 'Secret',
+        },
+        durationDeltas: { tabAwayMs: 500, windowBlurMs: 250 },
+        counterDeltas: {
+            tabAwayCount: 1,
+            windowBlurCount: 1,
+            videoTransitions: 2,
+            pauseCount: 1,
+            resumeCount: 1,
+        },
+        reasonCounts: { counting: 2, 'not allowed!': 99 },
+        markers: [
+            { type: 'tab_away', at: 1800 },
+            { type: 'video_transition', at: 1900, videoId: IDS.b },
+            { type: 'raw_key', at: 1950 },
+        ],
+    });
+    assert.equal(result.applied, true);
+    assert.equal(session.naturalActivity.pointerMoveBursts, 3);
+    assert.equal(session.naturalActivity.keyEvents, 5);
+    assert.equal(session.naturalActivity.tabAwayMs, 500);
+    assert.equal(session.naturalActivity.events.length, 2);
+    assert.equal(session.naturalActivity.qualificationReasonCounts.counting, 2);
+    const serialized = JSON.stringify(session.naturalActivity);
+    assert.equal(serialized.includes('Secret'), false);
+    assert.equal(serialized.includes('clientX'), false);
+    assert.equal(serialized.includes('raw_key'), false);
+});
+
+test('schema 4 state migrates compatibly and keeps an active background session', () => {
+    const session = makeSession({ harvestDurationSeconds: 30 });
+    const migrated = Core.normalizeState({
+        schemaVersion: 4,
+        settings: { harvestDurationSeconds: 45 },
+        activeSessionId: session.id,
+        sessions: [session],
+    });
+    assert.equal(migrated.schemaVersion, 5);
+    assert.equal(migrated.activeSessionId, session.id);
+    assert.equal(migrated.sessions[0].status, Core.SESSION_STATUS.COLLECTING);
+    assert.deepEqual(migrated.settings, {
+        harvestDurationSeconds: 45,
+        naturalSessionSeconds: 60,
     });
 });
 

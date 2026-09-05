@@ -58,6 +58,7 @@ function createHarness(options = {}) {
     const alarmEvent = eventSlot();
     const alarms = new Map();
     let externalSequence = 0;
+    let windowFocused = options.windowFocused !== false;
 
     const chrome = {
         runtime: {
@@ -67,7 +68,7 @@ function createHarness(options = {}) {
                 return `chrome-extension://${extensionId}/${relativePath}`;
             },
             getManifest() {
-                return { version: '0.4.5' };
+                return { version: '0.5.3' };
             },
             onMessage: runtimeMessage,
             onConnectExternal: runtimeConnectExternal,
@@ -213,7 +214,11 @@ function createHarness(options = {}) {
             onRemoved: tabRemoved,
         },
         windows: {
+            async get(windowId) {
+                return { id: windowId, focused: windowFocused };
+            },
             async update(windowId) {
+                windowFocused = true;
                 log.push(`windows.focus:${windowId}`);
             },
         },
@@ -283,6 +288,9 @@ function createHarness(options = {}) {
         },
         getState: () => clone(stored),
         getPermission: () => permissionGranted,
+        setWindowFocused(value) {
+            windowFocused = value === true;
+        },
         registered,
         tabs,
         log,
@@ -538,8 +546,8 @@ test('allowlisted Qualtrics page starts a bound session and reads confirmed IDs 
     });
     const started = await harness.externalRequest({ type: 'start' }, qualtricsSender(7));
     assert.equal(started.ok, true);
-    assert.equal(started.bridgeVersion, 4);
-    assert.equal(started.extensionVersion, '0.4.5');
+    assert.equal(started.bridgeVersion, 5);
+    assert.equal(started.extensionVersion, '0.5.3');
     const state = harness.getState();
     assert.equal(state.sessions[0].deliveryTarget, Core.DELIVERY_TARGET.QUALTRICS);
 
@@ -585,6 +593,113 @@ test('allowlisted Qualtrics page starts a bound session and reads confirmed IDs 
     }]);
 });
 
+test('natural Qualtrics mode uses a dedicated foreground tab and returns after qualified time', async () => {
+    const initial = Core.createDefaultState();
+    initial.settings.naturalSessionSeconds = 15;
+    const harness = createHarness({
+        state: initial,
+        tabs: [
+            { id: 7, windowId: 1, active: true, url: 'https://stanforduniversity.qualtrics.com/jfe/form/SV_natural' },
+            { id: 42, windowId: 1, active: false, url: Core.TIKTOK_FYP_URL },
+        ],
+    });
+    const started = await harness.externalRequest(
+        { type: 'start_natural' },
+        qualtricsSender(7)
+    );
+    assert.equal(started.ok, true);
+    assert.equal(started.bridgeVersion, 5);
+    const session = harness.getState().sessions[0];
+    assert.equal(session.collectionMode, Core.COLLECTION_MODE.NATURAL_FYP_SESSION);
+    assert.equal(session.targetTabOwned, true);
+    assert.notEqual(session.targetTabId, 42);
+    assert.equal(
+        harness.tabs.find((tab) => tab.id === session.targetTabId).url,
+        Core.TIKTOK_NATURAL_FYP_URL
+    );
+    assert.equal(harness.alarms.size, 0);
+
+    const samples = Array.from({ length: 20 }, (_value, index) => ({
+        videoId: index < 10 ? '7311111111111111111' : '7311111111111111112',
+        qualifiedDeltaMs: 250,
+        watchDeltaMs: 250,
+        firstSeenAt: Date.now() - 1000,
+        feedOrder: index < 10 ? 1 : 2,
+    }));
+    let response = null;
+    for (let sequence = 1; sequence <= 3; sequence += 1) {
+        response = await harness.dispatch({
+            type: Core.MESSAGE_TYPES.NATURAL_ACTIVITY,
+            sessionId: started.sessionId,
+            sourceId: 'source-natural',
+            sequence,
+            samples,
+            activity: { pointerMoveBursts: 1, wheelEvents: 2 },
+            counterDeltas: { videoTransitions: 1 },
+        }, collectorSender(session.targetTabId));
+    }
+    assert.equal(response.completed, true);
+    assert.equal(harness.getState().sessions[0].status, Core.SESSION_STATUS.COMPLETE);
+    assert.equal(
+        harness.tabs.some((tab) => tab.id === session.targetTabId),
+        false
+    );
+    assert.equal(harness.log.includes('tabs.update:7'), true);
+    assert.equal(
+        harness.tabs.some((tab) => tab.url.includes('/viewer/viewer.html')),
+        false
+    );
+
+    const status = await harness.externalRequest(
+        { type: 'status', sessionId: started.sessionId },
+        qualtricsSender(7)
+    );
+    assert.equal(status.session.collectionMode, Core.COLLECTION_MODE.NATURAL_FYP_SESSION);
+    assert.equal(status.session.naturalResult.videos.length, 2);
+    assert.equal(status.session.naturalResult.activity.pointerMoveBursts, 3);
+});
+
+test('natural activity is rejected while the TikTok Chrome window is unfocused', async () => {
+    const initial = Core.createDefaultState();
+    initial.settings.naturalSessionSeconds = 15;
+    const harness = createHarness({
+        state: initial,
+        windowFocused: false,
+        tabs: [
+            { id: 7, windowId: 1, active: false, url: 'https://stanforduniversity.qualtrics.com/jfe/form/SV_natural' },
+            { id: 42, windowId: 1, active: true, url: Core.TIKTOK_NATURAL_FYP_URL },
+        ],
+    });
+    const started = await harness.externalRequest(
+        { type: 'start_natural' },
+        qualtricsSender(7)
+    );
+    harness.setWindowFocused(false);
+    const session = harness.getState().sessions[0];
+    const response = await harness.dispatch({
+        type: Core.MESSAGE_TYPES.NATURAL_ACTIVITY,
+        sessionId: started.sessionId,
+        sourceId: 'source-unfocused',
+        sequence: 1,
+        samples: [{
+            videoId: '7311111111111111111',
+            qualifiedDeltaMs: 750,
+            watchDeltaMs: 750,
+            firstSeenAt: Date.now() - 750,
+            feedOrder: 1,
+        }],
+        durationDeltas: {},
+        reasonCounts: { counting: 3 },
+    }, collectorSender(session.targetTabId));
+    assert.equal(response.tabFocused, false);
+    assert.equal(response.progress.qualifiedMs, 0);
+    assert.equal(harness.getState().sessions[0].seen.length, 0);
+    assert.equal(
+        harness.getState().sessions[0].naturalActivity.qualificationReasonCounts.window_unfocused,
+        3
+    );
+});
+
 test('Stanford Qualtrics Preview can connect from its same-origin survey iframe', async () => {
     const harness = createHarness();
     const response = await harness.externalRequest(
@@ -592,7 +707,7 @@ test('Stanford Qualtrics Preview can connect from its same-origin survey iframe'
         qualtricsSender(7, 'stanforduniversity.qualtrics.com', 1)
     );
     assert.equal(response.ok, true);
-    assert.equal(response.bridgeVersion, 4);
+    assert.equal(response.bridgeVersion, 5);
 });
 
 test('a new Qualtrics start replaces a failed session lease with the requesting tab', async () => {

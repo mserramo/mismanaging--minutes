@@ -17,12 +17,11 @@ TEMPLATE_PATH = (
 )
 JAVASCRIPT_PATH = Path(__file__).with_name("tiktok_fyp_qualtrics.js")
 DEFAULT_OUTPUT = Path(__file__).with_name("TikTok_FYP_Qualtrics_Pilot.qsf")
-SURVEY_NAME = "TikTok FYP Qualtrics Bridge Pilot v0.4.5 - QSF r5"
+SURVEY_NAME = "TikTok FYP Qualtrics Bridge Pilot v0.5.2 - QSF r6"
 QUESTION_ID = "QID1"
 BLOCK_ID = "BL_ttfp_task"
 
 EMBEDDED_FIELDS: dict[str, str | None] = {
-    "ttfp_extension_id": None,
     "ttfp_bridge_version": None,
     "ttfp_session_id": None,
     "ttfp_harvest_status": None,
@@ -221,12 +220,16 @@ def validate_qsf(qsf: dict[str, Any]) -> None:
     piped_text_tokens = [
         token for token in payload["QuestionJS"].split("${")[1:]
     ]
-    if len(piped_text_tokens) != 2 or any(
+    if len(piped_text_tokens) != 1 or any(
         not token.startswith("e://Field/ttfp_") for token in piped_text_tokens
     ):
         raise ValueError(
             "Qualtrics would reinterpret JavaScript template interpolation as piped text"
         )
+    if "pjcgejllbdjbhegipdkagnafileoecpo" not in payload["QuestionJS"]:
+        raise ValueError("The fixed development extension ID is missing")
+    if "extensionInput" in payload["QuestionJS"] or "Chrome extension ID" in payload["QuestionJS"]:
+        raise ValueError("The survey must not request an extension ID from participants")
     options = next(element for element in elements if element["Element"] == "SO")["Payload"]
     if options.get("SurveyTermination") != "DefaultMessage":
         raise ValueError("The pilot must use Qualtrics' default completion message")

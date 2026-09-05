@@ -4,7 +4,7 @@ Use a research-development TikTok account/profile. Record date, Chrome version, 
 
 ## 1. Clean installation and consent
 
-- [ ] Load this directory from `chrome://extensions` and confirm version 0.4.5.
+- [ ] Remove any older unpacked build, load this directory from `chrome://extensions`, and confirm version 0.5.2 with ID `pjcgejllbdjbhegipdkagnafileoecpo`.
 - [ ] Confirm required permissions are `alarms`, `storage`, and `scripting`; confirm only TikTok access is optional.
 - [ ] Before consent, open TikTok and confirm there is no injected overlay or collector.
 - [ ] Leave consent unchecked and confirm the permission action is disabled.
@@ -82,10 +82,11 @@ Use a research-development TikTok account/profile. Record date, Chrome version, 
 ## 8. Qualtrics bridge
 
 - [ ] Import `qualtrics/TikTok_FYP_Qualtrics_Pilot.qsf` into the Stanford brand and keep it inactive.
-- [ ] Confirm the imported survey name ends in `v0.4.5 - QSF r5`, shows the five setup/collection/viewing steps above the extension-ID field, uses Qualtrics' default completion message, and has no Prolific redirect.
-- [ ] Confirm a non-Qualtrics page cannot connect and the Stanford Qualtrics respondent hostname can connect only when given the exact installed extension ID.
+- [ ] Confirm the imported survey name ends in `v0.5.2 - QSF r6`, shows the five setup/collection/viewing steps without an extension-ID field, connects automatically, uses Qualtrics' default completion message, and has no Prolific redirect.
+- [ ] Confirm a non-Qualtrics page cannot connect and the Stanford Qualtrics respondent hostname connects only to fixed extension ID `pjcgejllbdjbhegipdkagnafileoecpo`.
 - [ ] Confirm both an anonymous survey top frame and the same-origin iframe used by Qualtrics Preview can connect.
 - [ ] Confirm TikTok access must already have been granted from the extension popup.
+- [ ] Revoke access, reload the survey, and confirm **Check extension again** appears; grant access and confirm that recovery requires no copied or typed ID.
 - [ ] Confirm granting access does not create a competing standalone session before the survey starts its own session.
 - [ ] After a failed Preview run, start again from a newly opened Preview tab and confirm progress, completion return, and testing continuation bind to the new requesting tab rather than the prior Preview.
 - [ ] Confirm an older extension build is rejected with an instruction to reload it, and any legacy standalone session is reported as a conflict rather than claimed by the survey.
@@ -99,8 +100,26 @@ Use a research-development TikTok account/profile. Record date, Chrome version, 
 
 ## 9. Result record
 
+- [ ] For the v0.5.3 throughput update, reload the installed extension and start a fresh covered session from the existing Qualtrics preview. Record counts from three 30-second runs.
+- [ ] Confirm the covered feed retains the size and original display mode of captured slots and scrolls instantly. Check `capture_batch` and `automated_advance` diagnostics if a run stalls.
+- [ ] Serve `harness/collector-benchmark.html` locally and verify its throughput, slow-hydration, stall, identity-change (`invalidateFirst=1`), and early-Stop (`stopAfterMs=500`) scenarios. Check `hiddenCaptureCount` before calling a test an actual hidden-tab trial.
+
 - [ ] `npm run check` result recorded.
 - [ ] `npm test` result and test count recorded.
 - [ ] Synthetic **Run background-harvest assertions** result recorded.
 - [ ] At least three live hidden-tab trials recorded.
 - [ ] Any selector, overlay, embed, focus, hydration, or throttling deviations documented before pilot use.
+
+## 10. Separate natural FYP mode
+
+- [ ] Import `qualtrics/TikTok_FYP_Natural_Session.qsf` as a separate survey and confirm its name ends in `v0.5.2 - QSF r4`, connects automatically without an ID field, and has no end-of-survey redirect.
+- [ ] Start the natural task from that survey and confirm it creates a new dedicated `/foryou` tab rather than reusing an existing TikTok tab.
+- [ ] Confirm TikTok is fully visible and interactive, with only a small timer bar; there is no opaque cover, mute, input blocking, or automated scroll.
+- [ ] Confirm the timer advances only when one identified video is at least 60% visible, playing, and advancing while the tab and Chrome window are focused.
+- [ ] Confirm the timer pauses on tab switch, window blur, pause/buffer, unsupported path, and ambiguous/no active video, then resumes without resetting.
+- [ ] Confirm numeric video exposures appear after 500 ms, and Local data shows only aggregate pointer bursts, clicks, wheel/key-event counts, time-away totals, and bounded state markers—never key values or pointer coordinates.
+- [ ] Reach the locked duration and confirm the extension closes only the dedicated TikTok tab, focuses the exact survey tab, stores the detailed chunked payload and `ttfp_natural_summary_json`, and automatically advances from QID1 to the QID2 activity page.
+- [ ] Confirm the activity page reports the number of videos, qualified viewing time, coarse activity totals, and one row per stored video with its numeric ID and active watch time.
+- [ ] Export a preview response and verify that `ttfp_natural_summary_json` parses as valid JSON and that `ttfp_natural_summary_truncated` accurately reports whether the compact video list was shortened.
+- [ ] Close the dedicated tab early and confirm the run stops and returns to Qualtrics without marking `ttfp_natural_completed=1`.
+- [ ] Confirm the existing covered-harvest QSF still launches its old mode and embeds the collected queue as before.

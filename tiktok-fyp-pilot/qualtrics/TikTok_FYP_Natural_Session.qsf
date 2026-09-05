@@ -1,0 +1,449 @@
+{
+  "SurveyEntry": {
+    "SurveyID": "SV_07McTW65bCwKmGi",
+    "SurveyName": "TikTok FYP Natural Session Pilot v0.5.2 - QSF r4",
+    "SurveyDescription": null,
+    "SurveyOwnerID": "UR_cZPMLrEO6JJWxpk",
+    "SurveyBrandID": "stanforduniversity",
+    "DivisionID": null,
+    "SurveyLanguage": "EN",
+    "SurveyActiveResponseSet": "RS_2o559o4WwUGDI6q",
+    "SurveyStatus": "Inactive",
+    "SurveyStartDate": "0000-00-00 00:00:00",
+    "SurveyExpirationDate": "0000-00-00 00:00:00",
+    "SurveyCreationDate": "2026-05-14 23:54:33",
+    "CreatorID": "UR_cZPMLrEO6JJWxpk",
+    "LastModified": "2026-08-10 06:24:49",
+    "LastAccessed": "0000-00-00 00:00:00",
+    "LastActivated": "0000-00-00 00:00:00",
+    "Deleted": null
+  },
+  "SurveyElements": [
+    {
+      "SurveyID": "SV_07McTW65bCwKmGi",
+      "Element": "BL",
+      "PrimaryAttribute": "Survey Blocks",
+      "SecondaryAttribute": null,
+      "TertiaryAttribute": null,
+      "Payload": {
+        "0": {
+          "Type": "Trash",
+          "Description": "Trash / Unused Questions",
+          "ID": "BL_ttfp_natural_trash",
+          "BlockElements": [],
+          "Options": {
+            "BlockLocking": "false",
+            "RandomizeQuestions": "false",
+            "BlockVisibility": "Expanded"
+          }
+        },
+        "1": {
+          "Type": "Standard",
+          "SubType": "",
+          "Description": "Natural TikTok FYP Session",
+          "ID": "BL_ttfp_natural",
+          "BlockElements": [
+            {
+              "Type": "Question",
+              "QuestionID": "QID1"
+            },
+            {
+              "Type": "Page Break"
+            },
+            {
+              "Type": "Question",
+              "QuestionID": "QID2"
+            }
+          ],
+          "Options": {
+            "BlockLocking": "false",
+            "RandomizeQuestions": "false",
+            "BlockVisibility": "Expanded"
+          }
+        }
+      }
+    },
+    {
+      "SurveyID": "SV_07McTW65bCwKmGi",
+      "Element": "FL",
+      "PrimaryAttribute": "Survey Flow",
+      "SecondaryAttribute": null,
+      "TertiaryAttribute": null,
+      "Payload": {
+        "Type": "Root",
+        "FlowID": "FL_1",
+        "Flow": [
+          {
+            "Type": "EmbeddedData",
+            "FlowID": "FL_2",
+            "EmbeddedData": [
+              {
+                "Description": "ttfp_natural_bridge_version",
+                "Type": "Recipient",
+                "Field": "ttfp_natural_bridge_version",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "ttfp_natural_session_id",
+                "Type": "Recipient",
+                "Field": "ttfp_natural_session_id",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "ttfp_natural_status",
+                "Type": "Recipient",
+                "Field": "ttfp_natural_status",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "ttfp_natural_stop_reason",
+                "Type": "Recipient",
+                "Field": "ttfp_natural_stop_reason",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "ttfp_natural_required_ms",
+                "Type": "Recipient",
+                "Field": "ttfp_natural_required_ms",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "ttfp_natural_qualified_ms",
+                "Type": "Recipient",
+                "Field": "ttfp_natural_qualified_ms",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "ttfp_natural_video_count",
+                "Type": "Recipient",
+                "Field": "ttfp_natural_video_count",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "ttfp_natural_video_ids_json",
+                "Type": "Recipient",
+                "Field": "ttfp_natural_video_ids_json",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "ttfp_natural_summary_json",
+                "Type": "Recipient",
+                "Field": "ttfp_natural_summary_json",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "ttfp_natural_summary_truncated",
+                "Type": "Custom",
+                "Field": "ttfp_natural_summary_truncated",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false,
+                "Value": "0"
+              },
+              {
+                "Description": "ttfp_natural_payload_chunks",
+                "Type": "Recipient",
+                "Field": "ttfp_natural_payload_chunks",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "ttfp_natural_payload_truncated",
+                "Type": "Custom",
+                "Field": "ttfp_natural_payload_truncated",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false,
+                "Value": "0"
+              },
+              {
+                "Description": "ttfp_natural_payload_1",
+                "Type": "Recipient",
+                "Field": "ttfp_natural_payload_1",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "ttfp_natural_payload_2",
+                "Type": "Recipient",
+                "Field": "ttfp_natural_payload_2",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "ttfp_natural_payload_3",
+                "Type": "Recipient",
+                "Field": "ttfp_natural_payload_3",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "ttfp_natural_payload_4",
+                "Type": "Recipient",
+                "Field": "ttfp_natural_payload_4",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "ttfp_natural_payload_5",
+                "Type": "Recipient",
+                "Field": "ttfp_natural_payload_5",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "ttfp_natural_payload_6",
+                "Type": "Recipient",
+                "Field": "ttfp_natural_payload_6",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false
+              },
+              {
+                "Description": "ttfp_natural_completed",
+                "Type": "Custom",
+                "Field": "ttfp_natural_completed",
+                "VariableType": "String",
+                "DataVisibility": [],
+                "AnalyzeText": false,
+                "Value": "0"
+              }
+            ]
+          },
+          {
+            "Type": "Standard",
+            "FlowID": "FL_3",
+            "ID": "BL_ttfp_natural",
+            "Autofill": []
+          }
+        ],
+        "Properties": {
+          "Count": 3
+        }
+      }
+    },
+    {
+      "SurveyID": "SV_07McTW65bCwKmGi",
+      "Element": "PL",
+      "PrimaryAttribute": "Preview Link",
+      "SecondaryAttribute": null,
+      "TertiaryAttribute": null,
+      "Payload": {
+        "PreviewType": "Brand",
+        "PreviewID": "a65c044a-ce6d-4d31-bfa1-152041cc2f9d"
+      }
+    },
+    {
+      "SurveyID": "SV_07McTW65bCwKmGi",
+      "Element": "PROJ",
+      "PrimaryAttribute": "CORE",
+      "SecondaryAttribute": null,
+      "TertiaryAttribute": "1.1.0",
+      "Payload": {
+        "ProjectCategory": "CORE",
+        "SchemaVersion": "1.1.0"
+      }
+    },
+    {
+      "SurveyID": "SV_07McTW65bCwKmGi",
+      "Element": "QC",
+      "PrimaryAttribute": "Survey Question Count",
+      "SecondaryAttribute": "2",
+      "TertiaryAttribute": null,
+      "Payload": null
+    },
+    {
+      "SurveyID": "SV_07McTW65bCwKmGi",
+      "Element": "RS",
+      "PrimaryAttribute": "RS_2o559o4WwUGDI6q",
+      "SecondaryAttribute": "Default Response Set",
+      "TertiaryAttribute": null,
+      "Payload": null
+    },
+    {
+      "SurveyID": "SV_07McTW65bCwKmGi",
+      "Element": "SCO",
+      "PrimaryAttribute": "Scoring",
+      "SecondaryAttribute": null,
+      "TertiaryAttribute": null,
+      "Payload": {
+        "ScoringCategories": [],
+        "ScoringCategoryGroups": [],
+        "ScoringSummaryCategory": null,
+        "ScoringSummaryAfterQuestions": 0,
+        "ScoringSummaryAfterSurvey": 0,
+        "DefaultScoringCategory": null,
+        "AutoScoringCategory": null
+      }
+    },
+    {
+      "SurveyID": "SV_07McTW65bCwKmGi",
+      "Element": "SO",
+      "PrimaryAttribute": "Survey Options",
+      "SecondaryAttribute": null,
+      "TertiaryAttribute": null,
+      "Payload": {
+        "BackButton": "false",
+        "SaveAndContinue": "false",
+        "SurveyProtection": "PublicSurvey",
+        "BallotBoxStuffingPrevention": "false",
+        "NoIndex": "Yes",
+        "SecureResponseFiles": "true",
+        "SurveyExpiration": "None",
+        "SurveyTermination": "DefaultMessage",
+        "Header": "",
+        "Footer": "",
+        "ProgressBarDisplay": "None",
+        "PartialData": "+1 week",
+        "ValidationMessage": null,
+        "PreviousButton": "",
+        "NextButton": "",
+        "SurveyTitle": "TikTok FYP Natural Session Pilot v0.5.2 - QSF r4",
+        "SkinLibrary": "stanforduniversity",
+        "SkinType": "templated",
+        "Skin": {
+          "brandingId": "5236136929",
+          "templateId": "*base",
+          "overrides": null
+        },
+        "NewScoring": 1,
+        "SurveyMetaDescription": "The most powerful, simple and trusted way to gather experience data. Start your journey to experience management and try a free account today.",
+        "SurveyName": "TikTok FYP Natural Session Pilot v0.5.2 - QSF r4",
+        "EOSMessage": null,
+        "ShowExportTags": "false",
+        "CollectGeoLocation": "false",
+        "PasswordProtection": "No",
+        "AnonymizeResponse": "No",
+        "RefererCheck": "No",
+        "BallotBoxStuffingPreventionBehavior": null,
+        "BallotBoxStuffingPreventionMessage": null,
+        "BallotBoxStuffingPreventionMessageLibrary": null,
+        "BallotBoxStuffingPreventionURL": null,
+        "RecaptchaV3": "false",
+        "ConfirmStart": false,
+        "AutoConfirmStart": false,
+        "RelevantID": "false",
+        "RelevantIDLockoutPeriod": "+30 days",
+        "UseCustomSurveyLinkCompletedMessage": null,
+        "SurveyLinkCompletedMessage": null,
+        "SurveyLinkCompletedMessageLibrary": null,
+        "ResponseSummary": "No",
+        "EOSMessageLibrary": null,
+        "EOSRedirectURL": null,
+        "EmailThankYou": "false",
+        "ThankYouEmailMessageLibrary": null,
+        "ThankYouEmailMessage": null,
+        "ValidateMessage": "false",
+        "ValidationMessageLibrary": null,
+        "InactiveSurvey": null,
+        "PartialDeletion": null,
+        "PartialDataCloseAfter": "LastActivity",
+        "InactiveMessageLibrary": null,
+        "InactiveMessage": null,
+        "AvailableLanguages": {
+          "EN": []
+        },
+        "ProtectSelectionIds": true
+      }
+    },
+    {
+      "SurveyID": "SV_07McTW65bCwKmGi",
+      "Element": "SQ",
+      "PrimaryAttribute": "QID1",
+      "SecondaryAttribute": "Natural TikTok FYP session extension bridge",
+      "TertiaryAttribute": null,
+      "Payload": {
+        "QuestionText": "<div id=\"ttfp-natural-root\">Loading the natural TikTok session…</div><noscript>This task requires JavaScript and desktop Chrome.</noscript>",
+        "DataExportTag": "ttfp_natural_session",
+        "QuestionID": "QID1",
+        "QuestionType": "DB",
+        "Selector": "TB",
+        "QuestionDescription": "Natural TikTok FYP session extension bridge",
+        "Validation": {
+          "Settings": {
+            "Type": "None"
+          }
+        },
+        "Language": [],
+        "DataVisibility": {
+          "Private": false,
+          "Hidden": false
+        },
+        "Configuration": {
+          "QuestionDescriptionOption": "UseText"
+        },
+        "ChoiceOrder": [],
+        "NextChoiceId": 1,
+        "NextAnswerId": 1,
+        "QuestionJS": "/* global Qualtrics */\n'use strict';\n\n(function () {\n    const EXTENSION_ID = 'pjcgejllbdjbhegipdkagnafileoecpo';\n    const BRIDGE_NAME = 'tiktok-fyp-qualtrics-v1';\n    const MIN_BRIDGE_VERSION = 5;\n    const POLL_MS = 500;\n    const CHUNK_SIZE = 12000;\n    const MAX_CHUNKS = 6;\n    const SUMMARY_MAX_CHARS = 12000;\n    let teardown = function () {};\n\n    Qualtrics.SurveyEngine.addOnReady(function () {\n        const question = this;\n        const root = document.getElementById('ttfp-natural-root');\n        if (!root) {\n            return;\n        }\n        question.hideNextButton();\n        root.replaceChildren();\n\n        let port = null;\n        let requestSequence = 0;\n        let sessionId = cleanSessionId('${e://Field/ttfp_natural_session_id}');\n        let pollTimer = null;\n        let destroyed = false;\n        let finishing = false;\n        let completedSession = null;\n        const pending = new Map();\n\n        function cleanSessionId(value) {\n            return typeof value === 'string' && /^[A-Za-z0-9:_-]{1,120}$/.test(value)\n                ? value\n                : null;\n        }\n\n        function element(tag, className, text) {\n            const node = document.createElement(tag);\n            if (className) {\n                node.className = className;\n            }\n            if (text !== undefined) {\n                node.textContent = text;\n            }\n            return node;\n        }\n\n        function button(text, className) {\n            const node = element('button', className, text);\n            node.type = 'button';\n            return node;\n        }\n\n        const style = element('style');\n        style.textContent = `\n            #ttfp-natural-root, #ttfp-natural-root * { box-sizing: border-box; }\n            #ttfp-natural-root { color: #172033; font: 15px/1.45 -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif; }\n            .ttfpn-shell { margin: 0 auto; width: min(700px, 100%); }\n            .ttfpn-eyebrow { color: #595ee8; font-size: 11px; font-weight: 800; letter-spacing: .1em; margin: 0 0 7px; text-transform: uppercase; }\n            .ttfpn-title { font-size: clamp(25px, 4vw, 34px); line-height: 1.12; margin: 0 0 8px; }\n            .ttfpn-copy { color: #56627a; margin: 0 0 16px; }\n            .ttfpn-card { background: #fff; border: 1px solid #d7deeb; border-radius: 16px; box-shadow: 0 10px 30px rgba(23,32,51,.07); padding: 18px; }\n            .ttfpn-guide { background: #f7f8fc; border: 1px solid #e0e4f2; border-radius: 12px; margin-bottom: 18px; padding: 15px 16px; }\n            .ttfpn-guide h3 { font-size: 15px; margin: 0 0 10px; }\n            .ttfpn-steps { color: #344054; margin: 0; padding-left: 22px; }\n            .ttfpn-steps li + li { margin-top: 8px; }\n            .ttfpn-steps strong { color: #172033; }\n            .ttfpn-connect { border-top: 1px solid #e2e6ee; padding-top: 16px; }\n            .ttfpn-button { background: #fff; border: 1px solid #c6cede; border-radius: 9px; color: #172033; cursor: pointer; font: inherit; font-weight: 750; min-height: 42px; padding: 9px 15px; }\n            .ttfpn-button.primary { background: #595ee8; border-color: #595ee8; color: #fff; }\n            .ttfpn-button:disabled { cursor: not-allowed; opacity: .48; }\n            .ttfpn-status { color: #56627a; margin: 14px 0 0; min-height: 23px; }\n            .ttfpn-status.error { color: #b42318; }\n            .ttfpn-status.success { color: #067647; }\n            .ttfpn-progress { background: #e8ebf4; border-radius: 999px; height: 8px; margin-top: 12px; overflow: hidden; }\n            .ttfpn-progress-fill { background: #595ee8; height: 100%; transition: width .2s ease; width: 0; }\n            .ttfpn-actions { display: flex; gap: 9px; justify-content: center; margin-top: 15px; }\n            .ttfpn-note { border-top: 1px solid #e2e6ee; color: #667085; font-size: 12px; margin: 14px 0 0; padding-top: 13px; }\n            .ttfpn-result { background: #ecfdf3; border: 1px solid #abefc6; border-radius: 12px; color: #05603a; margin-top: 15px; padding: 14px; }\n            .ttfpn-result[hidden] { display: none; }\n        `;\n        document.head.appendChild(style);\n\n        const shell = element('section', 'ttfpn-shell');\n        const eyebrow = element('p', 'ttfpn-eyebrow', 'Research pilot');\n        const title = element('h2', 'ttfpn-title', 'Natural TikTok browsing session');\n        const copy = element(\n            'p',\n            'ttfpn-copy',\n            'You will browse your normal For You feed in TikTok. This survey resumes automatically when the timed session is complete.'\n        );\n        const card = element('div', 'ttfpn-card');\n        const guide = element('section', 'ttfpn-guide');\n        const guideTitle = element('h3', null, 'Before you begin');\n        const steps = element('ol', 'ttfpn-steps');\n        [\n            [\n                'Install the extension. ',\n                'For this pilot, open chrome://extensions, turn on Developer mode, select Load unpacked, and choose the supplied tiktok-fyp-pilot folder containing manifest.json.'\n            ],\n            [\n                'Grant TikTok access. ',\n                'Open TikTok FYP Research Pilot, accept the disclosure, and select Grant TikTok access. Then return here.'\n            ],\n            [\n                'Check the extension. ',\n                'This survey connects automatically. Wait for the confirmation below before starting.'\n            ],\n            [\n                'Start the natural session. ',\n                'Select Start natural session. TikTok opens in a dedicated foreground tab with a small timer. Browse the For You feed normally and keep that tab focused.'\n            ],\n            [\n                'Return automatically. ',\n                'When the required qualified time is reached, the dedicated TikTok tab closes and this exact survey tab returns to the front. Continue only after the completion message appears.'\n            ],\n        ].forEach(([heading, detail]) => {\n            const item = element('li');\n            item.append(element('strong', null, heading), document.createTextNode(detail));\n            steps.appendChild(item);\n        });\n        guide.append(guideTitle, steps);\n\n        const connectArea = element('div', 'ttfpn-connect');\n        const status = element(\n            'p',\n            'ttfpn-status',\n            'Checking the research extension automatically…'\n        );\n        const progressTrack = element('div', 'ttfpn-progress');\n        const progressFill = element('div', 'ttfpn-progress-fill');\n        progressTrack.appendChild(progressFill);\n        const actions = element('div', 'ttfpn-actions');\n        const retryButton = button('Check extension again', 'ttfpn-button');\n        retryButton.hidden = true;\n        const startButton = button('Start natural session', 'ttfpn-button primary');\n        startButton.disabled = true;\n        actions.append(retryButton, startButton);\n        const note = element(\n            'p',\n            'ttfpn-note',\n            'The response receives numeric post IDs, qualified exposure durations, aggregate pointer/click/wheel/key-event counts, and tab/window/video state markers. It never receives usernames, captions, creator information, cursor coordinates, or key values.'\n        );\n        const result = element('div', 'ttfpn-result');\n        result.hidden = true;\n        connectArea.append(status, progressTrack, actions, note, result);\n        card.append(guide, connectArea);\n        shell.append(eyebrow, title, copy, card);\n        root.appendChild(shell);\n\n        function setStatus(message, kind) {\n            status.textContent = message;\n            status.className = 'ttfpn-status' + (kind ? ' ' + kind : '');\n        }\n\n        function setEmbeddedData(name, value) {\n            Qualtrics.SurveyEngine.setEmbeddedData(\n                name,\n                value === null || value === undefined ? '' : String(value)\n            );\n        }\n\n        function storeChunkedPayload(payload) {\n            const serialized = JSON.stringify(payload);\n            const chunks = [];\n            for (let offset = 0; offset < serialized.length; offset += CHUNK_SIZE) {\n                chunks.push(serialized.slice(offset, offset + CHUNK_SIZE));\n            }\n            const truncated = chunks.length > MAX_CHUNKS;\n            const kept = chunks.slice(0, MAX_CHUNKS);\n            for (let index = 0; index < MAX_CHUNKS; index += 1) {\n                setEmbeddedData(\n                    'ttfp_natural_payload_' + (index + 1),\n                    kept[index] || ''\n                );\n            }\n            setEmbeddedData('ttfp_natural_payload_chunks', kept.length);\n            setEmbeddedData('ttfp_natural_payload_truncated', truncated ? '1' : '0');\n            return { serialized, truncated };\n        }\n\n        function storeSummaryPayload(payload) {\n            const source = payload && typeof payload === 'object' ? payload : {};\n            const sourceActivity = source.activity && typeof source.activity === 'object'\n                ? source.activity\n                : {};\n            const activity = {};\n            [\n                'pointerMoveBursts',\n                'clicks',\n                'wheelEvents',\n                'keyEvents',\n                'tabAwayCount',\n                'tabAwayMs',\n                'windowBlurCount',\n                'windowBlurMs',\n                'videoTransitions',\n                'pauseCount',\n                'resumeCount',\n            ].forEach((name) => {\n                activity[name] = Math.max(0, Number(sourceActivity[name]) || 0);\n            });\n            activity.qualificationReasonCounts = sourceActivity.qualificationReasonCounts &&\n                typeof sourceActivity.qualificationReasonCounts === 'object'\n                ? sourceActivity.qualificationReasonCounts\n                : {};\n            const sourceVideos = Array.isArray(source.videos) ? source.videos : [];\n            const summary = {\n                schemaVersion: 1,\n                sessionId: cleanSessionId(source.sessionId) || sessionId || '',\n                status: typeof source.status === 'string' ? source.status : 'complete',\n                startedAt: Number(source.startedAt) || null,\n                completedAt: Number(source.completedAt) || null,\n                stopReason: typeof source.stopReason === 'string' ? source.stopReason : '',\n                requiredQualifiedMs: Math.max(0, Number(source.requiredQualifiedMs) || 0),\n                qualifiedMs: Math.max(0, Number(source.qualifiedMs) || 0),\n                videoCount: sourceVideos.length,\n                videoRecordsStored: sourceVideos.length,\n                videoRecordsTruncated: false,\n                videos: sourceVideos.map((video) => ({\n                    videoId: String(video.videoId || ''),\n                    firstSeenAt: Number(video.firstSeenAt) || null,\n                    lastSeenAt: Number(video.lastSeenAt) || null,\n                    activeWatchMs: Math.max(0, Number(video.activeWatchMs) || 0),\n                    order: Math.max(0, Number(video.order) || 0),\n                    feedOrder: Number.isFinite(Number(video.feedOrder))\n                        ? Number(video.feedOrder)\n                        : null,\n                })),\n                activity,\n            };\n            let serialized = JSON.stringify(summary);\n            while (serialized.length > SUMMARY_MAX_CHARS && summary.videos.length > 0) {\n                summary.videos.pop();\n                summary.videoRecordsStored = summary.videos.length;\n                summary.videoRecordsTruncated = true;\n                serialized = JSON.stringify(summary);\n            }\n            const truncated = summary.videoRecordsTruncated || serialized.length > SUMMARY_MAX_CHARS;\n            setEmbeddedData('ttfp_natural_summary_json', serialized.slice(0, SUMMARY_MAX_CHARS));\n            setEmbeddedData('ttfp_natural_summary_truncated', truncated ? '1' : '0');\n            return { serialized, truncated };\n        }\n\n        function rejectPending(reason) {\n            pending.forEach((entry) => {\n                clearTimeout(entry.timer);\n                entry.reject(new Error(reason));\n            });\n            pending.clear();\n        }\n\n        function request(type, payload) {\n            return new Promise((resolve, reject) => {\n                if (!port) {\n                    reject(new Error('bridge_disconnected'));\n                    return;\n                }\n                requestSequence += 1;\n                const requestId = 'natural-' + Date.now() + '-' + requestSequence;\n                const timer = setTimeout(() => {\n                    pending.delete(requestId);\n                    reject(new Error('bridge_timeout'));\n                }, 8000);\n                pending.set(requestId, { resolve, reject, timer });\n                port.postMessage({ ...payload, type, requestId });\n            });\n        }\n\n        function connect() {\n            retryButton.hidden = true;\n            startButton.disabled = true;\n            if (!window.chrome || !chrome.runtime || typeof chrome.runtime.connect !== 'function') {\n                setStatus('Chrome did not expose the extension bridge on this survey domain.', 'error');\n                retryButton.hidden = false;\n                return;\n            }\n            if (port) {\n                port.disconnect();\n            }\n            setStatus('Connecting to the research extension…');\n            try {\n                port = chrome.runtime.connect(EXTENSION_ID, { name: BRIDGE_NAME });\n            } catch (_error) {\n                port = null;\n                retryButton.hidden = false;\n                setStatus('The research extension was not found. Install or reload version 0.5.2, then check again.', 'error');\n                return;\n            }\n            port.onMessage.addListener((message) => {\n                const entry = message && pending.get(message.requestId);\n                if (!entry) {\n                    return;\n                }\n                pending.delete(message.requestId);\n                clearTimeout(entry.timer);\n                entry.resolve(message);\n            });\n            port.onDisconnect.addListener(() => {\n                port = null;\n                rejectPending('bridge_disconnected');\n                if (!destroyed && !finishing) {\n                    startButton.disabled = true;\n                    retryButton.hidden = false;\n                    setStatus('Extension connection closed. Check the extension again.', 'error');\n                }\n            });\n            request('hello', { sessionId }).then(handleStatus).catch(() => {\n                retryButton.hidden = false;\n                setStatus('The research extension did not answer. Install or reload version 0.5.2, then check again.', 'error');\n            });\n        }\n\n        function schedulePoll() {\n            clearTimeout(pollTimer);\n            if (!destroyed && port && sessionId && !finishing) {\n                pollTimer = setTimeout(pollStatus, POLL_MS);\n            }\n        }\n\n        function pollStatus() {\n            request('status', { sessionId }).then(handleStatus).catch(() => {\n                if (!destroyed) {\n                    setStatus('Waiting to reconnect to the extension…', 'error');\n                }\n            });\n        }\n\n        function finishCompletedSession(session) {\n            if (finishing) {\n                return;\n            }\n            completedSession = session;\n            finishing = true;\n            clearTimeout(pollTimer);\n            const payload = session.naturalResult || {};\n            const stored = storeChunkedPayload(payload);\n            const summaryStored = storeSummaryPayload(payload);\n            const progress = session.progress || {};\n            setEmbeddedData('ttfp_natural_status', 'complete');\n            setEmbeddedData('ttfp_natural_required_ms',\n                Number(progress.naturalSessionSeconds || 0) * 1000);\n            setEmbeddedData('ttfp_natural_qualified_ms', Number(progress.qualifiedMs || 0));\n            setEmbeddedData('ttfp_natural_video_count', Array.isArray(payload.videos) ? payload.videos.length : 0);\n            setEmbeddedData(\n                'ttfp_natural_video_ids_json',\n                JSON.stringify((payload.videos || []).map((video) => video.videoId)).slice(0, CHUNK_SIZE)\n            );\n            setEmbeddedData('ttfp_natural_stop_reason', payload.stopReason || '');\n            request('finish', { sessionId }).then((response) => {\n                if (!response || !response.ok) {\n                    throw new Error((response && response.error) || 'finish_failed');\n                }\n                setEmbeddedData('ttfp_natural_status', 'viewed');\n                setEmbeddedData('ttfp_natural_completed', '1');\n                progressFill.style.width = '100%';\n                startButton.hidden = true;\n                result.hidden = false;\n                result.textContent = stored.truncated || summaryStored.truncated\n                    ? 'Session complete. The saved record reached a pilot size cap and was flagged. Opening your activity record…'\n                    : 'Session complete and saved. Opening your activity record…';\n                setStatus('Natural TikTok session complete and registered.', 'success');\n                question.showNextButton();\n                setTimeout(() => {\n                    if (!destroyed && typeof question.clickNextButton === 'function') {\n                        question.clickNextButton();\n                    }\n                }, 500);\n            }).catch(() => {\n                finishing = false;\n                startButton.hidden = false;\n                startButton.disabled = false;\n                startButton.textContent = 'Save completion again';\n                setStatus('The completed record could not be finalized. Select Save completion again.', 'error');\n            });\n        }\n\n        function handleStatus(response) {\n            if (!response || !response.ok) {\n                startButton.disabled = true;\n                retryButton.hidden = false;\n                setStatus('Extension error: ' + ((response && response.error) || 'unknown_error') + '.', 'error');\n                return;\n            }\n            const bridgeVersion = Number(response.bridgeVersion || 0);\n            const extensionVersion = response.extensionVersion || 'unknown';\n            setEmbeddedData('ttfp_natural_bridge_version', bridgeVersion);\n            if (bridgeVersion < MIN_BRIDGE_VERSION) {\n                startButton.disabled = true;\n                retryButton.hidden = false;\n                setStatus('Extension v' + extensionVersion + ' is outdated. Reload version 0.5.2 or later on chrome://extensions, then check again.', 'error');\n                return;\n            }\n            if (!response.permissionGranted) {\n                startButton.disabled = true;\n                retryButton.hidden = false;\n                setStatus('Open the extension, accept the disclosure, and grant TikTok access. Then check again.', 'error');\n                return;\n            }\n            if (response.conflict) {\n                startButton.disabled = true;\n                retryButton.hidden = false;\n                setStatus('Another extension session is active. Stop or finish it, then check again.', 'error');\n                return;\n            }\n            if (!response.session) {\n                retryButton.hidden = true;\n                sessionId = null;\n                startButton.hidden = false;\n                startButton.textContent = 'Start natural session';\n                startButton.disabled = false;\n                setStatus('Extension v' + extensionVersion + ' connected. TikTok access is ready.', 'success');\n                return;\n            }\n            if (response.session.collectionMode !== 'natural_fyp_session') {\n                startButton.disabled = true;\n                setStatus('The active session belongs to the covered-harvest survey, not this natural-session survey.', 'error');\n                return;\n            }\n            sessionId = response.session.id;\n            setEmbeddedData('ttfp_natural_session_id', sessionId);\n            setEmbeddedData('ttfp_natural_status', response.session.status);\n            const progress = response.session.progress || {};\n            const requiredMs = Math.max(1, Number(progress.naturalSessionSeconds || 60) * 1000);\n            const qualifiedMs = Math.max(0, Number(progress.qualifiedMs || 0));\n            progressFill.style.width = Math.min(100, qualifiedMs / requiredMs * 100) + '%';\n            if (response.session.status === 'complete' || response.session.status === 'viewed') {\n                finishCompletedSession(response.session);\n                return;\n            }\n            if (response.session.status === 'stopped' || response.session.status === 'failed') {\n                sessionId = null;\n                startButton.hidden = false;\n                startButton.disabled = false;\n                startButton.textContent = 'Start a fresh natural session';\n                setEmbeddedData('ttfp_natural_stop_reason', response.session.stopReason || 'stopped');\n                setStatus('The TikTok session stopped before completion. Start a fresh session to continue.', 'error');\n                return;\n            }\n            startButton.disabled = true;\n            setStatus(\n                Math.floor(qualifiedMs / 1000) + ' / ' + Math.round(requiredMs / 1000) +\n                ' qualified seconds. Continue browsing in the dedicated TikTok tab.'\n            );\n            schedulePoll();\n        }\n\n        retryButton.addEventListener('click', connect);\n        startButton.addEventListener('click', () => {\n            if (completedSession && sessionId) {\n                finishCompletedSession(completedSession);\n                return;\n            }\n            completedSession = null;\n            startButton.disabled = true;\n            setStatus('Opening the dedicated TikTok tab…');\n            request('start_natural', {}).then((response) => {\n                if (!response || !response.ok) {\n                    throw new Error((response && response.error) || 'start_failed');\n                }\n                sessionId = response.sessionId;\n                setEmbeddedData('ttfp_natural_session_id', sessionId);\n                setEmbeddedData('ttfp_natural_status', 'collecting');\n                schedulePoll();\n            }).catch((error) => {\n                startButton.disabled = false;\n                setStatus('Could not start: ' + error.message + '.', 'error');\n            });\n        });\n\n        function onVisibilityChange() {\n            if (document.visibilityState === 'visible' && port && sessionId && !finishing) {\n                pollStatus();\n            }\n        }\n\n        document.addEventListener('visibilitychange', onVisibilityChange);\n        connect();\n\n        teardown = function () {\n            destroyed = true;\n            clearTimeout(pollTimer);\n            rejectPending('page_unloaded');\n            document.removeEventListener('visibilitychange', onVisibilityChange);\n            if (port) {\n                port.disconnect();\n                port = null;\n            }\n            style.remove();\n        };\n    });\n\n    Qualtrics.SurveyEngine.addOnUnload(function () {\n        teardown();\n    });\n})();\n"
+      }
+    },
+    {
+      "SurveyID": "SV_07McTW65bCwKmGi",
+      "Element": "SQ",
+      "PrimaryAttribute": "QID2",
+      "SecondaryAttribute": "Natural TikTok FYP activity record",
+      "TertiaryAttribute": null,
+      "Payload": {
+        "QuestionText": "<div id=\"ttfp-natural-report-root\">Loading your TikTok activity record…</div><noscript>This task requires JavaScript and desktop Chrome.</noscript>",
+        "DataExportTag": "ttfp_natural_report",
+        "QuestionID": "QID2",
+        "QuestionType": "DB",
+        "Selector": "TB",
+        "QuestionDescription": "Natural TikTok FYP activity record",
+        "Validation": {
+          "Settings": {
+            "Type": "None"
+          }
+        },
+        "Language": [],
+        "DataVisibility": {
+          "Private": false,
+          "Hidden": false
+        },
+        "Configuration": {
+          "QuestionDescriptionOption": "UseText"
+        },
+        "ChoiceOrder": [],
+        "NextChoiceId": 1,
+        "NextAnswerId": 1,
+        "QuestionJS": "/* global Qualtrics */\n'use strict';\n\n(function () {\n    Qualtrics.SurveyEngine.addOnReady(function () {\n        const question = this;\n        const root = document.getElementById('ttfp-natural-report-root');\n        if (!root) {\n            return;\n        }\n        root.replaceChildren();\n\n        function element(tag, className, text) {\n            const node = document.createElement(tag);\n            if (className) {\n                node.className = className;\n            }\n            if (text !== undefined) {\n                node.textContent = text;\n            }\n            return node;\n        }\n\n        function getEmbeddedData(name) {\n            try {\n                const value = Qualtrics.SurveyEngine.getEmbeddedData(name);\n                return value === null || value === undefined ? '' : String(value);\n            } catch (_error) {\n                return '';\n            }\n        }\n\n        function nonnegative(value) {\n            const number = Number(value);\n            return Number.isFinite(number) && number >= 0 ? number : 0;\n        }\n\n        function seconds(milliseconds) {\n            return (nonnegative(milliseconds) / 1000).toFixed(1) + 's';\n        }\n\n        function parseSummary() {\n            const raw = getEmbeddedData('ttfp_natural_summary_json');\n            if (!raw) {\n                return null;\n            }\n            try {\n                const parsed = JSON.parse(raw);\n                return parsed && typeof parsed === 'object' ? parsed : null;\n            } catch (_error) {\n                return null;\n            }\n        }\n\n        function appendLine(parent, label, value) {\n            const line = element('p', 'ttfpnr-line');\n            line.append(\n                element('strong', null, label + ': '),\n                document.createTextNode(String(value))\n            );\n            parent.appendChild(line);\n        }\n\n        const style = element('style');\n        style.textContent = `\n            #ttfp-natural-report-root, #ttfp-natural-report-root * { box-sizing: border-box; }\n            #ttfp-natural-report-root { color: #172033; font: 15px/1.45 -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif; }\n            .ttfpnr-shell { margin: 0 auto; width: min(820px, 100%); }\n            .ttfpnr-title { font-size: 24px; line-height: 1.2; margin: 0 0 18px; }\n            .ttfpnr-output { border-top: 1px solid #d7dce5; padding-top: 14px; }\n            .ttfpnr-line { margin: 0 0 7px; overflow-wrap: anywhere; }\n            .ttfpnr-empty { color: #b42318; margin: 0; }\n        `;\n        document.head.appendChild(style);\n\n        const shell = element('section', 'ttfpnr-shell');\n        shell.appendChild(element('h2', 'ttfpnr-title', 'Recorded session data'));\n        const summary = parseSummary();\n        if (!summary) {\n            shell.appendChild(element(\n                'p',\n                'ttfpnr-empty',\n                'No valid natural-session summary was found.'\n            ));\n            root.appendChild(shell);\n            question.showNextButton();\n            return;\n        }\n\n        const videos = Array.isArray(summary.videos) ? summary.videos : [];\n        const activity = summary.activity && typeof summary.activity === 'object'\n            ? summary.activity\n            : {};\n        const output = element('div', 'ttfpnr-output');\n        appendLine(output, 'Status', summary.status || 'complete');\n        appendLine(output, 'Qualified viewing time', seconds(summary.qualifiedMs));\n        appendLine(output, 'Videos registered (at least 0.5s)', Math.floor(nonnegative(summary.videoCount)));\n        videos.forEach((video, index) => {\n            appendLine(\n                output,\n                'Video ' + (Math.floor(nonnegative(video.order)) || index + 1),\n                'post ID ' + String(video.videoId || '—') +\n                    '; active watch time ' + seconds(video.activeWatchMs)\n            );\n        });\n        appendLine(output, 'Video transitions', Math.floor(nonnegative(activity.videoTransitions)));\n        appendLine(output, 'Pointer-movement bursts', Math.floor(nonnegative(activity.pointerMoveBursts)));\n        appendLine(output, 'Clicks', Math.floor(nonnegative(activity.clicks)));\n        appendLine(output, 'Scroll-wheel events', Math.floor(nonnegative(activity.wheelEvents)));\n        appendLine(output, 'Key events', Math.floor(nonnegative(activity.keyEvents)));\n        appendLine(output, 'Pauses', Math.floor(nonnegative(activity.pauseCount)));\n        appendLine(output, 'Resumes', Math.floor(nonnegative(activity.resumeCount)));\n        appendLine(output, 'Tab-away events', Math.floor(nonnegative(activity.tabAwayCount)));\n        appendLine(output, 'Tab-away time', seconds(activity.tabAwayMs));\n        appendLine(output, 'Window-blur events', Math.floor(nonnegative(activity.windowBlurCount)));\n        appendLine(output, 'Window-unfocused time', seconds(activity.windowBlurMs));\n        appendLine(\n            output,\n            'Compact summary truncated',\n            getEmbeddedData('ttfp_natural_summary_truncated') === '1' ? 'yes' : 'no'\n        );\n        shell.appendChild(output);\n        root.appendChild(shell);\n        question.showNextButton();\n    });\n})();\n"
+      }
+    },
+    {
+      "SurveyID": "SV_07McTW65bCwKmGi",
+      "Element": "STAT",
+      "PrimaryAttribute": "Survey Statistics",
+      "SecondaryAttribute": null,
+      "TertiaryAttribute": null,
+      "Payload": {
+        "MobileCompatible": true,
+        "ID": "Survey Statistics"
+      }
+    }
+  ]
+}

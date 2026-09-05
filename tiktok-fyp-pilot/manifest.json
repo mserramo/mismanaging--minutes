@@ -1,8 +1,9 @@
 {
   "manifest_version": 3,
   "name": "TikTok FYP Research Pilot",
-  "version": "0.4.5",
-  "description": "Harvests a covered, account-personalized TikTok pool for the allowlisted Qualtrics research viewer.",
+  "version": "0.5.3",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAxA8cQR21SlSIMA2XieVWXZLr6iBlbzW7fdvii/38En2MS4vHjILonrW6iX+FdA0M9QfALz+7F/cs7zqllV8vy6rUTM/oOZlEzrWnad4ypNI9Xc1XLzyU9Gn3VUykzwBUwoGazAulm6Uizv3YjQQuiFfc58IwpfseYE/t+Nm+MVZXBsjo5KqpL6mNiI51xY0zQ92bDBLfdQcrXJ8spZ+Rctl7AJxvkSjDjTnUvbaFHpTlDjQ4T9BSLV02Q5Y9xAnmJfyo0pcE7+Hh0iBkgmZ5uFliv3SgJ81JYz/fdJSHJnqnAAc8uid4w50Qqc1LHUUIqcG6Vc73Q70wFmiYX3x5/wIDAQAB",
+  "description": "Runs covered-harvest and natural-browsing TikTok FYP research sessions for allowlisted Qualtrics surveys.",
   "minimum_chrome_version": "111",
   "incognito": "not_allowed",
   "permissions": [

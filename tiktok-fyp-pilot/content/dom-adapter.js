@@ -193,6 +193,15 @@
             }
         );
 
+        // Selector groups can discover cards in different passes. Preserve feed
+        // order across those passes rather than treating discovery as DOM order.
+        roots.sort((left, right) => {
+            if (typeof left.compareDocumentPosition !== 'function') {
+                return 0;
+            }
+            const position = left.compareDocumentPosition(right);
+            return position & 4 ? -1 : position & 2 ? 1 : 0;
+        });
         const records = roots.map((element, index) => {
             const ids = videoIdsWithin(element, baseUrl);
             const ambiguous = ids.length !== 1;
@@ -284,6 +293,34 @@
         return Boolean(record && record.element && record.element.isConnected);
     }
 
+    function coveredFeedPosition(documentObject, records, width, height) {
+        // Include empty structural slots: virtual feeds often hydrate only the
+        // current slot and one neighbour. An ID-only snapshot misses the next
+        // place we must scroll to in order to request another recommendation.
+        let cards = Array.from(documentObject.querySelectorAll(CARD_SELECTORS.join(',')))
+            .filter((card) => card.isConnected);
+        cards = cards.filter((card) => !cards.some((other) =>
+            other !== card && typeof other.contains === 'function' && other.contains(card)
+        ));
+        if (!cards.length) {
+            cards = records.filter(connected).map((record) => record.element);
+        }
+        let current = null;
+        let bestRatio = 0;
+        cards.forEach((card) => {
+            const rect = card.getBoundingClientRect();
+            const ratio = Core.visibleRatio(rect, width, height);
+            if (ratio > bestRatio) {
+                current = card;
+                bestRatio = ratio;
+            }
+        });
+        if (bestRatio < 0.5) {
+            return { current: null, next: null };
+        }
+        return { current, next: cards[cards.indexOf(current) + 1] || null };
+    }
+
     function recordsWithAnyId(records, ids) {
         const targetIds = ids instanceof Set ? ids : new Set(ids || []);
         return (Array.isArray(records) ? records : []).filter(
@@ -308,6 +345,7 @@
         videoIsPlaying,
         addedVideoIds,
         connected,
+        coveredFeedPosition,
         recordsWithAnyId,
     });
 });

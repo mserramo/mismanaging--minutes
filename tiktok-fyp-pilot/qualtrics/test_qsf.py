@@ -30,7 +30,8 @@ class TikTokQualtricsQsfTests(unittest.TestCase):
             element for element in qsf["SurveyElements"] if element["Element"] == "SQ"
         )["Payload"]
         javascript = question["QuestionJS"]
-        self.assertIn("chrome.runtime.connect(extensionId", javascript)
+        self.assertIn("const EXTENSION_ID = 'pjcgejllbdjbhegipdkagnafileoecpo'", javascript)
+        self.assertIn("chrome.runtime.connect(EXTENSION_ID", javascript)
         self.assertIn("tiktok-fyp-qualtrics-v1", javascript)
         self.assertIn("MIN_BRIDGE_VERSION = 2", javascript)
         self.assertIn("standalone extension session is active", javascript)
@@ -42,8 +43,8 @@ class TikTokQualtricsQsfTests(unittest.TestCase):
         self.assertIn("element('div', 'ttfpq-player-mount')", javascript)
         self.assertIn("Open chrome://extensions", javascript)
         self.assertIn("select Load unpacked", javascript)
-        self.assertIn("copy the 32-letter ID", javascript)
-        self.assertIn("select Connect, and then select Start harvest", javascript)
+        self.assertIn("checks the extension automatically", javascript)
+        self.assertIn("Check extension again", javascript)
         self.assertIn("Keep both tabs open", javascript)
         self.assertIn("The collected videos will appear here automatically", javascript)
         self.assertIn("player.addEventListener('click', togglePlayback)", javascript)
@@ -54,8 +55,11 @@ class TikTokQualtricsQsfTests(unittest.TestCase):
         self.assertNotIn("addEventListener('wheel'", javascript)
         self.assertNotIn("WHEEL_DEBOUNCE_MS", javascript)
         self.assertNotIn("document.write", javascript)
-        self.assertEqual(javascript.count("${"), 2)
-        self.assertEqual(javascript.count("${e://Field/ttfp_"), 2)
+        self.assertNotIn("extensionInput", javascript)
+        self.assertNotIn("Chrome extension ID", javascript)
+        self.assertNotIn("copy the 32-letter ID", javascript)
+        self.assertEqual(javascript.count("${"), 1)
+        self.assertEqual(javascript.count("${e://Field/ttfp_"), 1)
 
     def test_survey_does_not_inherit_template_prolific_redirect(self) -> None:
         qsf = build_qsf.build_qsf()

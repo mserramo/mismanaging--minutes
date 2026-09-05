@@ -83,6 +83,7 @@ function makeTable(headers, rows) {
 
 function renderSession(session, initiallyOpen) {
     const automated = session.collectionMode === Core.COLLECTION_MODE.AUTOMATED_BACKGROUND;
+    const natural = session.collectionMode === Core.COLLECTION_MODE.NATURAL_FYP_SESSION;
     const progress = Core.sessionProgress(session);
     const details = node('details', 'card session-card');
     details.open = initiallyOpen;
@@ -97,13 +98,20 @@ function renderSession(session, initiallyOpen) {
     const body = node('div', 'session-body');
     const meta = node('div', 'metadata-grid');
     meta.append(
-        metadataItem('Mode', automated ? 'Automated background' : 'Legacy manual'),
+        metadataItem(
+            'Mode',
+            automated ? 'Automated background' : natural ? 'Natural FYP session' : 'Legacy manual'
+        ),
         metadataItem('Capture strategy', session.captureStrategy || 'Legacy / unknown'),
         metadataItem('Delivery target', session.deliveryTarget || 'Local viewer'),
         metadataItem('Stop reason', session.stopReason || '—'),
         metadataItem(
             'Locked harvest window',
             automated ? `${session.lockedSettings.harvestDurationSeconds}s` : '—'
+        ),
+        metadataItem(
+            'Locked natural time',
+            natural ? `${session.lockedSettings.naturalSessionSeconds}s qualified` : '—'
         ),
         metadataItem(
             automated ? 'Collection rule' : 'Unseen target',
@@ -139,6 +147,35 @@ function renderSession(session, initiallyOpen) {
                 `${record.hydrationLatencyMs}ms`,
                 record.advanceAttempt,
                 record.driverVideoId || '—',
+            ])
+        ));
+    }
+
+    if (natural && session.naturalActivity) {
+        body.appendChild(node('h3', 'section-heading', 'Natural-session activity summary'));
+        body.appendChild(makeTable(
+            ['Measure', 'Value'],
+            [
+                ['Pointer movement bursts', session.naturalActivity.pointerMoveBursts],
+                ['Clicks', session.naturalActivity.clicks],
+                ['Wheel events', session.naturalActivity.wheelEvents],
+                ['Key events (values not stored)', session.naturalActivity.keyEvents],
+                ['Tab-away episodes', session.naturalActivity.tabAwayCount],
+                ['Tab-away time', formatMs(session.naturalActivity.tabAwayMs)],
+                ['Window-blur episodes', session.naturalActivity.windowBlurCount],
+                ['Window-blur time', formatMs(session.naturalActivity.windowBlurMs)],
+                ['Video transitions', session.naturalActivity.videoTransitions],
+                ['Pauses', session.naturalActivity.pauseCount],
+                ['Resumes', session.naturalActivity.resumeCount],
+            ]
+        ));
+        body.appendChild(node('h3', 'section-heading', 'Natural-session state markers'));
+        body.appendChild(makeTable(
+            ['Event', 'Time', 'Video ID'],
+            session.naturalActivity.events.map((record) => [
+                record.type,
+                formatDate(record.at),
+                record.videoId || '—',
             ])
         ));
     }
@@ -217,7 +254,8 @@ async function refresh() {
     elements.sessionCount.textContent = String(state.sessions.length);
     elements.permission.textContent = response.permissionGranted ? 'Granted' : 'Not granted';
     elements.settings.textContent =
-        `${state.settings.harvestDurationSeconds}s maximize window`;
+        `${state.settings.harvestDurationSeconds}s harvest · ` +
+        `${state.settings.naturalSessionSeconds}s natural`;
     elements.revoke.disabled = !response.permissionGranted;
     elements.sessions.replaceChildren();
     elements.empty.hidden = state.sessions.length !== 0;

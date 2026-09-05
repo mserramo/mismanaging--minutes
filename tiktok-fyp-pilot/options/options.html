@@ -34,6 +34,19 @@
                     </span>
                 </div>
 
+                <div class="field">
+                    <label for="natural-duration">Natural FYP session</label>
+                    <div class="input-with-unit">
+                        <input id="natural-duration" name="natural-duration" type="number" min="15" max="1800" step="1" required>
+                        <span>qualified seconds</span>
+                    </div>
+                    <span class="field-help">
+                        Used only by the separate natural-browsing Qualtrics survey. Time counts
+                        while its TikTok tab is visible and focused and one identifiable,
+                        substantially visible video is actively playing.
+                    </span>
+                </div>
+
                 <div class="button-row">
                     <button id="save" type="submit">Save pilot settings</button>
                     <button id="reset" class="secondary" type="button">Restore defaults</button>
@@ -45,10 +58,11 @@
         <section class="card boundary-card">
             <h2>Pilot data boundary</h2>
             <p>
-                The participant-facing flow starts from the allowlisted Stanford Qualtrics pilot.
-                Only the bound survey tab receives its session's numeric queue and records the IDs
-                and playback log. This prototype has no general upload endpoint, participant
-                identifier, or oTree integration.
+                Both participant-facing modes start from their own allowlisted Stanford Qualtrics
+                survey. The natural mode records numeric post IDs, qualified exposure duration,
+                and bounded event counts; it never records key values, cursor coordinates,
+                usernames, captions, or creator information. This prototype has no general upload
+                endpoint, participant identifier, or oTree integration.
             </p>
         </section>
     </main>

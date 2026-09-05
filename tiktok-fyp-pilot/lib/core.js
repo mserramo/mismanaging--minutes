@@ -7,17 +7,20 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
     'use strict';
 
-    const SCHEMA_VERSION = 4;
+    const SCHEMA_VERSION = 5;
     const LEGACY_SCHEMA_VERSION = 1;
     const TARGET_BANK_SCHEMA_VERSION = 2;
     const ONE_AHEAD_SCHEMA_VERSION = 3;
+    const BACKGROUND_SCHEMA_VERSION = 4;
     const TIKTOK_ORIGIN = 'https://www.tiktok.com';
     const TIKTOK_FYP_URL = `${TIKTOK_ORIGIN}/foryou`;
+    const TIKTOK_NATURAL_FYP_URL = `${TIKTOK_FYP_URL}#ttfp-natural-session`;
     const CONTENT_SCRIPT_ID = 'tiktok-fyp-pilot-collector';
     const MIN_SAFE_AHEAD = 1;
 
     const COLLECTION_MODE = Object.freeze({
         AUTOMATED_BACKGROUND: 'automated_background',
+        NATURAL_FYP_SESSION: 'natural_fyp_session',
         LEGACY_MANUAL: 'legacy_manual',
     });
 
@@ -29,14 +32,17 @@
     const CAPTURE_STRATEGY = Object.freeze({
         COVERED_EVERY_ITEM: 'covered_every_item',
         OFFSCREEN_SUCCESSOR: 'offscreen_successor',
+        NATURAL_EXPOSURE: 'natural_exposure',
     });
 
     const DEFAULT_SETTINGS = Object.freeze({
         harvestDurationSeconds: 30,
+        naturalSessionSeconds: 60,
     });
 
     const SETTING_LIMITS = Object.freeze({
         harvestDurationSeconds: Object.freeze({ min: 15, max: 600 }),
+        naturalSessionSeconds: Object.freeze({ min: 15, max: 1800 }),
     });
 
     const MESSAGE_TYPES = Object.freeze({
@@ -52,6 +58,8 @@
         RESERVE_VIDEO: 'RESERVE_VIDEO',
         CONFIRM_RESERVATION: 'CONFIRM_RESERVATION',
         COLLECTOR_READY: 'COLLECTOR_READY',
+        NATURAL_COLLECTOR_READY: 'NATURAL_COLLECTOR_READY',
+        NATURAL_ACTIVITY: 'NATURAL_ACTIVITY',
         HARVEST_STEP: 'HARVEST_STEP',
         HARVEST_FAIL: 'HARVEST_FAIL',
         RETRY_HARVEST: 'RETRY_HARVEST',
@@ -120,6 +128,24 @@
         'failed',
     ]);
 
+    const NATURAL_EVENT_TYPES = new Set([
+        'tab_away',
+        'tab_return',
+        'window_blur',
+        'window_focus',
+        'video_transition',
+        'video_pause',
+        'video_resume',
+        'unsupported_page',
+    ]);
+
+    const NATURAL_ACTIVITY_COUNT_KEYS = Object.freeze([
+        'pointerMoveBursts',
+        'clicks',
+        'wheelEvents',
+        'keyEvents',
+    ]);
+
     function toBoundedInteger(value, minimum, maximum, fallback) {
         const number = Number(value);
         if (!Number.isFinite(number)) {
@@ -136,6 +162,12 @@
                 SETTING_LIMITS.harvestDurationSeconds.min,
                 SETTING_LIMITS.harvestDurationSeconds.max,
                 DEFAULT_SETTINGS.harvestDurationSeconds
+            ),
+            naturalSessionSeconds: toBoundedInteger(
+                input.naturalSessionSeconds,
+                SETTING_LIMITS.naturalSessionSeconds.min,
+                SETTING_LIMITS.naturalSessionSeconds.max,
+                DEFAULT_SETTINGS.naturalSessionSeconds
             ),
         };
     }
@@ -182,6 +214,74 @@
             step.retainDriver = true;
         }
         return step;
+    }
+
+    function emptyNaturalActivity() {
+        return {
+            pointerMoveBursts: 0,
+            clicks: 0,
+            wheelEvents: 0,
+            keyEvents: 0,
+            tabAwayCount: 0,
+            tabAwayMs: 0,
+            windowBlurCount: 0,
+            windowBlurMs: 0,
+            videoTransitions: 0,
+            pauseCount: 0,
+            resumeCount: 0,
+            lastParticipantActivityAt: null,
+            qualificationReasonCounts: {},
+            events: [],
+        };
+    }
+
+    function sanitizeNaturalActivity(raw, fallbackAt) {
+        const input = raw && typeof raw === 'object' ? raw : {};
+        const output = emptyNaturalActivity();
+        [
+            ...NATURAL_ACTIVITY_COUNT_KEYS,
+            'tabAwayCount',
+            'windowBlurCount',
+            'videoTransitions',
+            'pauseCount',
+            'resumeCount',
+        ].forEach((key) => {
+            output[key] = toBoundedInteger(input[key], 0, 1000000, 0);
+        });
+        output.tabAwayMs = persistedNumber(input.tabAwayMs, 0, 86400000, 0);
+        output.windowBlurMs = persistedNumber(input.windowBlurMs, 0, 86400000, 0);
+        output.lastParticipantActivityAt = persistedNumber(
+            input.lastParticipantActivityAt,
+            0,
+            1e15,
+            null
+        );
+        Object.entries(
+            input.qualificationReasonCounts &&
+            typeof input.qualificationReasonCounts === 'object'
+                ? input.qualificationReasonCounts
+                : {}
+        ).slice(0, 20).forEach(([reason, count]) => {
+            const safeReason = sanitizeToken(reason, null);
+            if (safeReason) {
+                output.qualificationReasonCounts[safeReason] =
+                    toBoundedInteger(count, 0, 1000000, 0);
+            }
+        });
+        for (const event of (Array.isArray(input.events) ? input.events : []).slice(-500)) {
+            if (!event || !NATURAL_EVENT_TYPES.has(event.type)) {
+                continue;
+            }
+            const clean = {
+                type: event.type,
+                at: persistedNumber(event.at, 0, 1e15, fallbackAt),
+            };
+            if (isVideoId(event.videoId)) {
+                clean.videoId = event.videoId;
+            }
+            output.events.push(clean);
+        }
+        return output;
     }
 
     function normalizePersistedSession(raw, sourceSchemaVersion) {
@@ -384,9 +484,20 @@
         const targetBankInput = sourceSchemaVersion === TARGET_BANK_SCHEMA_VERSION;
         const collectionMode = legacyInput || raw.collectionMode === COLLECTION_MODE.LEGACY_MANUAL
             ? COLLECTION_MODE.LEGACY_MANUAL
-            : COLLECTION_MODE.AUTOMATED_BACKGROUND;
+            : raw.collectionMode === COLLECTION_MODE.NATURAL_FYP_SESSION
+                ? COLLECTION_MODE.NATURAL_FYP_SESSION
+                : COLLECTION_MODE.AUTOMATED_BACKGROUND;
         const lockedSettings = collectionMode === COLLECTION_MODE.LEGACY_MANUAL
             ? sanitizeLegacySettings(raw.lockedSettings)
+            : collectionMode === COLLECTION_MODE.NATURAL_FYP_SESSION
+                ? {
+                    naturalSessionSeconds: toBoundedInteger(
+                        raw.lockedSettings && raw.lockedSettings.naturalSessionSeconds,
+                        SETTING_LIMITS.naturalSessionSeconds.min,
+                        SETTING_LIMITS.naturalSessionSeconds.max,
+                        DEFAULT_SETTINGS.naturalSessionSeconds
+                    ),
+                }
             : targetBankInput
                 ? {
                     harvestDurationSeconds: toBoundedInteger(
@@ -396,7 +507,10 @@
                         90
                     ),
                 }
-                : sanitizeSettings(raw.lockedSettings);
+                : {
+                    harvestDurationSeconds:
+                        sanitizeSettings(raw.lockedSettings).harvestDurationSeconds,
+                };
         const harvestSteps = [];
         if (collectionMode === COLLECTION_MODE.AUTOMATED_BACKGROUND) {
             for (const step of (Array.isArray(raw.harvestSteps) ? raw.harvestSteps : []).slice(-500)) {
@@ -411,7 +525,9 @@
             id,
             collectionMode,
             captureStrategy:
-                raw.captureStrategy === CAPTURE_STRATEGY.COVERED_EVERY_ITEM
+                collectionMode === COLLECTION_MODE.NATURAL_FYP_SESSION
+                    ? CAPTURE_STRATEGY.NATURAL_EXPOSURE
+                    : raw.captureStrategy === CAPTURE_STRATEGY.COVERED_EVERY_ITEM
                     ? CAPTURE_STRATEGY.COVERED_EVERY_ITEM
                     : CAPTURE_STRATEGY.OFFSCREEN_SUCCESSOR,
             deliveryTarget:
@@ -431,6 +547,9 @@
                     : persistedNumber(raw.viewerTabOpenedAt, 0, 1e15, null),
             status: raw.status,
             targetTabId: Number.isInteger(raw.targetTabId) ? raw.targetTabId : null,
+            targetTabOwned:
+                collectionMode === COLLECTION_MODE.NATURAL_FYP_SESSION &&
+                raw.targetTabOwned === true,
             lockedSettings,
             qualifiedMs: persistedNumber(raw.qualifiedMs, 0, 86400000, 0),
             harvestStartedAt: collectionMode === COLLECTION_MODE.AUTOMATED_BACKGROUND
@@ -468,6 +587,10 @@
             diagnostics,
             viewerEvents,
             sourceSequences,
+            naturalActivity:
+                collectionMode === COLLECTION_MODE.NATURAL_FYP_SESSION
+                    ? sanitizeNaturalActivity(raw.naturalActivity, startedAt)
+                    : null,
         };
         if (Number.isInteger(raw.viewerTabId)) {
             session.viewerTabId = raw.viewerTabId;
@@ -482,9 +605,12 @@
         }
         if ([SESSION_STATUS.COMPLETE, SESSION_STATUS.VIEWING, SESSION_STATUS.VIEWED].includes(session.status)) {
             const progress = sessionProgress(session);
-            if (!progress.unseenComplete || (
-                collectionMode === COLLECTION_MODE.LEGACY_MANUAL && !progress.timeComplete
-            )) {
+            const validCompletion = collectionMode === COLLECTION_MODE.NATURAL_FYP_SESSION
+                ? progress.timeComplete
+                : progress.unseenComplete && (
+                    collectionMode !== COLLECTION_MODE.LEGACY_MANUAL || progress.timeComplete
+                );
+            if (!validCompletion) {
                 return null;
             }
         }
@@ -500,6 +626,7 @@
             LEGACY_SCHEMA_VERSION,
             TARGET_BANK_SCHEMA_VERSION,
             ONE_AHEAD_SCHEMA_VERSION,
+            BACKGROUND_SCHEMA_VERSION,
         ]
             .includes(sourceSchemaVersion);
         if (!migratable && sourceSchemaVersion !== SCHEMA_VERSION) {
@@ -511,7 +638,11 @@
             if (!session || sessions.some((existing) => existing.id === session.id)) {
                 return createDefaultState();
             }
-            if (migratable && session.status === SESSION_STATUS.COLLECTING) {
+            if (
+                sourceSchemaVersion !== BACKGROUND_SCHEMA_VERSION &&
+                migratable &&
+                session.status === SESSION_STATUS.COLLECTING
+            ) {
                 stopSession(session, Date.now(), 'collection_rule_replaced');
                 session.targetTabId = null;
             }
@@ -579,11 +710,20 @@
 
     function createSession(settings, metadata) {
         const now = sanitizeTimestamp(metadata && metadata.startedAt, Date.now());
-        const lockedSettings = sanitizeSettings(settings);
+        const sanitizedSettings = sanitizeSettings(settings);
+        const collectionMode = metadata &&
+            metadata.collectionMode === COLLECTION_MODE.NATURAL_FYP_SESSION
+            ? COLLECTION_MODE.NATURAL_FYP_SESSION
+            : COLLECTION_MODE.AUTOMATED_BACKGROUND;
+        const lockedSettings = collectionMode === COLLECTION_MODE.NATURAL_FYP_SESSION
+            ? { naturalSessionSeconds: sanitizedSettings.naturalSessionSeconds }
+            : { harvestDurationSeconds: sanitizedSettings.harvestDurationSeconds };
         return {
             id: sanitizeToken(metadata && metadata.id, `session-${now}`),
-            collectionMode: COLLECTION_MODE.AUTOMATED_BACKGROUND,
-            captureStrategy: CAPTURE_STRATEGY.COVERED_EVERY_ITEM,
+            collectionMode,
+            captureStrategy: collectionMode === COLLECTION_MODE.NATURAL_FYP_SESSION
+                ? CAPTURE_STRATEGY.NATURAL_EXPOSURE
+                : CAPTURE_STRATEGY.COVERED_EVERY_ITEM,
             deliveryTarget:
                 metadata && metadata.deliveryTarget === DELIVERY_TARGET.QUALTRICS
                     ? DELIVERY_TARGET.QUALTRICS
@@ -600,11 +740,19 @@
             targetTabId: Number.isInteger(metadata && metadata.targetTabId)
                 ? metadata.targetTabId
                 : null,
+            targetTabOwned: collectionMode === COLLECTION_MODE.NATURAL_FYP_SESSION &&
+                metadata && metadata.targetTabOwned === true,
             lockedSettings,
             qualifiedMs: 0,
-            harvestStartedAt: now,
-            harvestDeadlineAt: now + lockedSettings.harvestDurationSeconds * 1000,
-            harvestPhase: 'starting',
+            harvestStartedAt: collectionMode === COLLECTION_MODE.AUTOMATED_BACKGROUND
+                ? now
+                : null,
+            harvestDeadlineAt: collectionMode === COLLECTION_MODE.AUTOMATED_BACKGROUND
+                ? now + lockedSettings.harvestDurationSeconds * 1000
+                : null,
+            harvestPhase: collectionMode === COLLECTION_MODE.AUTOMATED_BACKGROUND
+                ? 'starting'
+                : null,
             harvestSteps: [],
             batchCounter: 0,
             seen: [],
@@ -615,6 +763,9 @@
             diagnostics: [],
             viewerEvents: [],
             sourceSequences: {},
+            naturalActivity: collectionMode === COLLECTION_MODE.NATURAL_FYP_SESSION
+                ? emptyNaturalActivity()
+                : null,
         };
     }
 
@@ -640,10 +791,13 @@
             return null;
         }
         const automated = session.collectionMode === COLLECTION_MODE.AUTOMATED_BACKGROUND;
+        const natural = session.collectionMode === COLLECTION_MODE.NATURAL_FYP_SESSION;
         const now = sanitizeTimestamp(at, Date.now());
         const timeoutMs = automated
             ? session.lockedSettings.harvestDurationSeconds * 1000
-            : session.lockedSettings.durationSeconds * 1000;
+            : natural
+                ? session.lockedSettings.naturalSessionSeconds * 1000
+                : session.lockedSettings.durationSeconds * 1000;
         const harvestElapsedMs = automated
             ? Math.min(timeoutMs, Math.max(0, now - session.harvestStartedAt))
             : 0;
@@ -652,7 +806,14 @@
             status: session.status,
             stopReason: session.stopReason || null,
             collectionMode: session.collectionMode,
-            durationSeconds: automated ? null : session.lockedSettings.durationSeconds,
+            durationSeconds: automated
+                ? null
+                : natural
+                    ? session.lockedSettings.naturalSessionSeconds
+                    : session.lockedSettings.durationSeconds,
+            naturalSessionSeconds: natural
+                ? session.lockedSettings.naturalSessionSeconds
+                : null,
             harvestDurationSeconds: automated
                 ? session.lockedSettings.harvestDurationSeconds
                 : null,
@@ -660,7 +821,9 @@
             harvestRemainingMs: automated ? Math.max(0, timeoutMs - harvestElapsedMs) : null,
             harvestPhase: automated ? session.harvestPhase : null,
             timedOut: automated ? now >= session.harvestDeadlineAt : false,
-            targetUnseenCount: automated ? null : session.lockedSettings.targetUnseenCount,
+            targetUnseenCount: automated || natural
+                ? null
+                : session.lockedSettings.targetUnseenCount,
             qualifiedMs: session.qualifiedMs,
             qualifiedSeconds: Math.floor(session.qualifiedMs / 1000),
             timeComplete: automated
@@ -671,7 +834,9 @@
                 ].includes(session.status)
                 : session.qualifiedMs >= timeoutMs,
             unseenCount: validReservedVideos(session).length,
-            unseenComplete: automated
+            unseenComplete: natural
+                ? true
+                : automated
                 ? validReservedVideos(session).length > 0
                 : validReservedVideos(session).length >= session.lockedSettings.targetUnseenCount,
             seenCount: session.seen.length,
@@ -903,6 +1068,158 @@
         return { applied: qualifiedDeltaMs > 0 || seenApplied, seenApplied };
     }
 
+    function applyNaturalActivity(session, payload) {
+        if (
+            !session ||
+            session.status !== SESSION_STATUS.COLLECTING ||
+            session.collectionMode !== COLLECTION_MODE.NATURAL_FYP_SESSION
+        ) {
+            return { applied: false, reason: 'not_natural_session' };
+        }
+        const input = payload && typeof payload === 'object' ? payload : {};
+        const now = sanitizeTimestamp(input.at, Date.now());
+        let qualifiedDeltaMs = 0;
+        let seenApplied = false;
+        for (const sample of (Array.isArray(input.samples) ? input.samples : []).slice(0, 20)) {
+            if (!sample || !isVideoId(sample.videoId)) {
+                continue;
+            }
+            const qualifiedSampleMs = clampTickDelta(sample.qualifiedDeltaMs);
+            const watchDeltaMs = Math.min(
+                1000,
+                Math.max(0, Math.round(Number(sample.watchDeltaMs) || 0))
+            );
+            if (qualifiedSampleMs <= 0) {
+                continue;
+            }
+            qualifiedDeltaMs += qualifiedSampleMs;
+            if (watchDeltaMs <= 0) {
+                continue;
+            }
+            let seen = findSeen(session, sample.videoId);
+            if (!seen) {
+                seen = {
+                    videoId: sample.videoId,
+                    firstSeenAt: sanitizeTimestamp(sample.firstSeenAt, now),
+                    lastSeenAt: now,
+                    activeWatchMs: 0,
+                    order: session.seen.length + 1,
+                    feedOrder: Number.isInteger(sample.feedOrder) && sample.feedOrder >= 1
+                        ? sample.feedOrder
+                        : null,
+                };
+                session.seen.push(seen);
+            }
+            seen.lastSeenAt = now;
+            seen.activeWatchMs = Math.min(86400000, seen.activeWatchMs + watchDeltaMs);
+            seenApplied = true;
+        }
+        const targetMs = session.lockedSettings.naturalSessionSeconds * 1000;
+        session.qualifiedMs = Math.min(targetMs, session.qualifiedMs + qualifiedDeltaMs);
+
+        if (!session.naturalActivity) {
+            session.naturalActivity = emptyNaturalActivity();
+        }
+        const activity = input.activity && typeof input.activity === 'object'
+            ? input.activity
+            : {};
+        let activityApplied = false;
+        NATURAL_ACTIVITY_COUNT_KEYS.forEach((key) => {
+            const delta = toBoundedInteger(activity[key], 0, 1000, 0);
+            if (delta > 0) {
+                session.naturalActivity[key] = Math.min(
+                    1000000,
+                    session.naturalActivity[key] + delta
+                );
+                activityApplied = true;
+            }
+        });
+        if (activityApplied) {
+            session.naturalActivity.lastParticipantActivityAt = now;
+        }
+
+        const durationDeltas = input.durationDeltas &&
+            typeof input.durationDeltas === 'object'
+            ? input.durationDeltas
+            : {};
+        ['tabAwayMs', 'windowBlurMs'].forEach((key) => {
+            const delta = toBoundedInteger(durationDeltas[key], 0, 10000, 0);
+            if (delta > 0) {
+                session.naturalActivity[key] = Math.min(
+                    86400000,
+                    session.naturalActivity[key] + delta
+                );
+                activityApplied = true;
+            }
+        });
+
+        const counterDeltas = input.counterDeltas &&
+            typeof input.counterDeltas === 'object'
+            ? input.counterDeltas
+            : {};
+        [
+            'tabAwayCount',
+            'windowBlurCount',
+            'videoTransitions',
+            'pauseCount',
+            'resumeCount',
+        ].forEach((key) => {
+            const delta = toBoundedInteger(counterDeltas[key], 0, 1000, 0);
+            if (delta > 0) {
+                session.naturalActivity[key] = Math.min(
+                    1000000,
+                    session.naturalActivity[key] + delta
+                );
+                activityApplied = true;
+            }
+        });
+
+        Object.entries(
+            input.reasonCounts && typeof input.reasonCounts === 'object'
+                ? input.reasonCounts
+                : {}
+        ).slice(0, 20).forEach(([reason, count]) => {
+            const safeReason = sanitizeToken(reason, null);
+            const delta = toBoundedInteger(count, 0, 1000, 0);
+            if (!safeReason || delta <= 0) {
+                return;
+            }
+            const previous = session.naturalActivity.qualificationReasonCounts[safeReason] || 0;
+            session.naturalActivity.qualificationReasonCounts[safeReason] = Math.min(
+                1000000,
+                previous + delta
+            );
+            activityApplied = true;
+        });
+
+        for (const marker of (Array.isArray(input.markers) ? input.markers : []).slice(0, 50)) {
+            if (!marker || !NATURAL_EVENT_TYPES.has(marker.type)) {
+                continue;
+            }
+            const event = {
+                type: marker.type,
+                at: sanitizeTimestamp(marker.at, now),
+            };
+            if (isVideoId(marker.videoId)) {
+                event.videoId = marker.videoId;
+            }
+            session.naturalActivity.events.push(event);
+            activityApplied = true;
+        }
+        if (session.naturalActivity.events.length > 500) {
+            session.naturalActivity.events.splice(
+                0,
+                session.naturalActivity.events.length - 500
+            );
+        }
+        session.updatedAt = now;
+        return {
+            applied: qualifiedDeltaMs > 0 || seenApplied || activityApplied,
+            qualifiedDeltaMs,
+            seenApplied,
+        };
+    }
+
     function hashString(value) {
         let hash = 2166136261;
         const string = String(value);
@@ -1085,7 +1402,8 @@
             return false;
         }
         const progress = sessionProgress(session, at);
-        if (!progress.unseenComplete || !progress.timeComplete) {
+        const natural = session.collectionMode === COLLECTION_MODE.NATURAL_FYP_SESSION;
+        if (!progress.timeComplete || (!natural && !progress.unseenComplete)) {
             return false;
         }
         const now = sanitizeTimestamp(at, Date.now());
@@ -1469,6 +1787,7 @@
         CAPTURE_STRATEGY,
         TIKTOK_ORIGIN,
         TIKTOK_FYP_URL,
+        TIKTOK_NATURAL_FYP_URL,
         CONTENT_SCRIPT_ID,
         MIN_SAFE_AHEAD,
         DEFAULT_SETTINGS,
@@ -1497,6 +1816,7 @@
         excludeVideo,
         markExposed,
         applyActivity,
+        applyNaturalActivity,
         hashString,
         selectSafeCandidate,
         selectImmediateSafeCandidate,

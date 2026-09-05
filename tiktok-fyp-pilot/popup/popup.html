@@ -25,12 +25,17 @@
                     <span>Harvest window</span>
                     <strong id="duration-summary">30 seconds</strong>
                 </div>
+                <div>
+                    <span>Natural session</span>
+                    <strong id="natural-duration-summary">60 qualified seconds</strong>
+                </div>
             </div>
 
             <div class="privacy-box">
                 <strong>What this extension can record</strong>
                 <p>
-                    Only numeric video IDs, local timing/status metadata, and player events.
+                    Only numeric video IDs, local timing/status metadata, bounded natural-session
+                    interaction counts, and player events.
                     It reads post links to extract the IDs but does not store usernames, captions,
                     messages, credentials, or cookies. If I deliberately start collection from the
                     allowlisted Stanford Qualtrics pilot, that survey receives numeric IDs and its
@@ -39,6 +44,9 @@
                     During collection, the extension automatically advances and skips covered
                     FYP cards. TikTok may treat those skips or brief watch time as ranking signals,
                     which can influence future recommendations.
+                    The separate natural-session survey leaves TikTok visible and records only
+                    aggregate pointer-movement bursts, clicks, wheel events, and key-event counts;
+                    it never records cursor coordinates or which keys were pressed.
                 </p>
                 <label class="consent-row">
                     <input id="consent" type="checkbox">
@@ -52,7 +60,7 @@
             <button id="grant" type="button" disabled>Grant TikTok access</button>
             <div id="qualtrics-ready" class="notice success" hidden>
                 Access is ready. Return to the Qualtrics survey, select
-                <strong>Connect</strong>, then <strong>Start harvest</strong> there.
+                <strong>Connect</strong>, then start the task shown there.
                 Granting access does not start collection.
             </div>
         </section>

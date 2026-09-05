@@ -8,9 +8,19 @@ html.ttfp-booting::before {
 }
 
 .ttfp-reserved-card {
-    display: none !important;
     visibility: hidden !important;
     pointer-events: none !important;
+}
+
+.ttfp-reserved-card:not(.ttfp-reserved-slot) {
+    display: none !important;
+}
+
+/* During covered harvesting TikTok still needs each slot's size and position
+   to hydrate its virtual feed. Outside that tab, tombstones remain removed. */
+html.ttfp-covered-harvesting .ttfp-reserved-card.ttfp-reserved-slot {
+    visibility: visible !important;
+    opacity: 0 !important;
 }
 
 #ttfp-harvest-overlay-host {

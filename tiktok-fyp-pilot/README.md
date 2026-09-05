@@ -1,10 +1,15 @@
-# Experimental Background TikTok Harvester
+# TikTok FYP Research Pilot
 
-An unpacked Chrome Manifest V3 research prototype that asks for explicit TikTok site access, covers a logged-in desktop For You page, and experimentally sources a pool of account-personalized video IDs while the TikTok tab is in the background. The participant flow starts from the allowlisted Stanford Qualtrics pilot, returns the pool to that same survey tab, and shows one video at a time there through TikTok's official embed player.
+An unpacked Chrome Manifest V3 research prototype with two separate Qualtrics-started modes:
+
+1. **Covered background harvest** covers a logged-in For You page, sources an account-personalized pool, returns it to Qualtrics, and shows the official embedded players there.
+2. **Natural FYP session** opens a dedicated foreground For You tab, lets the participant browse normally for a locked number of qualified seconds, records numeric post exposure plus privacy-bounded activity/state markers, then closes only that extension-created tab and returns to the exact Qualtrics tab.
 
 This directory is standalone. It has no oTree integration, research backend, upload endpoint, or external JavaScript dependency. The extension itself has no build step; the included Qualtrics QSF has a deterministic local builder.
 
 ## Research interpretation and limitation
+
+The two modes have different estimands and must not be conflated. The covered harvester produces a pool under automated advancement. The natural mode observes the recommendations and behavior that occur while the participant navigates TikTok themselves; it does not reserve unseen stimuli or replay them in an embed.
 
 The stimuli are an account-personalized pool produced under automated feed advancement. They are **not** the participant's natural FYP sequence. Chrome throttles hidden tabs and TikTok may stop hydrating a virtualized feed, so background collection is not guaranteed. The collector keeps each uniquely identified feed card it can persist and conceal while the opaque overlay and media mute are active. It opens the selected viewer at the deadline if at least one video was confirmed; an empty or structurally failed run opens no viewer.
 
@@ -20,13 +25,15 @@ Automatic advancement can affect the participant's future recommendations. TikTo
 4. Choose this `tiktok-fyp-pilot/` directory—the directory containing `manifest.json`.
 5. Pin **TikTok FYP Research Pilot** from Chrome's Extensions menu.
 
-After editing the source, use **Reload** on `chrome://extensions` before testing again. No package installation is needed to run the extension.
+Version 0.5.2 adds a non-secret manifest public key, fixing the unpacked development ID as `pjcgejllbdjbhegipdkagnafileoecpo` on every computer. Remove an older unpacked installation once, then load this directory again; subsequent source edits need only **Reload**. No package installation is needed to run the extension.
 
 ## Participant flow
 
+### Covered background harvest
+
 1. Begin on the experiment page or another tab that should regain focus.
 2. Open the extension popup. Optionally set the wall-clock sourcing window; the default is 30 seconds.
-3. Read the disclosure, check consent, and select **Grant TikTok access**. Chrome requests only optional access to `https://www.tiktok.com/*`; the required `alarms` permission supplies a local deadline wake-up and grants no site data access. Granting permission does not start collection. Return to Qualtrics, select **Connect**, and then select **Start harvest**. The participant-facing popup intentionally has no standalone Start action.
+3. Read the disclosure, check consent, and select **Grant TikTok access**. Chrome requests only optional access to `https://www.tiktok.com/*`; the required `alarms` permission supplies a local deadline wake-up and grants no site data access. Granting permission does not start collection. Return to Qualtrics; the survey connects automatically, with **Check extension again** available only for recovery. Select **Start harvest**. The participant-facing popup intentionally has no standalone Start action.
 4. The extension opens or reloads `/foryou`. A document-start opaque overlay covers the entire page before the collector initializes. TikTok remains rendered underneath it.
 5. TikTok remains foregrounded but fully covered until the first recommendation is safely confirmed. The extension then returns to the originating tab and attempts the rest of the harvest in the background. This avoids hiding TikTok before its first feed card has hydrated.
 6. Success returns to the bound Qualtrics tab and makes its confirmed queue available in the survey's minimalist viewer. It does not open an extension viewer tab. Failure focuses the still-covered TikTok tab with **Try a fresh session**, **Continue to Qualtrics (testing)**, and **Stop and uncover TikTok** controls as applicable.
@@ -34,23 +41,37 @@ After editing the source, use **Reload** on `chrome://extensions` before testing
 
 TikTok authentication remains entirely between Chrome and TikTok. The extension never attempts to bypass a login prompt, CAPTCHA, rate limit, or unsupported page state.
 
+### Natural FYP session
+
+1. Import and Preview `qualtrics/TikTok_FYP_Natural_Session.qsf`. It connects to the fixed pilot extension automatically; select **Start natural session** after the confirmation appears. When the session completes, the QSF saves both the detailed chunked payload and `ttfp_natural_summary_json`, then advances to a second page that displays the video IDs, watch times, and aggregate activity measures registered with the response.
+2. The extension creates a new dedicated TikTok tab and opens `/foryou` in front. There is no opaque cover, media mute, input block, or automated scrolling in this mode.
+3. A small nonblocking status bar reports qualified time. Time counts only while the page is `/foryou`, the document is visible, Chrome/TikTok is focused, and exactly one identified video is at least 60% visible and actively advancing.
+4. Numeric IDs enter the exposure list after 500 ms of cumulative qualified exposure. The extension also stores aggregate pointer-movement bursts, clicks, wheel events, and key-event counts, plus bounded tab/window/video state markers. It never stores pointer coordinates or key values.
+5. On reaching the locked qualified duration (60 seconds by default), the record is persisted, the extension-created TikTok tab closes, and the exact originating survey tab regains focus. The survey chunks the result into bounded Embedded Data fields, finalizes the extension session, and exposes Next.
+
+Leaving TikTok, hiding the tab, pausing the video, or losing window focus pauses qualified time. Closing the dedicated tab stops the run and returns to Qualtrics without manufacturing a completion.
+
 ## Harvest protocol
 
 The collector uses `MutationObserver` and chained `setTimeout` callbacks rather than `requestAnimationFrame`, so it can continue to receive opportunities in a hidden tab. It records actual timer delay and visibility because Chrome may throttle those callbacks.
 
 For each step it:
 
-1. Identifies one current, uniquely identified feed card while the full-page opaque overlay is mounted.
+1. Identifies every uniquely identified, hydrated feed card while the full-page opaque overlay is mounted, including offscreen neighbours.
 2. Mutes its media and durably writes its numeric ID as `prepared`, including the covered-capture evidence.
 3. Rechecks that the same unique card is connected, the overlay remains active, and its media remains muted.
-4. Conceals the structural card with a tombstone while leaving the node mounted for TikTok's virtual scroller.
+4. Conceals the structural card with a tombstone while preserving its display mode, size, and position for TikTok's virtual scroller. The covered tab uses transparent slots; guards in other tabs still remove tombstones from layout.
 5. Confirms the concealment, which changes the record to `reserved` and makes it viewer-eligible.
-6. Programmatically advances the relevant scroll container immediately after confirmation. If a muted successor is already hydrated, it can be processed in a bounded four-item burst; otherwise the collector settles for 250 ms before its hydration fallback.
+6. Captures up to twelve hydrated IDs per pass, then scrolls instantly to the next structural slot, including a not-yet-hydrated placeholder. Explicit instant scrolling avoids inheriting TikTok's CSS smooth animation. A scroll event notifies the page even when native rendering is delayed.
 7. Repeats for every safely identified card traversed during the locked window.
 
-A stage may attempt advancement three times and has an eight-second limit. The short burst avoids spending another background-timer turn on successors that TikTok has already hydrated; it does not bypass the persist/recheck/conceal/confirm sequence or collect an unmuted or ambiguous card. The entire session has a locked wall-clock window, backed by a one-shot extension alarm in case the hidden page's timers stop. Chrome documents that alarms may themselves be delayed—for example while the device sleeps—so “30 seconds” is a deadline target, not a hard real-time guarantee. At the deadline, all confirmed reservations become the viewer pool. If hidden-tab hydration stalls after at least one confirmed card, the extension preserves that pool and waits for the deadline instead of misclassifying the pause as a login failure. A zero-video window, unsupported page, target-tab closure, or safety-write failure still changes the session to `failed`; hard failures invalidate the partial bank and open no viewer. The covered failure screen reports its machine-readable failure code plus the latest phase, visibility, timer delay, hydration latency, attempt number, and safe diagnostic fields.
+A stage may attempt advancement three times and has an eight-second limit. Hydration mutations wake collection directly, without another timer or a fixed settling sleep. Every ID still passes the persist/recheck/conceal/confirm sequence. The entire session has a locked wall-clock window, backed by a one-shot extension alarm in case the hidden page's timers stop. Chrome documents that alarms may themselves be delayed—for example while the device sleeps—so “30 seconds” is a deadline target, not a hard real-time guarantee. At the deadline, all confirmed reservations become the viewer pool. If hidden-tab hydration stalls after at least one confirmed card, the extension preserves that pool and waits for the deadline instead of misclassifying the pause as a login failure. A zero-video window, unsupported page, target-tab closure, or safety-write failure still changes the session to `failed`; hard failures invalidate the partial bank and open no viewer. The covered failure screen reports its machine-readable failure code plus the latest phase, visibility, timer delay, hydration latency, attempt number, and safe diagnostic fields.
 
 Numeric IDs in ambiguous multi-ID card boundaries are excluded without concealing the broad container. Tombstones are reapplied after DOM recycling. Any other exact `/foryou` tab receives guard-only behavior for existing tombstones but cannot collect or display the overlay.
+
+Version 0.5.3 adds `capture_batch` diagnostics (batch size, persistence time, visibility) and `automated_advance` diagnostics (elapsed time, confirmed count, and whether scrolling moved). These appear in the existing local inspector's code-only diagnostics.
+
+The production collector can also be run against a synthetic virtual feed using `harness/collector-benchmark.html` served locally. Parameters `duration` (milliseconds), `timerFloor` (collector timer clamp), `hydration` (feed delay), `stallAfter` (slot index), and `invalidateFirst=1` exercise throughput and failure handling. The page reports confirmed IDs, duplicates/handshake violations, actual hidden-tab captures, preserved slot heights, and diagnostics. It makes no TikTok requests. Synthetic results are not live TikTok throughput guarantees.
 
 ## Overlay behavior
 
@@ -64,7 +85,7 @@ For Qualtrics-started test sessions only, a failed collection also shows **Conti
 
 ## Local data and migration
 
-Schema version 4 is stored in `chrome.storage.local`. It contains only:
+Schema version 5 is stored in `chrome.storage.local`. It contains only:
 
 - a random local session ID and 32-bit selection seed;
 - locked harvest-window duration;
@@ -72,8 +93,11 @@ Schema version 4 is stored in `chrome.storage.local`. It contains only:
 - capture strategy and delivery target, prepared/reserved/invalidated state, tombstones, and viewer order;
 - harvest phase plus bounded visibility, timer-delay, hydration-latency, and advancement diagnostics; and
 - validated viewer playback events and local idempotency sequences.
+- for `natural_fyp_session`, locked qualified duration, numeric exposure records,
+  aggregate pointer/click/wheel/key-event counts, time-away totals, and bounded
+  tab/window/video state markers.
 
-Completed schema-1 sessions migrate as `legacy_manual`. Completed schema-2 and schema-3 background sessions are preserved with their original `offscreen_successor` capture interpretation. A pre-schema-4 session still collecting is stopped with `collection_rule_replaced`; it is never silently continued under the new covered-every-item rule.
+Completed schema-1 sessions migrate as `legacy_manual`. Completed schema-2 and schema-3 background sessions are preserved with their original `offscreen_successor` capture interpretation. A pre-schema-4 session still collecting is stopped with `collection_rule_replaced`; it is never silently continued under the covered-every-item rule. Schema-4 covered-harvest sessions migrate compatibly to schema 5 and gain only the new default natural-session setting.
 
 The extension does **not** store usernames, creator names, descriptions, captions, account URLs, credentials, cookies, Prolific IDs, participant identifiers, or page content. There is no general upload or export endpoint. When—and only when—the participant starts the included Qualtrics pilot from the survey's **Start harvest** control, an allowlisted browser connection gives that same bound survey tab the current session's numeric IDs and progress. The QSF records those IDs and its bounded playback log in the Qualtrics response. TikTok's page and official player still communicate normally with TikTok.
 
@@ -98,7 +122,7 @@ npm run check
 npm test
 ```
 
-The suite covers schema migration, locked settings, maximize-through-deadline completion, covered-current-item safety evidence, empty-window failure, hidden timer diagnostics, prepare-before-conceal semantics, confirmation, invalidation, tombstones, origin-tab return, the allowlisted Qualtrics bridge, retry, storage restoration, viewer ordering/skips, strict message validation, narrow permissions, and static overlay/state-machine guards.
+The suite covers schema migration, both locked settings, natural qualified-time completion and privacy bounds, dedicated-tab return/closure, maximize-through-deadline completion, covered-current-item safety evidence, empty-window failure, hidden timer diagnostics, prepare-before-conceal semantics, confirmation, invalidation, tombstones, origin-tab return, both Qualtrics contracts, retry, storage restoration, viewer ordering/skips, strict message validation, narrow permissions, and static overlay/state-machine guards.
 
 Open **Local data → Open synthetic harness** and select **Run background-harvest assertions** to exercise hidden timing, replacement hydration, scroll-fallback diagnostics, three-attempt failure, retry, DOM recycling, tombstones, and the two-phase reservation protocol without a TikTok account. The fixture does not prove compatibility with TikTok's current live DOM.
 
@@ -108,11 +132,12 @@ Use [MANUAL_TEST_CHECKLIST.md](MANUAL_TEST_CHECKLIST.md) for logged-in Chrome tr
 
 - `manifest.json` — MV3 permissions, entry points, and extension CSP.
 - `background.js` — serialized state, dynamic registration, transient return-tab leases, failure/retry, permissions, and message authorization.
-- `lib/core.js` — schema-4 model and pure selection, classification, reservation, migration, viewer, and validation logic.
+- `lib/core.js` — schema-5 model and pure qualification, activity, selection, reservation, migration, viewer, and validation logic.
 - `content/dom-adapter.js` — conservative post-ID and bounded feed-card discovery.
 - `content/collector.js` — Shadow DOM overlay, media/input isolation, automated hidden-tab state machine, tombstones, and diagnostics.
+- `content/natural-session.js` — nonblocking timer, foreground qualification, exposure tracking, and bounded natural-activity summaries.
 - `viewer/` — centered official TikTok iframe player, autoplay fallback, and bidirectional participant controls.
-- `qualtrics/` — minimal survey runtime, deterministic known-export-based QSF builder, generated import, and structural checks.
+- `qualtrics/` — separate covered-harvest and natural-session runtimes, deterministic known-export-based QSF builders, generated imports, and structural checks.
 - `popup/`, `options/`, and `inspector/` — consent, settings, session status, and local records.
 - `harness/` and `tests/` — synthetic fixture and dependency-free coverage.
 
